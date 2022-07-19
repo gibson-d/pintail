@@ -1,4 +1,4 @@
-
+rm(list=ls())
 library(boot)
 library(jagsUI)
 setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
@@ -915,8 +915,8 @@ pt_ipm <- nimbleCode({
 
   ### Age-ratio at banding
   for (i in 1:narea) {
-    for (t in 1:nyear) {
-       q[i,t] <- (N1F[i,t] *  f_jf[i,t]) / ((N1F[i,t] *  f_jf[i,t]) + (NAF[i,t] * f_af[i,t]))
+    for (t in 1:(nyear-1)) {
+       q[i,t] <- (N1F_Fall[i,t] *  f_jf[i,t]) / ((N1F_Fall[i,t] *  f_jf[i,t]) + (N2F_Fall[i,t] * f_af[i,t]))
       nband_jf[i,t] ~ dbinom(q[i,t], nband_jf_af[i,t])
     } # t
   } # i
@@ -962,6 +962,21 @@ pt_ipm <- nimbleCode({
       }
  # Age and Sex-Structured Abundance 
       for (t in 2:nyear) {
+        # Number of each age-class that survived until the start of the hunting season
+        N2M_Fall[1,t-1] <- NAM[1,t-1] * sur_am[1,t-1]^(1/3)
+        N2M_Fall[2,t-1] <- NAM[2,t-1] * sur_am[2,t-1]^(1/3)
+        N2M_Fall[3,t-1] <- NAM[3,t-1] * sur_am[3,t-1]^(1/3)
+        N2F_Fall[1,t-1] <- NAF[1,t-1] * sur_af[1,t-1]^(1/3)
+        N2F_Fall[2,t-1] <- NAF[3,t-1] * sur_af[2,t-1]^(1/3)
+        N2F_Fall[3,t-1] <- NAF[2,t-1] * sur_af[3,t-1]^(1/3)
+        N1M_Fall[1,t-1] <- NAF[1,t-1] * 0.5 * ar[1,t-1]
+        N1M_Fall[2,t-1] <- NAF[2,t-1] * 0.5 * ar[2,t-1]
+        N1M_Fall[3,t-1] <- NAF[3,t-1] * 0.5 * ar[3,t-1]
+        N1F_Fall[1,t-1] <- NAF[1,t-1] * 0.5 * ar[1,t-1]
+        N1F_Fall[2,t-1] <- NAF[2,t-1] * 0.5 * ar[2,t-1]
+        N1F_Fall[3,t-1] <- NAF[3,t-1] * 0.5 * ar[3,t-1]
+        
+        # Number of each age-class that survived until the following regional breeding season
         N2M_AK_AK[t-1] <- NAM[1,t-1] * sur_am[1,t-1] * pi[1,1]
         N2M_NH_AK[t-1] <- NAM[2,t-1] * sur_am[2,t-1] * pi[2,1]
         N2M_PR_AK[t-1] <- NAM[3,t-1] * sur_am[3,t-1] * pi[3,1]
@@ -969,12 +984,12 @@ pt_ipm <- nimbleCode({
         N2F_NH_AK[t-1] <- NAF[3,t-1] * sur_af[2,t-1] * pi[2,1]
         N2F_PR_AK[t-1] <- NAF[2,t-1] * sur_af[3,t-1] * pi[3,1]
         
-        N1M_AK_AK[t-1] <- NAF[1,t-1] * ar[1,t-1] * sur_jm[1,t-1] * pi[1,1]
-        N1M_NH_AK[t-1] <- NAF[2,t-1] * ar[2,t-1] * sur_jm[2,t-1] * pi[2,1]
-        N1M_PR_AK[t-1] <- NAF[3,t-1] * ar[3,t-1] * sur_jm[3,t-1] * pi[3,1]
-        N1F_AK_AK[t-1] <- NAF[1,t-1] * ar[1,t-1] * sur_jf[1,t-1] * pi[1,1]
-        N1F_NH_AK[t-1] <- NAF[2,t-1] * ar[2,t-1] * sur_jf[2,t-1] * pi[2,1]
-        N1F_PR_AK[t-1] <- NAF[3,t-1] * ar[3,t-1] * sur_jf[2,t-1] * pi[3,1]
+        N1M_AK_AK[t-1] <- N1M_Fall[1,t-1] * sur_jm[1,t-1] * pi[1,1]
+        N1M_NH_AK[t-1] <- N1M_Fall[2,t-1] * sur_jm[2,t-1] * pi[2,1]
+        N1M_PR_AK[t-1] <- N1M_Fall[3,t-1] * sur_jm[3,t-1] * pi[3,1]
+        N1F_AK_AK[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,1]
+        N1F_NH_AK[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,1]
+        N1F_PR_AK[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,1]
         
         N2M_AK_NH[t-1] <- NAM[1,t-1] * sur_am[1,t-1] * pi[1,2]
         N2M_NH_NH[t-1] <- NAM[2,t-1] * sur_am[2,t-1] * pi[2,2]
@@ -983,12 +998,12 @@ pt_ipm <- nimbleCode({
         N2F_NH_NH[t-1] <- NAF[3,t-1] * sur_af[2,t-1] * pi[2,2]
         N2F_PR_NH[t-1] <- NAF[2,t-1] * sur_af[3,t-1] * pi[3,2]
         
-        N1M_AK_NH[t-1] <- NAF[1,t-1] * ar[1,t-1] * sur_jm[1,t-1] * pi[1,2]
-        N1M_NH_NH[t-1] <- NAF[2,t-1] * ar[2,t-1] * sur_jm[2,t-1] * pi[2,2]
-        N1M_PR_NH[t-1] <- NAF[3,t-1] * ar[3,t-1] * sur_jm[3,t-1] * pi[3,2]
-        N1F_AK_NH[t-1] <- NAF[1,t-1] * ar[1,t-1] * sur_jf[1,t-1] * pi[1,2]
-        N1F_NH_NH[t-1] <- NAF[2,t-1] * ar[2,t-1] * sur_jf[2,t-1] * pi[2,2]
-        N1F_PR_NH[t-1] <- NAF[3,t-1] * ar[3,t-1] * sur_jf[2,t-1] * pi[3,2]
+        N1M_AK_NH[t-1] <- N1M_Fall[1,t-1] * sur_jm[1,t-1] * pi[1,2]
+        N1M_NH_NH[t-1] <- N1M_Fall[2,t-1] * sur_jm[2,t-1] * pi[2,2]
+        N1M_PR_NH[t-1] <- N1M_Fall[3,t-1] * sur_jm[3,t-1] * pi[3,2]
+        N1F_AK_NH[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,2]
+        N1F_NH_NH[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,2]
+        N1F_PR_NH[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,2]
         
         N2M_AK_PR[t-1] <- NAM[1,t-1] * sur_am[1,t-1] * pi[1,3]
         N2M_NH_PR[t-1] <- NAM[2,t-1] * sur_am[2,t-1] * pi[2,3]
@@ -997,12 +1012,12 @@ pt_ipm <- nimbleCode({
         N2F_NH_PR[t-1] <- NAF[3,t-1] * sur_af[2,t-1] * pi[2,3]
         N2F_PR_PR[t-1] <- NAF[2,t-1] * sur_af[3,t-1] * pi[3,3]
         
-        N1M_AK_PR[t-1] <- NAF[1,t-1] * ar[1,t-1] * sur_jm[1,t-1] * pi[1,3]
-        N1M_NH_PR[t-1] <- NAF[2,t-1] * ar[2,t-1] * sur_jm[2,t-1] * pi[2,3]
-        N1M_PR_PR[t-1] <- NAF[3,t-1] * ar[3,t-1] * sur_jm[3,t-1] * pi[3,3]
-        N1F_AK_PR[t-1] <- NAF[1,t-1] * ar[1,t-1] * sur_jf[1,t-1] * pi[1,3]
-        N1F_NH_PR[t-1] <- NAF[2,t-1] * ar[2,t-1] * sur_jf[2,t-1] * pi[2,3]
-        N1F_PR_PR[t-1] <- NAF[3,t-1] * ar[3,t-1] * sur_jf[2,t-1] * pi[3,3]
+        N1M_AK_PR[t-1] <- N1M_Fall[1,t-1] * sur_jm[1,t-1] * pi[1,3]
+        N1M_NH_PR[t-1] <- N1M_Fall[2,t-1] * sur_jm[2,t-1] * pi[2,3]
+        N1M_PR_PR[t-1] <- N1M_Fall[3,t-1] * sur_jm[3,t-1] * pi[3,3]
+        N1F_AK_PR[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,3]
+        N1F_NH_PR[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,3]
+        N1F_PR_PR[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,3]
       
         N1F[1,t] <-  N1F_AK_AK[t-1] +  N1F_NH_AK[t-1] + N1F_PR_AK[t-1]
         N1M[1,t] <-  N1M_AK_AK[t-1] +  N1M_NH_AK[t-1] + N1M_PR_AK[t-1]  
@@ -1020,9 +1035,9 @@ pt_ipm <- nimbleCode({
         N2M[3,t] <-  N2M_AK_PR[t-1] +  N2M_NH_PR[t-1] + N2M_PR_PR[t-1]
        
         for(i in 1:3){
-          NAF[i,t] <- N1F[i,t] + N2F[i,t] 
-          NAM[i,t] <- N1M[i,t] + N2M[i,t]
-           N[i,t] <- N1F[i,t] + N1M[i,t] + N2F[i,t] + N2M[i,t]
+          NAF[i,t] <- N1F[i,t] + N2F[i,t] # Female Breeding Abundance
+          NAM[i,t] <- N1M[i,t] + N2M[i,t] # Male Breeding Abundance
+            N[i,t] <- NAF[i,t] + NAM[i,t] # Total Breeding Population
         }
           im_ak[t-1] <-  N1F_NH_AK[t-1] + N1F_PR_AK[t-1] + N1M_NH_AK[t-1] + N1M_PR_AK[t-1] + N2F_NH_AK[t-1] + N2F_PR_AK[t-1] + N2M_NH_AK[t-1] + N2M_PR_AK[t-1]
           em_ak[t-1] <-  N1F_AK_NH[t-1] + N1M_AK_NH[t-1] + N2F_AK_NH[t-1] + N2M_AK_NH[t-1] + N1F_AK_PR[t-1] + N1M_AK_PR[t-1] + N2F_AK_PR[t-1] + N2M_AK_PR[t-1] 
@@ -1301,3 +1316,4 @@ samples1    <- list(chain1 =   out[[1]][[2]][-1,],
 
 mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
 mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
+
