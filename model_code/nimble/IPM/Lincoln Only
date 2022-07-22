@@ -171,8 +171,11 @@ temp_pc <- temp[4,(nyear_all-nyear+1):(nyear_all+1)]
 temp_gc <- temp[5,(nyear_all-nyear+1):(nyear_all+1)]
 
 #======================
-# define model in Jags
+# define model in Nimble
 #======================
+
+# Note: Density-dependence is flagged out of the model (7/22/22) until I resolve 'what' densities are.
+
 pt_ipm <- nimbleCode({
   # Priors
   ### Pond
@@ -380,28 +383,28 @@ pt_ipm <- nimbleCode({
     # Alaska
     logit_sur_mu_ak_af[t] <- 
       logit_sur_mean_ak_af + 
-      logit_sur_bpop_ak_af * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      #logit_sur_bpop_ak_af * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
       logit_sur_prec_ak_af * prec_ak[t] + 
       logit_sur_temp_ak_af * temp_ak[t] + 
       logit_sur_prpc_ak_af * prec_pc[t+1] + 
       logit_sur_tepc_ak_af * temp_pc[t+1]
     logit_sur_mu_ak_am[t] <- 
       logit_sur_mean_ak_am + 
-      logit_sur_bpop_ak_am * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      #logit_sur_bpop_ak_am * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
       logit_sur_prec_ak_am * prec_ak[t] + 
       logit_sur_temp_ak_am * temp_ak[t] + 
       logit_sur_prpc_ak_am * prec_pc[t+1] + 
       logit_sur_tepc_ak_am * temp_pc[t+1]
     logit_sur_mu_ak_jf[t] <- 
       logit_sur_mean_ak_jf + 
-      logit_sur_bpop_ak_jf * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      #logit_sur_bpop_ak_jf * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
       logit_sur_prec_ak_jf * prec_ak[t] + 
       logit_sur_temp_ak_jf * temp_ak[t] + 
       logit_sur_prpc_ak_jf * prec_pc[t+1] + 
       logit_sur_tepc_ak_jf * temp_pc[t+1]
     logit_sur_mu_ak_jm[t] <- 
       logit_sur_mean_ak_jm + 
-      logit_sur_bpop_ak_jm * (logBP[2,t] - log_bpop_mean[1]) / log_bpop_se[1] + 
+      #logit_sur_bpop_ak_jm * (logBP[2,t] - log_bpop_mean[1]) / log_bpop_se[1] + 
       logit_sur_prec_ak_jm * prec_ak[t] + 
       logit_sur_temp_ak_jm * temp_ak[t] + 
       logit_sur_prpc_ak_jm * prec_pc[t+1] + 
@@ -410,7 +413,7 @@ pt_ipm <- nimbleCode({
     # Northern habitat
     logit_sur_mu_nh_af[t] <- 
       logit_sur_mean_nh_af + 
-      logit_sur_bpop_nh_af * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      #logit_sur_bpop_nh_af * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
       logit_sur_prec_nh_af * prec_nh[t] + 
       logit_sur_temp_nh_af * temp_nh[t] + 
       logit_sur_prpc_nh_af * prec_pc[t+1] + 
@@ -419,7 +422,7 @@ pt_ipm <- nimbleCode({
       logit_sur_tegc_nh_af * temp_gc[t+1]
     logit_sur_mu_nh_am[t] <- 
       logit_sur_mean_nh_am + 
-      logit_sur_bpop_nh_am * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      #logit_sur_bpop_nh_am * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
       logit_sur_prec_nh_am * prec_nh[t] + 
       logit_sur_temp_nh_am * temp_nh[t] + 
       logit_sur_prpc_nh_am * prec_pc[t+1] + 
@@ -428,7 +431,7 @@ pt_ipm <- nimbleCode({
       logit_sur_tegc_nh_am * temp_gc[t+1]
     logit_sur_mu_nh_jf[t] <- 
       logit_sur_mean_nh_jf + 
-      logit_sur_bpop_nh_jf * (logBP[2,t] - log_bpop_mean[2]) / log_bpop_se[2] + 
+      #logit_sur_bpop_nh_jf * (logBP[2,t] - log_bpop_mean[2]) / log_bpop_se[2] + 
       logit_sur_prec_nh_jf * prec_nh[t] + 
       logit_sur_temp_nh_jf * temp_nh[t] + 
       logit_sur_prpc_nh_jf * prec_pc[t+1] + 
@@ -437,7 +440,7 @@ pt_ipm <- nimbleCode({
       logit_sur_tegc_nh_jf * temp_gc[t+1]
     logit_sur_mu_nh_jm[t] <- 
       logit_sur_mean_nh_jm + 
-      logit_sur_bpop_nh_jm * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      #logit_sur_bpop_nh_jm * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
       logit_sur_prec_nh_jm * prec_nh[t] + 
       logit_sur_temp_nh_jm * temp_nh[t] + 
       logit_sur_prpc_nh_jm * prec_pc[t+1] + 
@@ -448,7 +451,7 @@ pt_ipm <- nimbleCode({
     # Prairie
     logit_sur_mu_pr_af[t] <- 
       logit_sur_mean_pr_af + 
-      logit_sur_bpop_pr_af * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
+      #logit_sur_bpop_pr_af * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
       logit_sur_pond_pr_af * (log_pond[t] - log_pond_mean) / log_pond_se + 
       logit_sur_prpc_pr_af * prec_pc[t+1] + 
       logit_sur_tepc_pr_af * temp_pc[t+1] + 
@@ -456,7 +459,7 @@ pt_ipm <- nimbleCode({
       logit_sur_tegc_pr_af * temp_gc[t+1]
     logit_sur_mu_pr_am[t] <- 
       logit_sur_mean_pr_am + 
-      logit_sur_bpop_pr_am * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
+      #logit_sur_bpop_pr_am * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
       logit_sur_pond_pr_am * (log_pond[t] - log_pond_mean) / log_pond_se + 
       logit_sur_prpc_pr_am * prec_pc[t+1] + 
       logit_sur_tepc_pr_am * temp_pc[t+1] + 
@@ -464,7 +467,7 @@ pt_ipm <- nimbleCode({
       logit_sur_tegc_pr_am * temp_gc[t+1]
     logit_sur_mu_pr_jf[t] <- 
       logit_sur_mean_pr_jf + 
-      logit_sur_bpop_pr_jf * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
+      #logit_sur_bpop_pr_jf * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
       logit_sur_pond_pr_jf * (log_pond[t] - log_pond_mean) / log_pond_se + 
       logit_sur_prpc_pr_jf * prec_pc[t+1] + 
       logit_sur_tepc_pr_jf * temp_pc[t+1] + 
@@ -472,7 +475,7 @@ pt_ipm <- nimbleCode({
       logit_sur_tegc_pr_jf * temp_gc[t+1]
     logit_sur_mu_pr_jm[t] <- 
       logit_sur_mean_pr_jm + 
-      logit_sur_bpop_pr_jm * (logBP[3,t] - log_bpop_mean[3]) / log_bpop_se[3] + 
+      #logit_sur_bpop_pr_jm * (logBP[3,t] - log_bpop_mean[3]) / log_bpop_se[3] + 
       logit_sur_pond_pr_jm * (log_pond[t] - log_pond_mean) / log_pond_se + 
       logit_sur_prpc_pr_jm * prec_pc[t+1] + 
       logit_sur_tepc_pr_jm * temp_pc[t+1] + 
@@ -525,11 +528,11 @@ pt_ipm <- nimbleCode({
     logit_rec_jf[t] ~ dnorm(logit_rec_mean[3], sd = logit_rec_sd)
     logit_rec_jm[t] ~ dnorm(logit_rec_mean[4], sd = logit_rec_sd)
     for(a in 1:2){
-          rec_af[a,t] <- ilogit(logit_rec_af[t] + beta.direct[1,a])
-          rec_am[a,t] <- ilogit(logit_rec_am[t] + beta.direct[2,a])
+          rec_af[a,t] <- ilogit(logit_rec_af[t] + beta.direct[1,a]) 
+          rec_am[a,t] <- ilogit(logit_rec_am[t] + beta.direct[2,a]) 
     } # direct recoveries
-          rec_jf[t] <- ilogit(logit_rec_jf[t])
-          rec_jm[t] <- ilogit(logit_rec_jm[t])
+          rec_jf[t] <- ilogit(logit_rec_jf[t]) 
+          rec_jm[t] <- ilogit(logit_rec_jm[t]) 
   } # t
 
          for(j in 1:2){
@@ -557,7 +560,7 @@ pt_ipm <- nimbleCode({
   logit_pcap_j ~ dnorm(logit(.00144), 90.70)
   pcap_a <- ilogit(logit_pcap_a)
   pcap_j <- ilogit(logit_pcap_j)
-  vul <- .00144 / .00072
+  #vul <- .00144 / .00072
 
   ### Productivity
   ##### Mean
@@ -649,11 +652,11 @@ pt_ipm <- nimbleCode({
   log_ar_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
 
   ##### Yearly productivity
-  for (t in 1:nyear) {
+  for (t in 1:(nyear-1)) {
     # Alaska
     log_ar_mu_ak[t] <- 
       log_ar_mean_ak + 
-      log_ar_bpop_ak * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      #log_ar_bpop_ak * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
       log_ar_prec_ak * prec_ak[t] + 
       log_ar_temp_ak * temp_ak[t] + 
       log_ar_prpc_ak * prec_pc[t] + 
@@ -662,7 +665,7 @@ pt_ipm <- nimbleCode({
     # Northern habitat
     log_ar_mu_nh[t] <- 
       log_ar_mean_nh + 
-      log_ar_bpop_nh * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      #log_ar_bpop_nh * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
       log_ar_prec_nh * prec_nh[t] + 
       log_ar_temp_nh * temp_nh[t] + 
       log_ar_prpc_nh * prec_pc[t] + 
@@ -673,7 +676,7 @@ pt_ipm <- nimbleCode({
     # Prairie
     log_ar_mu_pr[t] <- 
       log_ar_mean_pr + 
-      log_ar_bpop_pr * (logBP[3,t] - log_bpop_mean[3]) / log_bpop_se[3] + 
+     # log_ar_bpop_pr * (logBP[3,t] - log_bpop_mean[3]) / log_bpop_se[3] + 
       log_ar_pond_pr * (log_pond[t] - log_pond_mean) / log_pond_se + 
       log_ar_crop_pr * crop[t] + 
       log_ar_pocr_pr * (log_pond[t] - log_pond_mean) / log_pond_se * crop[t] + 
@@ -683,14 +686,14 @@ pt_ipm <- nimbleCode({
       log_ar_tegc_pr * temp_gc[t]
   } # t
 
-  for (t in 1:nyear) {
+  for (t in 1:(nyear-1)) {
     log_ar[1,t] ~ dnorm(log_ar_mu_ak[t], sd = log_ar_sd)
     log_ar[2,t] ~ dnorm(log_ar_mu_nh[t], sd = log_ar_sd)
     log_ar[3,t] ~ dnorm(log_ar_mu_pr[t], sd = log_ar_sd)
   } # t
 
   for (i in 1:narea) {
-    for (t in 1:nyear) {
+    for (t in 1:(nyear-1)) {
       ar[i,t] <- exp(log_ar[i,t])
     } # t
   } # i
@@ -698,7 +701,6 @@ pt_ipm <- nimbleCode({
   ### Population
   log_bpop0_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
    log_bpop_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
-            m <- 0.7
 
   # Derived quantities
   ### Cell probability of M-array data
@@ -937,49 +939,31 @@ pt_ipm <- nimbleCode({
   ### Age-ratio at banding
   for (i in 1:narea) {
     for (t in 1:(nyear-1)) {
-      q[i,t] <- (N1F_Fall[i,t] *  f_jf[i,t]) / ((N1F_Fall[i,t] *  f_jf[i,t]) + (N2F_Fall[i,t] * f_af[i,t]))
+             q[i,t] <- (N1F_Fall[i,t] *  f_jf[i,t]) / ((N1F_Fall[i,t] *  f_jf[i,t]) + (N2F_Fall[i,t] * f_af[i,t]))
       nband_jf[i,t] ~ dbinom(q[i,t], nband_jf_af[i,t])
     } # t
   } # i
 
-  # Priors for starting age and sex structure
-      SR[1,1] ~ dbeta(alpha.sr, beta.sr)
-      SR[2,1] ~ dbeta(alpha.sr, beta.sr)
-      SR[3,1] ~ dbeta(alpha.sr, beta.sr) 
-      
-      mu.sr ~ dbeta(1,1)
-      sd.sr ~ T(dt(0, pow(2.5, -2), 1),0,)
-      
-      alpha.sr <- pow(sd.sr,-2) * mu.sr
-       beta.sr <- pow(sd.sr,-2) * (1 -mu.sr)
-      
-      SR[1,2] <- 1 - SR[1,1]
-      SR[2,2] <- 1 - SR[2,1]
-      SR[3,2] <- 1 - SR[3,1]
-            
-      AR[1,1] <- exp(log_ar_mean_ak)/ (1 + exp(log_ar_mean_ak))
-      AR[2,1] <- exp(log_ar_mean_nh)/ (1 + exp(log_ar_mean_nh))
-      AR[3,1] <- exp(log_ar_mean_pr)/ (1 + exp(log_ar_mean_pr))
-      
-      AR[1,2] <- 1 - AR[1,1]
-      AR[2,2] <- 1 - AR[2,1]
-      AR[3,2] <- 1 - AR[3,1]
-
+  # Prior for starting age structure (intecept for the productivity model)
+          AR[1] <-   exp(log_ar_mean_ak)
+          AR[2] <-   exp(log_ar_mean_nh)
+          AR[3] <-   exp(log_ar_mean_pr)
       for(i in 1:3){
-          n1f[i] <-  bpop_obs[i,1] * AR[i,1] * SR[i,1]
-          n1m[i] <-  bpop_obs[i,1] * AR[i,1] * SR[i,2]
-          n2f[i] <-  bpop_obs[i,1] * AR[i,2] * SR[i,1]
-          n2m[i] <-  bpop_obs[i,1] * AR[i,2] * SR[i,2]
-          
+         mu.n[i] ~ dunif(0,10)                   # Prior for starting adult population size (0 to 10 million breeding male and females)
+           sr[i] ~ dbeta(3,7)                    # Proportion of the starting adult population that was female
+          n1f[i] <-   mu.n[i] *  sr[i] * AR[i]/2 # Intitial SY female population
+          n1m[i] <-   mu.n[i] *  sr[i] * AR[i]/2 # Intitial SY male population
+          n2f[i] <-   mu.n[i] *  sr[i]           # Intitial AHY female population
+          n2m[i] <-   mu.n[i] *  (1 - sr[i])     # Intitial AHY male population
+           
           N1F[i,1] <- n1f[i]
           N1M[i,1] <- n1m[i]
           N2F[i,1] <- n2f[i]
           N2M[i,1] <- n2m[i]
           
-          NAF[i,1] <-  N1F[i,1] + N2F[i,1] 
-          NAM[i,1] <-  N1M[i,1] + N2M[i,1]
-           TN[i,1] <- (N1F[i,1] + N1M[i,1] + N2F[i,1] + N2M[i,1])
-            N[i,1] <- (N1F[i,1] + N1M[i,1] + N2F[i,1] + N2M[i,1])  #* psi
+          NAF[i,1] <-  N1F[i,1] + N2F[i,1]                                     # Initial breeding females
+          NAM[i,1] <-  N1M[i,1] + N2M[i,1]                                     # Initial breeding males
+            N[i,1] <- (N1F[i,1] + N1M[i,1] + N2F[i,1] + N2M[i,1])              # Intitial breeding population
       }
 
       for (t in 2:nyear) {
@@ -1039,7 +1023,7 @@ pt_ipm <- nimbleCode({
         N1F_AK_PR[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,3]
         N1F_NH_PR[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,3]
         N1F_PR_PR[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,3]
-        
+        # Age and Sex-Structured Breeding Abundance 
         N1F[1,t] <-  N1F_AK_AK[t-1] +  N1F_NH_AK[t-1] + N1F_PR_AK[t-1]
         N1M[1,t] <-  N1M_AK_AK[t-1] +  N1M_NH_AK[t-1] + N1M_PR_AK[t-1]  
         N2F[1,t] <-  N2F_AK_AK[t-1] +  N2F_NH_AK[t-1] + N2F_PR_AK[t-1]
@@ -1054,13 +1038,13 @@ pt_ipm <- nimbleCode({
         N1M[3,t] <-  N1M_AK_PR[t-1] +  N1M_NH_PR[t-1] + N1M_PR_PR[t-1] 
         N2F[3,t] <-  N2F_AK_PR[t-1] +  N2F_NH_PR[t-1] + N2F_PR_PR[t-1] 
         N2M[3,t] <-  N2M_AK_PR[t-1] +  N2M_NH_PR[t-1] + N2M_PR_PR[t-1]
+        
         for(i in 1:3){
           NAF[i,t] <- N1F[i,t] + N2F[i,t] # Female Breeding Abundance
           NAM[i,t] <- N1M[i,t] + N2M[i,t] # Male Breeding Abundance
-           TN[i,t] <- NAF[i,t] + NAM[i,t] # Total Breeding Population
-            N[i,t] <- (NAF[i,t] + NAM[i,t]) #* psi
-        logBP[i,t] <- log(N[i,t])
+            N[i,t] <- NAF[i,t] + NAM[i,t] # Total Breeding Population
         }
+         # Derive number of immigrants/emigrants
           im_ak[t-1] <-  N1F_NH_AK[t-1] + N1F_PR_AK[t-1] + N1M_NH_AK[t-1] + N1M_PR_AK[t-1] + N2F_NH_AK[t-1] + N2F_PR_AK[t-1] + N2M_NH_AK[t-1] + N2M_PR_AK[t-1]
           em_ak[t-1] <-  N1F_AK_NH[t-1] + N1M_AK_NH[t-1] + N2F_AK_NH[t-1] + N2M_AK_NH[t-1] + N1F_AK_PR[t-1] + N1M_AK_PR[t-1] + N2F_AK_PR[t-1] + N2M_AK_PR[t-1] 
           im_nh[t-1] <-  N1F_AK_NH[t-1] + N1F_PR_NH[t-1] + N1M_AK_NH[t-1] + N1M_PR_NH[t-1] + N2F_AK_NH[t-1] + N2F_PR_NH[t-1] + N2M_AK_NH[t-1] + N2M_PR_NH[t-1]
@@ -1068,44 +1052,35 @@ pt_ipm <- nimbleCode({
           im_pr[t-1] <-  N1F_NH_PR[t-1] + N1F_AK_PR[t-1] + N1M_NH_PR[t-1] + N1M_AK_PR[t-1] + N2F_NH_PR[t-1] + N2F_AK_PR[t-1] + N2M_NH_PR[t-1] + N2M_AK_PR[t-1]
           em_pr[t-1] <-  N1F_PR_NH[t-1] + N1M_PR_NH[t-1] + N2F_PR_NH[t-1] + N2M_PR_NH[t-1] + N1F_PR_PR[t-1] + N1M_PR_PR[t-1] + N2F_PR_PR[t-1] + N2M_PR_PR[t-1]
       }
-      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-      # Arnold et al. reporting rate prior
-      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-      psi ~ dbeta(1,1) # Proportion of the 'True' breeding population reported in the Bpop Survey
+      # Observation error for Lincoln estimate
       for(i in 1:4){
         sig.lincoln[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
       }
-      for (t in 1:nyear) {  
+      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+      # Arnold et al. reporting rate prior
+      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+      for (t in 1:(nyear-1)) {
               rr[t] ~ dbeta(alpha.rr[t], beta.rr[t])
         alpha.rr[t] <- pow(SD.rr[t],-2) * RR.rr[t]
          beta.rr[t] <- pow(SD.rr[t],-2) * (1 - RR.rr[t])
         for(i in 1:3){
-         N1F.harvest[i,t] <- N1F[i,t] *( f_jf[i,t]/ rr[t])   # latent N * direct recovery/reporting rate
-         N1M.harvest[i,t] <- N1M[i,t] *( f_jm[i,t]/ rr[t])   # latent N * direct recovery/reporting rate
-         N2F.harvest[i,t] <- N2F[i,t] *( f_af[i,t]/ rr[t])   # latent N * direct recovery/reporting rate
-         N2M.harvest[i,t] <- N2M[i,t] *( f_am[i,t]/ rr[t])   # latent N * direct recovery/reporting rate
+         N1F.harvest[i,t] <- N1F_Fall[i,t] *( f_jf[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+         N1M.harvest[i,t] <- N1M_Fall[i,t] *( f_jm[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+         N2F.harvest[i,t] <- N2F_Fall[i,t] *( f_af[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+         N2M.harvest[i,t] <- N2M_Fall[i,t] *( f_am[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
         }
-        N1F.Lincoln[t] <- sum(N1F.harvest[1:3,t])
-        N1M.Lincoln[t] <- sum(N1M.harvest[1:3,t])
-        N2F.Lincoln[t] <- sum(N2F.harvest[1:3,t])
-        N2M.Lincoln[t] <- sum(N2M.harvest[1:3,t])
-        
-        
-      }
-      for (t in 1:(nyear-1)) {
-                H1F[t] ~ dnorm(N1F.Lincoln[t], sd = sig.lincoln[1])
-                H1M[t] ~ dnorm(N1M.Lincoln[t], sd = sig.lincoln[2])
-                H2F[t] ~ dnorm(N2F.Lincoln[t], sd = sig.lincoln[3])
-                H2M[t] ~ dnorm(N2M.Lincoln[t], sd = sig.lincoln[4])
+        # Total number of individuals harvested
+           N1F.Lincoln[t] <- sum(N1F.harvest[1:3,t])
+           N1M.Lincoln[t] <- sum(N1M.harvest[1:3,t])
+           N2F.Lincoln[t] <- sum(N2F.harvest[1:3,t])
+           N2M.Lincoln[t] <- sum(N2M.harvest[1:3,t])
+          # Estimated number of individuals harvested ~ modeled number of individuals harvested
+                   H1F[t] ~ dnorm(N1F.Lincoln[t], sd = sig.lincoln[1])
+                   H1M[t] ~ dnorm(N1M.Lincoln[t], sd = sig.lincoln[2])
+                   H2F[t] ~ dnorm(N2F.Lincoln[t], sd = sig.lincoln[3])
+                   H2M[t] ~ dnorm(N2M.Lincoln[t], sd = sig.lincoln[4])
       }
       
-      ### BPOP data    
-  # for (t in 2:nyear) {
-  #   bpop_obs[1,t] ~ dnorm(N[1,t], sd = bpop_se[1,t])
-  #   bpop_obs[2,t] ~ dnorm(N[2,t], sd = bpop_se[2,t])
-  #   bpop_obs[3,t] ~ dnorm(N[3,t], sd = bpop_se[3,t])
-  # } # t
-
 })
 
 #================
@@ -1128,9 +1103,8 @@ nimble.constants <- list(narea=narea, nyear=nyear, nyear_use=nyear_use, ncoho=nc
                          crop=crop)
 
 initsFunction <- function()list(
-  sig.lincoln = c(.5,.5,.5,.5), psi = .8, rr = MU_R,mu.sr = .65, sd.sr = 10,
-    AR = matrix(c(.75,.25), ncol = 2, nrow = 3, byrow = TRUE), 
-    SR = matrix(c(.55,.45), ncol = 2, nrow = 3, byrow = TRUE),
+  sig.lincoln = c(.5,.5,.5,.5),  rr = MU_R,mu.n = c(2,2,2), sr = c(.4,.4,.4),
+
     beta.direct = matrix(0, 2,2),
     pond = pond_obs, bpop = bpop_obs,
     log_pond_alpha=0, log_pond_ddp=0, log_pond_prec=0, log_pond_temp=0, log_pond_sd=1, 
@@ -1228,7 +1202,7 @@ nimble.parms <- c(
   'log_ar_tegc_nh', 'log_ar_tegc_pr', 
   'log_ar_sd', 
   'log_bpop0_sd', 'log_bpop_sd', 
-  'pcap_a', 'pcap_j',
+  'pcap_a', 'pcap_j','sr',
   'f_jf','f_af','f_jm','f_am',
   'NAF','NAM','N1F','N1M','N2F','N2M','N','TN','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall',
   'N2M_AK_AK',  'N2M_NH_AK',  'N2M_PR_AK',  'N2F_AK_AK',  'N2F_NH_AK',  'N2F_PR_AK',  
@@ -1300,7 +1274,7 @@ nimble.model$simulate(c('log_pond','log_pond_mu','pond','logit_sur_mean_region',
                      'mv_pr_pr','log_bpop_ak_mu','im_ak','em_ak','epsilon_ak','log_bpop_nh_mu','im_nh','em_nh',
                      'epsilon_nh','log_bpop_pr_mu','im_pr','em_pr','epsilon_pr',
                      'NAF','NAM','N1F','N1M','N2F','N2M','N','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall',
-                     'f_af', 'f_am', 'f_jf', 'f_jm',
+                     'f_af', 'f_am', 'f_jf', 'f_jm','sr',
                      'N2M_AK_AK',  'N2M_NH_AK',  'N2M_PR_AK',  'N2F_AK_AK',  'N2F_NH_AK',  'N2F_PR_AK',  
                      'N1M_AK_AK',  'N1M_NH_AK',  'N1M_PR_AK',  'N1F_AK_AK',  'N1F_NH_AK',  'N1F_PR_AK',  
                      'N2M_AK_NH',  'N2M_NH_NH',  'N2M_PR_NH',  'N2F_AK_NH',  'N2F_NH_NH',  'N2F_PR_NH', 
@@ -1357,7 +1331,7 @@ mcmc_Conf$addSampler(target = c('logit_sur_tepc_mu','logit_sur_tepc_sd_cohort','
 modelMCMC  <- buildMCMC(mcmc_Conf)
 CmodelMCMC <- compileNimble(modelMCMC,project = nimble.model)
 
-CmodelMCMC$run(2500, reset = FALSE)
+CmodelMCMC$run(5000, reset = FALSE, thin2 = 2)
 
 return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
              as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
@@ -1373,6 +1347,25 @@ samples2 <- list(chain1 =   out[[1]][[1]][-1,],
 samples1    <- list(chain1 =   out[[1]][[2]][-1,], 
                     chain2 =   out[[2]][[2]][-1,], 
                     chain3 =   out[[3]][[2]][-1,])
+
+mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
+mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
+
+
+out2 <- clusterEvalQ(cl_new5, {
+  CmodelMCMC$run(75000, reset = FALSE)
+  return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
+               as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
+})
+
+
+samples2 <- list(chain1 =   out2[[1]][[1]][-1,], 
+                 chain2 =   out2[[2]][[1]][-1,], 
+                 chain3 =   out2[[3]][[1]][-1,])
+
+samples1    <- list(chain1 =   out2[[1]][[2]][-1,], 
+                    chain2 =   out2[[2]][[2]][-1,], 
+                    chain3 =   out2[[3]][[2]][-1,])
 
 mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
 mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
