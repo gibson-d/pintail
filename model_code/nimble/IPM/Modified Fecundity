@@ -150,7 +150,7 @@ temp_pc <- temp[4,(nyear_all-nyear+1):(nyear_all+1)]
 temp_gc <- temp[5,(nyear_all-nyear+1):(nyear_all+1)]
 
 #======================
-# define model in Jags
+# define model in Nimble
 #======================
 pt_ipm <- nimbleCode({
   # Priors
