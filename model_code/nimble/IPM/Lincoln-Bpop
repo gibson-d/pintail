@@ -1,0 +1,1385 @@
+rm(list=ls())
+library(boot)
+library(jagsUI)
+setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
+
+years_all <- 1961:2019
+nyear_all <- length(years_all)
+areas <- c('AK', 'NH', 'PR')
+narea <- length(areas)
+cohos <- c('af', 'am', 'jf', 'jm')
+ncoho <- length(cohos)
+
+nyear <- 59 # 20 for test, 59 for all
+years <- years_all[(nyear_all-nyear+1):nyear_all]
+nyear_use <- 10 # number of years used in M-array
+
+
+# continental <- read.csv("continental.csv") # this file includes Canadian recoveries (but needs Cdn harvest added)
+# this file excludes Canadian recoveries and harvest, but uses Canadian bandings
+continental <- read.csv("US_harvest_recoveries.csv") 
+continental <- continental[,-c(1)] # drop counter variable
+preseason   <- subset(continental, age!=3)
+summary(continental)
+
+reporting <- read.csv("Estimated reporting rates, MALL & NOPI, 1948 to 2010.csv",header=TRUE)
+reporting <- subset(reporting, year >= 1961)
+MU_R1 <- reporting$NOPI.rho
+SD_R1 <- reporting$NOPI.rho.SD
+
+MU_R <- c(MU_R1, rep(MU_R1[50], 9))
+SD_R <- c(SD_R1, rep(SD_R1[50], 9))
+
+H_F1 <- subset(preseason, age  < 2 & sex == 2) 
+H_F2 <- subset(preseason, age  >= 2 & sex == 2) 
+H_M1 <- subset(preseason, age  < 2 & sex == 1) 
+H_M2 <- subset(preseason, age  >= 2 & sex == 1) 
+
+#==============
+# Read in data
+#==============
+# 1. Breeding population size
+load('bpop.RData')
+bpop_obs_all <- as.matrix(bpop$bpop_obs[,-1]) / 1e6
+bpop_se_all <- as.matrix(bpop$bpop_se[,-1]) / 1e6
+
+bpop_obs_all[2,1] <- mean(bpop_obs_all[2,2:6]) # fix the weird value in Northern Habitat, year 1961
+bpop_se_all[2,1] <- mean(bpop_se_all[2,2:6]) # fix the weird value in Northern Habitat, year 1961
+
+bpop_obs <- bpop_obs_all[,(nyear_all-nyear+1):nyear_all]
+bpop_se <- bpop_se_all[,(nyear_all-nyear+1):nyear_all]
+
+log_bpop_mean <- apply(log(bpop_obs), 1, mean, na.rm=T)
+log_bpop_se <- apply(log(bpop_obs), 1, sd, na.rm=T)
+log_bpop0 <- log(bpop_obs[,1])
+
+# 2. Joint live- and dead-encounter data (in M-array)
+load('marr.RData')
+marr_all <- marr
+marr_af_all <- marr_all[,,,'af']
+marr_am_all <- marr_all[,,,'am']
+marr_jf_all <- marr_all[,,,'jf']
+marr_jm_all <- marr_all[,,,'jm']
+
+marr_af_use <- marr_af_all[,((nyear_all-nyear)*4+1):(nyear_all*4+1),(nyear_all-nyear+1):nyear_all]
+marr_am_use <- marr_am_all[,((nyear_all-nyear)*4+1):(nyear_all*4+1),(nyear_all-nyear+1):nyear_all]
+marr_jf_use <- marr_jf_all[,((nyear_all-nyear)*4+1):(nyear_all*4+1),(nyear_all-nyear+1):nyear_all]
+marr_jm_use <- marr_jm_all[,((nyear_all-nyear)*4+1):(nyear_all*4+1),(nyear_all-nyear+1):nyear_all]
+
+marr_af <- marr_am <- marr_jf <- marr_jm <- array(0, dim=c(nyear, (nyear_use-1)*(narea+1)+3, narea))
+
+for (i in 1:narea) {
+  for (t in 1:(nyear-nyear_use+1)) {
+    marr_af[t,1,i] <- sum(marr_af_use[i,paste(years[t], areas, sep='_'),t])
+    marr_af[t,2,i] <- marr_af_use[i,paste(years[t], 'dead', sep='_'),t]
+    marr_am[t,1,i] <- sum(marr_am_use[i,paste(years[t], areas, sep='_'),t])
+    marr_am[t,2,i] <- marr_am_use[i,paste(years[t], 'dead', sep='_'),t]
+    marr_jf[t,1,i] <- sum(marr_jf_use[i,paste(years[t], areas, sep='_'),t])
+    marr_jf[t,2,i] <- marr_jf_use[i,paste(years[t], 'dead', sep='_'),t]
+    marr_jm[t,1,i] <- sum(marr_jm_use[i,paste(years[t], areas, sep='_'),t])
+    marr_jm[t,2,i] <- marr_jm_use[i,paste(years[t], 'dead', sep='_'),t]
+    for (s in 2:nyear_use) {
+      marr_af[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_af_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+      marr_am[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_am_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+      marr_jf[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_jf_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+      marr_jm[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_jm_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+    } # s
+    marr_af[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_af_use[i,,t]) - sum(marr_af[t,1:((nyear_use-1)*(narea+1)+2),i])
+    marr_am[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_am_use[i,,t]) - sum(marr_am[t,1:((nyear_use-1)*(narea+1)+2),i])
+    marr_jf[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_jf_use[i,,t]) - sum(marr_jf[t,1:((nyear_use-1)*(narea+1)+2),i])
+    marr_jm[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_jm_use[i,,t]) - sum(marr_jm[t,1:((nyear_use-1)*(narea+1)+2),i])
+  } # t
+  
+  for (t in (nyear-nyear_use+2):(nyear-1)) {
+    marr_af[t,1,i] <- sum(marr_af_use[i,paste(years[t], areas, sep='_'),t])
+    marr_af[t,2,i] <- marr_af_use[i,paste(years[t], 'dead', sep='_'),t]
+    marr_am[t,1,i] <- sum(marr_am_use[i,paste(years[t], areas, sep='_'),t])
+    marr_am[t,2,i] <- marr_am_use[i,paste(years[t], 'dead', sep='_'),t]
+    marr_jf[t,1,i] <- sum(marr_jf_use[i,paste(years[t], areas, sep='_'),t])
+    marr_jf[t,2,i] <- marr_jf_use[i,paste(years[t], 'dead', sep='_'),t]
+    marr_jm[t,1,i] <- sum(marr_jm_use[i,paste(years[t], areas, sep='_'),t])
+    marr_jm[t,2,i] <- marr_jm_use[i,paste(years[t], 'dead', sep='_'),t]
+    for (s in 2:(nyear-t+1)) {
+      marr_af[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_af_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+      marr_am[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_am_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+      marr_jf[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_jf_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+      marr_jm[t,(narea+1)*(s-2)+1:(narea+1)+2,i] <- marr_jm_use[i,paste(years[t+s-1], c(areas,'dead'), sep='_'),t]
+    } # s
+    marr_af[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_af_use[i,,t]) - sum(marr_af[t,1:((nyear_use-1)*(narea+1)+2),i])
+    marr_am[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_am_use[i,,t]) - sum(marr_am[t,1:((nyear_use-1)*(narea+1)+2),i])
+    marr_jf[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_jf_use[i,,t]) - sum(marr_jf[t,1:((nyear_use-1)*(narea+1)+2),i])
+    marr_jm[t,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_jm_use[i,,t]) - sum(marr_jm[t,1:((nyear_use-1)*(narea+1)+2),i])
+  } # t
+  
+  marr_af[nyear,1,i] <- sum(marr_af_use[i,paste(years[nyear], areas, sep='_'),nyear])
+  marr_af[nyear,2,i] <- marr_af_use[i,paste(years[nyear], 'dead', sep='_'),nyear]
+  marr_af[nyear,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_af_use[i,,nyear]) - sum(marr_af[nyear,1:((nyear_use-1)*narea+2),i])
+  marr_am[nyear,1,i] <- sum(marr_am_use[i,paste(years[nyear], areas, sep='_'),nyear])
+  marr_am[nyear,2,i] <- marr_am_use[i,paste(years[nyear], 'dead', sep='_'),nyear]
+  marr_am[nyear,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_am_use[i,,nyear]) - sum(marr_am[nyear,1:((nyear_use-1)*narea+2),i])
+  marr_jf[nyear,1,i] <- sum(marr_jf_use[i,paste(years[nyear], areas, sep='_'),nyear])
+  marr_jf[nyear,2,i] <- marr_jf_use[i,paste(years[nyear], 'dead', sep='_'),nyear]
+  marr_jf[nyear,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_jf_use[i,,nyear]) - sum(marr_jf[nyear,1:((nyear_use-1)*narea+2),i])
+  marr_jm[nyear,1,i] <- sum(marr_jm_use[i,paste(years[nyear], areas, sep='_'),nyear])
+  marr_jm[nyear,2,i] <- marr_jm_use[i,paste(years[nyear], 'dead', sep='_'),nyear]
+  marr_jm[nyear,(nyear_use-1)*(narea+1)+3,i] <- sum(marr_jm_use[i,,nyear]) - sum(marr_jm[nyear,1:((nyear_use-1)*narea+2),i])
+} # i
+
+nband_af <- apply(marr_af_use, c(1,3), sum)
+nband_am <- apply(marr_am_use, c(1,3), sum)
+nband_jf <- apply(marr_jf_use, c(1,3), sum)
+nband_jm <- apply(marr_jm_use, c(1,3), sum)
+nband_jf_af <- nband_jf + nband_af
+
+# 3. Environmental covariates
+load('pond.RData')
+pond_obs <- pond$pond_obs / 1e6
+pond_se <- pond$pond_se / 1e6
+pond_obs <- pond_obs[(nyear_all-nyear+1):nyear_all]
+pond_se <- pond_se[(nyear_all-nyear+1):nyear_all]
+log_pond_mean <- mean(log(pond_obs))
+log_pond_se <- sd(log(pond_obs))
+
+load('crop.RData')
+crop_all <- crop$crop
+crop <- crop_all[(nyear_all-nyear+1):nyear_all]
+crop <- (crop - min(crop)) / (max(crop) - min(crop)) * 4 - 2
+
+load('clim.RData')
+prec_spr <- log(as.matrix(clim$prec_spr[,-1]))
+prec_win <- log(as.matrix(clim$prec_win[,-1]))
+temp_spr <- as.matrix(clim$temp_spr[,-1])
+temp_win <- as.matrix(clim$temp_win[,-1])
+prec <- rbind(prec_spr, prec_win)
+temp <- rbind(temp_spr, temp_win)
+
+for (i in 1:dim(prec)[1]) {
+  prec[i,] <- (prec[i,] - mean(prec[i,])) / sd(prec[i,])
+  temp[i,] <- (temp[i,] - mean(temp[i,])) / sd(temp[i,])
+}
+
+prec_ak <- prec[1,(nyear_all-nyear+1):nyear_all]
+prec_nh <- prec[2,(nyear_all-nyear+1):nyear_all]
+prec_pr <- prec[3,(nyear_all-nyear+1):nyear_all]
+prec_pc <- prec[4,(nyear_all-nyear+1):(nyear_all+1)]
+prec_gc <- prec[5,(nyear_all-nyear+1):(nyear_all+1)]
+
+temp_ak <- temp[1,(nyear_all-nyear+1):nyear_all]
+temp_nh <- temp[2,(nyear_all-nyear+1):nyear_all]
+temp_pr <- temp[3,(nyear_all-nyear+1):nyear_all]
+temp_pc <- temp[4,(nyear_all-nyear+1):(nyear_all+1)]
+temp_gc <- temp[5,(nyear_all-nyear+1):(nyear_all+1)]
+
+#======================
+# define model in Nimble
+#======================
+
+# Note: Density-dependence is flagged out of the model (7/22/22) until I resolve 'what' densities are.
+
+pt_ipm <- nimbleCode({
+  # Priors
+  ### Pond
+  log_pond_alpha ~ dnorm(0, sd = 4)
+    log_pond_ddp ~ dnorm(0, sd = 4)
+   log_pond_prec ~ dnorm(0, sd = 4)
+   log_pond_temp ~ dnorm(0, sd = 4)
+     log_pond_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
+     log_pond[1] ~ dnorm(0, sd = 4)
+  for (t in 2:nyear) {
+    log_pond_mu[t-1] <- log_pond_alpha + log_pond_ddp * log_pond[t-1] + log_pond_prec * prec_pr[t] + log_pond_temp * temp_pr[t]
+         log_pond[t] ~ dnorm(log_pond_mu[t-1], sd = log_pond_sd)
+  } # t
+
+  for (t in 1:nyear) {
+    pond[t] <- exp(log_pond[t])
+  } # t
+
+  ### Survival
+  ##### Mean
+  logit_sur_mean_mu ~ dlogis(0,1)
+  logit_sur_mean_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_mean_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_mean_region[i] ~ dnorm(0, sd = logit_sur_mean_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_mean_cohort[k] ~ dnorm(0, sd = logit_sur_mean_sd_cohort)
+  } # k
+  logit_sur_mean_ak_af <- logit_sur_mean_mu + logit_sur_mean_region[1] + logit_sur_mean_cohort[1]
+  logit_sur_mean_ak_am <- logit_sur_mean_mu + logit_sur_mean_region[1] + logit_sur_mean_cohort[2]
+  logit_sur_mean_ak_jf <- logit_sur_mean_mu + logit_sur_mean_region[1] + logit_sur_mean_cohort[3]
+  logit_sur_mean_ak_jm <- logit_sur_mean_mu + logit_sur_mean_region[1] + logit_sur_mean_cohort[4]
+  logit_sur_mean_nh_af <- logit_sur_mean_mu + logit_sur_mean_region[2] + logit_sur_mean_cohort[1]
+  logit_sur_mean_nh_am <- logit_sur_mean_mu + logit_sur_mean_region[2] + logit_sur_mean_cohort[2]
+  logit_sur_mean_nh_jf <- logit_sur_mean_mu + logit_sur_mean_region[2] + logit_sur_mean_cohort[3]
+  logit_sur_mean_nh_jm <- logit_sur_mean_mu + logit_sur_mean_region[2] + logit_sur_mean_cohort[4]
+  logit_sur_mean_pr_af <- logit_sur_mean_mu + logit_sur_mean_region[3] + logit_sur_mean_cohort[1]
+  logit_sur_mean_pr_am <- logit_sur_mean_mu + logit_sur_mean_region[3] + logit_sur_mean_cohort[2]
+  logit_sur_mean_pr_jf <- logit_sur_mean_mu + logit_sur_mean_region[3] + logit_sur_mean_cohort[3]
+  logit_sur_mean_pr_jm <- logit_sur_mean_mu + logit_sur_mean_region[3] + logit_sur_mean_cohort[4]
+
+  ##### Density dependence
+  logit_sur_bpop_mu ~ dlogis(0,1)
+  logit_sur_bpop_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_bpop_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_bpop_region[i] ~ dnorm(0, sd = logit_sur_bpop_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_bpop_cohort[k] ~ dnorm(0, sd = logit_sur_bpop_sd_cohort)
+  } # k
+  logit_sur_bpop_ak_af <- logit_sur_bpop_mu + logit_sur_bpop_region[1] + logit_sur_bpop_cohort[1]
+  logit_sur_bpop_ak_am <- logit_sur_bpop_mu + logit_sur_bpop_region[1] + logit_sur_bpop_cohort[2]
+  logit_sur_bpop_ak_jf <- logit_sur_bpop_mu + logit_sur_bpop_region[1] + logit_sur_bpop_cohort[3]
+  logit_sur_bpop_ak_jm <- logit_sur_bpop_mu + logit_sur_bpop_region[1] + logit_sur_bpop_cohort[4]
+  logit_sur_bpop_nh_af <- logit_sur_bpop_mu + logit_sur_bpop_region[2] + logit_sur_bpop_cohort[1]
+  logit_sur_bpop_nh_am <- logit_sur_bpop_mu + logit_sur_bpop_region[2] + logit_sur_bpop_cohort[2]
+  logit_sur_bpop_nh_jf <- logit_sur_bpop_mu + logit_sur_bpop_region[2] + logit_sur_bpop_cohort[3]
+  logit_sur_bpop_nh_jm <- logit_sur_bpop_mu + logit_sur_bpop_region[2] + logit_sur_bpop_cohort[4]
+  logit_sur_bpop_pr_af <- logit_sur_bpop_mu + logit_sur_bpop_region[3] + logit_sur_bpop_cohort[1]
+  logit_sur_bpop_pr_am <- logit_sur_bpop_mu + logit_sur_bpop_region[3] + logit_sur_bpop_cohort[2]
+  logit_sur_bpop_pr_jf <- logit_sur_bpop_mu + logit_sur_bpop_region[3] + logit_sur_bpop_cohort[3]
+  logit_sur_bpop_pr_jm <- logit_sur_bpop_mu + logit_sur_bpop_region[3] + logit_sur_bpop_cohort[4]
+
+  ##### Pond effect, Prairie
+  logit_sur_pond_mu ~ dlogis(0,1)
+  logit_sur_pond_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (k in 1:ncoho) {
+    logit_sur_pond_cohort[k] ~ dnorm(0, sd = logit_sur_pond_sd_cohort)
+  } # k
+  logit_sur_pond_pr_af <- logit_sur_pond_mu + logit_sur_pond_cohort[1]
+  logit_sur_pond_pr_am <- logit_sur_pond_mu + logit_sur_pond_cohort[2]
+  logit_sur_pond_pr_jf <- logit_sur_pond_mu + logit_sur_pond_cohort[3]
+  logit_sur_pond_pr_jm <- logit_sur_pond_mu + logit_sur_pond_cohort[4]
+
+  ##### Precipitation effect, Alaska & Northern habitat
+  logit_sur_prec_mu ~ dlogis(0,1)
+  logit_sur_prec_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_prec_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_prec_region[i] ~ dnorm(0, sd = logit_sur_prec_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_prec_cohort[k] ~ dnorm(0, sd = logit_sur_prec_sd_cohort)
+  } # k
+  logit_sur_prec_ak_af <- logit_sur_prec_mu + logit_sur_prec_region[1] + logit_sur_prec_cohort[1]
+  logit_sur_prec_ak_am <- logit_sur_prec_mu + logit_sur_prec_region[1] + logit_sur_prec_cohort[2]
+  logit_sur_prec_ak_jf <- logit_sur_prec_mu + logit_sur_prec_region[1] + logit_sur_prec_cohort[3]
+  logit_sur_prec_ak_jm <- logit_sur_prec_mu + logit_sur_prec_region[1] + logit_sur_prec_cohort[4]
+  logit_sur_prec_nh_af <- logit_sur_prec_mu + logit_sur_prec_region[2] + logit_sur_prec_cohort[1]
+  logit_sur_prec_nh_am <- logit_sur_prec_mu + logit_sur_prec_region[2] + logit_sur_prec_cohort[2]
+  logit_sur_prec_nh_jf <- logit_sur_prec_mu + logit_sur_prec_region[2] + logit_sur_prec_cohort[3]
+  logit_sur_prec_nh_jm <- logit_sur_prec_mu + logit_sur_prec_region[2] + logit_sur_prec_cohort[4]
+
+  ##### Temperature effect, Alaska & Northern habitat
+  logit_sur_temp_mu ~ dlogis(0,1)
+  logit_sur_temp_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_temp_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_temp_region[i] ~ dnorm(0, sd = logit_sur_temp_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_temp_cohort[k] ~ dnorm(0, sd = logit_sur_temp_sd_cohort)
+  } # k
+  logit_sur_temp_ak_af <- logit_sur_temp_mu + logit_sur_temp_region[1] + logit_sur_temp_cohort[1]
+  logit_sur_temp_ak_am <- logit_sur_temp_mu + logit_sur_temp_region[1] + logit_sur_temp_cohort[2]
+  logit_sur_temp_ak_jf <- logit_sur_temp_mu + logit_sur_temp_region[1] + logit_sur_temp_cohort[3]
+  logit_sur_temp_ak_jm <- logit_sur_temp_mu + logit_sur_temp_region[1] + logit_sur_temp_cohort[4]
+  logit_sur_temp_nh_af <- logit_sur_temp_mu + logit_sur_temp_region[2] + logit_sur_temp_cohort[1]
+  logit_sur_temp_nh_am <- logit_sur_temp_mu + logit_sur_temp_region[2] + logit_sur_temp_cohort[2]
+  logit_sur_temp_nh_jf <- logit_sur_temp_mu + logit_sur_temp_region[2] + logit_sur_temp_cohort[3]
+  logit_sur_temp_nh_jm <- logit_sur_temp_mu + logit_sur_temp_region[2] + logit_sur_temp_cohort[4]
+
+  ##### Precipitation effect, Pacific Coast
+  logit_sur_prpc_mu ~ dlogis(0,1)
+  logit_sur_prpc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_prpc_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_prpc_region[i] ~ dnorm(0, sd = logit_sur_prpc_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_prpc_cohort[k] ~ dnorm(0, sd = logit_sur_prpc_sd_cohort)
+  } # k
+  logit_sur_prpc_ak_af <- logit_sur_prpc_mu + logit_sur_prpc_region[1] + logit_sur_prpc_cohort[1]
+  logit_sur_prpc_ak_am <- logit_sur_prpc_mu + logit_sur_prpc_region[1] + logit_sur_prpc_cohort[2]
+  logit_sur_prpc_ak_jf <- logit_sur_prpc_mu + logit_sur_prpc_region[1] + logit_sur_prpc_cohort[3]
+  logit_sur_prpc_ak_jm <- logit_sur_prpc_mu + logit_sur_prpc_region[1] + logit_sur_prpc_cohort[4]
+  logit_sur_prpc_nh_af <- logit_sur_prpc_mu + logit_sur_prpc_region[2] + logit_sur_prpc_cohort[1]
+  logit_sur_prpc_nh_am <- logit_sur_prpc_mu + logit_sur_prpc_region[2] + logit_sur_prpc_cohort[2]
+  logit_sur_prpc_nh_jf <- logit_sur_prpc_mu + logit_sur_prpc_region[2] + logit_sur_prpc_cohort[3]
+  logit_sur_prpc_nh_jm <- logit_sur_prpc_mu + logit_sur_prpc_region[2] + logit_sur_prpc_cohort[4]
+  logit_sur_prpc_pr_af <- logit_sur_prpc_mu + logit_sur_prpc_region[3] + logit_sur_prpc_cohort[1]
+  logit_sur_prpc_pr_am <- logit_sur_prpc_mu + logit_sur_prpc_region[3] + logit_sur_prpc_cohort[2]
+  logit_sur_prpc_pr_jf <- logit_sur_prpc_mu + logit_sur_prpc_region[3] + logit_sur_prpc_cohort[3]
+  logit_sur_prpc_pr_jm <- logit_sur_prpc_mu + logit_sur_prpc_region[3] + logit_sur_prpc_cohort[4]
+
+  ##### Temperature effect, Pacific Coast
+  logit_sur_tepc_mu~ dlogis(0,1)
+  logit_sur_tepc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_tepc_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_tepc_region[i] ~ dnorm(0, sd = logit_sur_tepc_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_tepc_cohort[k] ~ dnorm(0, sd = logit_sur_tepc_sd_cohort)
+  } # k
+  logit_sur_tepc_ak_af <- logit_sur_tepc_mu + logit_sur_tepc_region[1] + logit_sur_tepc_cohort[1]
+  logit_sur_tepc_ak_am <- logit_sur_tepc_mu + logit_sur_tepc_region[1] + logit_sur_tepc_cohort[2]
+  logit_sur_tepc_ak_jf <- logit_sur_tepc_mu + logit_sur_tepc_region[1] + logit_sur_tepc_cohort[3]
+  logit_sur_tepc_ak_jm <- logit_sur_tepc_mu + logit_sur_tepc_region[1] + logit_sur_tepc_cohort[4]
+  logit_sur_tepc_nh_af <- logit_sur_tepc_mu + logit_sur_tepc_region[2] + logit_sur_tepc_cohort[1]
+  logit_sur_tepc_nh_am <- logit_sur_tepc_mu + logit_sur_tepc_region[2] + logit_sur_tepc_cohort[2]
+  logit_sur_tepc_nh_jf <- logit_sur_tepc_mu + logit_sur_tepc_region[2] + logit_sur_tepc_cohort[3]
+  logit_sur_tepc_nh_jm <- logit_sur_tepc_mu + logit_sur_tepc_region[2] + logit_sur_tepc_cohort[4]
+  logit_sur_tepc_pr_af <- logit_sur_tepc_mu + logit_sur_tepc_region[3] + logit_sur_tepc_cohort[1]
+  logit_sur_tepc_pr_am <- logit_sur_tepc_mu + logit_sur_tepc_region[3] + logit_sur_tepc_cohort[2]
+  logit_sur_tepc_pr_jf <- logit_sur_tepc_mu + logit_sur_tepc_region[3] + logit_sur_tepc_cohort[3]
+  logit_sur_tepc_pr_jm <- logit_sur_tepc_mu + logit_sur_tepc_region[3] + logit_sur_tepc_cohort[4]
+
+  ##### Precipitation effect, Gulf Coast, Northern habitat & Prairie
+  logit_sur_prgc_mu ~ dlogis(0,1)
+  logit_sur_prgc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_prgc_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+
+  for (i in 1:narea) {
+    logit_sur_prgc_region[i] ~ dnorm(0, sd = logit_sur_prgc_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_prgc_cohort[k] ~ dnorm(0, sd = logit_sur_prgc_sd_cohort)
+  } # k
+  logit_sur_prgc_nh_af <- logit_sur_prgc_mu + logit_sur_prgc_region[2] + logit_sur_prgc_cohort[1]
+  logit_sur_prgc_nh_am <- logit_sur_prgc_mu + logit_sur_prgc_region[2] + logit_sur_prgc_cohort[2]
+  logit_sur_prgc_nh_jf <- logit_sur_prgc_mu + logit_sur_prgc_region[2] + logit_sur_prgc_cohort[3]
+  logit_sur_prgc_nh_jm <- logit_sur_prgc_mu + logit_sur_prgc_region[2] + logit_sur_prgc_cohort[4]
+  logit_sur_prgc_pr_af <- logit_sur_prgc_mu + logit_sur_prgc_region[3] + logit_sur_prgc_cohort[1]
+  logit_sur_prgc_pr_am <- logit_sur_prgc_mu + logit_sur_prgc_region[3] + logit_sur_prgc_cohort[2]
+  logit_sur_prgc_pr_jf <- logit_sur_prgc_mu + logit_sur_prgc_region[3] + logit_sur_prgc_cohort[3]
+  logit_sur_prgc_pr_jm <- logit_sur_prgc_mu + logit_sur_prgc_region[3] + logit_sur_prgc_cohort[4]
+
+  ##### Temperature effect, Gulf Coast, Northern habitat & Prairie
+  logit_sur_tegc_mu ~ dlogis(0,1)
+  logit_sur_tegc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  logit_sur_tegc_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    logit_sur_tegc_region[i] ~ dnorm(0, sd = logit_sur_tegc_sd_region)
+  } # i
+  for (k in 1:ncoho) {
+    logit_sur_tegc_cohort[k] ~ dnorm(0, sd = logit_sur_tegc_sd_cohort)
+  } # k
+  logit_sur_tegc_nh_af <- logit_sur_tegc_mu + logit_sur_tegc_region[2] + logit_sur_tegc_cohort[1]
+  logit_sur_tegc_nh_am <- logit_sur_tegc_mu + logit_sur_tegc_region[2] + logit_sur_tegc_cohort[2]
+  logit_sur_tegc_nh_jf <- logit_sur_tegc_mu + logit_sur_tegc_region[2] + logit_sur_tegc_cohort[3]
+  logit_sur_tegc_nh_jm <- logit_sur_tegc_mu + logit_sur_tegc_region[2] + logit_sur_tegc_cohort[4]
+  logit_sur_tegc_pr_af <- logit_sur_tegc_mu + logit_sur_tegc_region[3] + logit_sur_tegc_cohort[1]
+  logit_sur_tegc_pr_am <- logit_sur_tegc_mu + logit_sur_tegc_region[3] + logit_sur_tegc_cohort[2]
+  logit_sur_tegc_pr_jf <- logit_sur_tegc_mu + logit_sur_tegc_region[3] + logit_sur_tegc_cohort[3]
+  logit_sur_tegc_pr_jm <- logit_sur_tegc_mu + logit_sur_tegc_region[3] + logit_sur_tegc_cohort[4]
+
+  ##### Residuals
+  logit_sur_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
+
+  ##### Yearly survival
+  for (t in 1:nyear) {
+    # Alaska
+    logit_sur_mu_ak_af[t] <- 
+      logit_sur_mean_ak_af + 
+      #logit_sur_bpop_ak_af * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      logit_sur_prec_ak_af * prec_ak[t] + 
+      logit_sur_temp_ak_af * temp_ak[t] + 
+      logit_sur_prpc_ak_af * prec_pc[t+1] + 
+      logit_sur_tepc_ak_af * temp_pc[t+1]
+    logit_sur_mu_ak_am[t] <- 
+      logit_sur_mean_ak_am + 
+      #logit_sur_bpop_ak_am * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      logit_sur_prec_ak_am * prec_ak[t] + 
+      logit_sur_temp_ak_am * temp_ak[t] + 
+      logit_sur_prpc_ak_am * prec_pc[t+1] + 
+      logit_sur_tepc_ak_am * temp_pc[t+1]
+    logit_sur_mu_ak_jf[t] <- 
+      logit_sur_mean_ak_jf + 
+      #logit_sur_bpop_ak_jf * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      logit_sur_prec_ak_jf * prec_ak[t] + 
+      logit_sur_temp_ak_jf * temp_ak[t] + 
+      logit_sur_prpc_ak_jf * prec_pc[t+1] + 
+      logit_sur_tepc_ak_jf * temp_pc[t+1]
+    logit_sur_mu_ak_jm[t] <- 
+      logit_sur_mean_ak_jm + 
+      #logit_sur_bpop_ak_jm * (logBP[2,t] - log_bpop_mean[1]) / log_bpop_se[1] + 
+      logit_sur_prec_ak_jm * prec_ak[t] + 
+      logit_sur_temp_ak_jm * temp_ak[t] + 
+      logit_sur_prpc_ak_jm * prec_pc[t+1] + 
+      logit_sur_tepc_ak_jm * temp_pc[t+1]
+
+    # Northern habitat
+    logit_sur_mu_nh_af[t] <- 
+      logit_sur_mean_nh_af + 
+      #logit_sur_bpop_nh_af * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      logit_sur_prec_nh_af * prec_nh[t] + 
+      logit_sur_temp_nh_af * temp_nh[t] + 
+      logit_sur_prpc_nh_af * prec_pc[t+1] + 
+      logit_sur_tepc_nh_af * temp_pc[t+1] + 
+      logit_sur_prgc_nh_af * prec_gc[t+1] + 
+      logit_sur_tegc_nh_af * temp_gc[t+1]
+    logit_sur_mu_nh_am[t] <- 
+      logit_sur_mean_nh_am + 
+      #logit_sur_bpop_nh_am * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      logit_sur_prec_nh_am * prec_nh[t] + 
+      logit_sur_temp_nh_am * temp_nh[t] + 
+      logit_sur_prpc_nh_am * prec_pc[t+1] + 
+      logit_sur_tepc_nh_am * temp_pc[t+1] + 
+      logit_sur_prgc_nh_am * prec_gc[t+1] + 
+      logit_sur_tegc_nh_am * temp_gc[t+1]
+    logit_sur_mu_nh_jf[t] <- 
+      logit_sur_mean_nh_jf + 
+      #logit_sur_bpop_nh_jf * (logBP[2,t] - log_bpop_mean[2]) / log_bpop_se[2] + 
+      logit_sur_prec_nh_jf * prec_nh[t] + 
+      logit_sur_temp_nh_jf * temp_nh[t] + 
+      logit_sur_prpc_nh_jf * prec_pc[t+1] + 
+      logit_sur_tepc_nh_jf * temp_pc[t+1] + 
+      logit_sur_prgc_nh_jf * prec_gc[t+1] + 
+      logit_sur_tegc_nh_jf * temp_gc[t+1]
+    logit_sur_mu_nh_jm[t] <- 
+      logit_sur_mean_nh_jm + 
+      #logit_sur_bpop_nh_jm * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      logit_sur_prec_nh_jm * prec_nh[t] + 
+      logit_sur_temp_nh_jm * temp_nh[t] + 
+      logit_sur_prpc_nh_jm * prec_pc[t+1] + 
+      logit_sur_tepc_nh_jm * temp_pc[t+1] + 
+      logit_sur_prgc_nh_jm * prec_gc[t+1] + 
+      logit_sur_tegc_nh_jm * temp_gc[t+1]
+
+    # Prairie
+    logit_sur_mu_pr_af[t] <- 
+      logit_sur_mean_pr_af + 
+      #logit_sur_bpop_pr_af * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
+      logit_sur_pond_pr_af * (log_pond[t] - log_pond_mean) / log_pond_se + 
+      logit_sur_prpc_pr_af * prec_pc[t+1] + 
+      logit_sur_tepc_pr_af * temp_pc[t+1] + 
+      logit_sur_prgc_pr_af * prec_gc[t+1] + 
+      logit_sur_tegc_pr_af * temp_gc[t+1]
+    logit_sur_mu_pr_am[t] <- 
+      logit_sur_mean_pr_am + 
+      #logit_sur_bpop_pr_am * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
+      logit_sur_pond_pr_am * (log_pond[t] - log_pond_mean) / log_pond_se + 
+      logit_sur_prpc_pr_am * prec_pc[t+1] + 
+      logit_sur_tepc_pr_am * temp_pc[t+1] + 
+      logit_sur_prgc_pr_am * prec_gc[t+1] + 
+      logit_sur_tegc_pr_am * temp_gc[t+1]
+    logit_sur_mu_pr_jf[t] <- 
+      logit_sur_mean_pr_jf + 
+      #logit_sur_bpop_pr_jf * (logBP[3,t]  - log_bpop_mean[3]) / log_bpop_se[3] + 
+      logit_sur_pond_pr_jf * (log_pond[t] - log_pond_mean) / log_pond_se + 
+      logit_sur_prpc_pr_jf * prec_pc[t+1] + 
+      logit_sur_tepc_pr_jf * temp_pc[t+1] + 
+      logit_sur_prgc_pr_jf * prec_gc[t+1] + 
+      logit_sur_tegc_pr_jf * temp_gc[t+1]
+    logit_sur_mu_pr_jm[t] <- 
+      logit_sur_mean_pr_jm + 
+      #logit_sur_bpop_pr_jm * (logBP[3,t] - log_bpop_mean[3]) / log_bpop_se[3] + 
+      logit_sur_pond_pr_jm * (log_pond[t] - log_pond_mean) / log_pond_se + 
+      logit_sur_prpc_pr_jm * prec_pc[t+1] + 
+      logit_sur_tepc_pr_jm * temp_pc[t+1] + 
+      logit_sur_prgc_pr_jm * prec_gc[t+1] + 
+      logit_sur_tegc_pr_jm * temp_gc[t+1]
+  } # t
+
+  # Add residuals
+  for (t in 1:nyear) {
+    logit_sur_af[1,t] ~ dnorm(logit_sur_mu_ak_af[t], sd = logit_sur_sd)
+    logit_sur_am[1,t] ~ dnorm(logit_sur_mu_ak_am[t], sd = logit_sur_sd)
+    logit_sur_jf[1,t] ~ dnorm(logit_sur_mu_ak_jf[t], sd = logit_sur_sd)
+    logit_sur_jm[1,t] ~ dnorm(logit_sur_mu_ak_jm[t], sd = logit_sur_sd)
+    logit_sur_af[2,t] ~ dnorm(logit_sur_mu_nh_af[t], sd = logit_sur_sd)
+    logit_sur_am[2,t] ~ dnorm(logit_sur_mu_nh_am[t], sd = logit_sur_sd)
+    logit_sur_jf[2,t] ~ dnorm(logit_sur_mu_nh_jf[t], sd = logit_sur_sd)
+    logit_sur_jm[2,t] ~ dnorm(logit_sur_mu_nh_jm[t], sd = logit_sur_sd)
+    logit_sur_af[3,t] ~ dnorm(logit_sur_mu_pr_af[t], sd = logit_sur_sd)
+    logit_sur_am[3,t] ~ dnorm(logit_sur_mu_pr_am[t], sd = logit_sur_sd)
+    logit_sur_jf[3,t] ~ dnorm(logit_sur_mu_pr_jf[t], sd = logit_sur_sd)
+    logit_sur_jm[3,t] ~ dnorm(logit_sur_mu_pr_jm[t], sd = logit_sur_sd)
+  } # t
+
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      sur_af[i,t] <- ilogit(logit_sur_af[i,t])
+      sur_am[i,t] <- ilogit(logit_sur_am[i,t])
+      sur_jf[i,t] <- ilogit(logit_sur_jf[i,t])
+      sur_jm[i,t] <- ilogit(logit_sur_jm[i,t])
+        f_af[i,t] <- (1 - sur_af[i,t]) * rec_af[1,t]
+        f_am[i,t] <- (1 - sur_am[i,t]) * rec_am[1,t]
+        f_jf[i,t] <- (1 - sur_jf[i,t]) * rec_jf[t]
+        f_jm[i,t] <- (1 - sur_jm[i,t]) * rec_jm[t]
+      
+    } # t
+  } # i
+
+  ### Recovery rate
+         logit_rec_mu ~ dlogis(0,1)
+  logit_rec_sd_cohort ~ T(dt(0, pow(2.5, -2), 1),0,)
+         logit_rec_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
+
+  for (k in 1:ncoho) {
+    logit_rec_mean[k] ~ dnorm(logit_rec_mu, sd = logit_rec_sd_cohort)
+  } # k
+
+  for (t in 1:(nyear+nyear_use-1)) {
+    logit_rec_af[t] ~ dnorm(logit_rec_mean[1], sd = logit_rec_sd)
+    logit_rec_am[t] ~ dnorm(logit_rec_mean[2], sd = logit_rec_sd)
+    logit_rec_jf[t] ~ dnorm(logit_rec_mean[3], sd = logit_rec_sd)
+    logit_rec_jm[t] ~ dnorm(logit_rec_mean[4], sd = logit_rec_sd)
+    for(a in 1:2){
+          rec_af[a,t] <- ilogit(logit_rec_af[t] + beta.direct[1,a]) 
+          rec_am[a,t] <- ilogit(logit_rec_am[t] + beta.direct[2,a]) 
+    } # direct recoveries
+          rec_jf[t] <- ilogit(logit_rec_jf[t]) 
+          rec_jm[t] <- ilogit(logit_rec_jm[t]) 
+  } # t
+
+         for(j in 1:2){
+           beta.direct[j,1] ~ dlogis(0,1)
+           beta.direct[j,2] <- 0
+         }
+         
+  ### Transition probability
+  # Look into bringing ponds back into this model
+  for (i in 1:narea) {
+    rho[i,i] <- 1
+    for (j in 1:(i-1)){
+      rho[i,j] <- eta[i,j] 
+      rho[j,i] <- eta[j,i] 
+    }
+    
+    for (j in 1:narea) {
+      eta[i,j] ~ dgamma(.01, .01)
+       pi[i,j] <- rho[i,j] / sum(rho[i,1:narea])
+    } # j
+  } # i 
+
+  ### Capture probability
+  logit_pcap_a ~ dnorm(logit(.00072), 44.44)
+  logit_pcap_j ~ dnorm(logit(.00144), 90.70)
+  pcap_a <- ilogit(logit_pcap_a)
+  pcap_j <- ilogit(logit_pcap_j)  
+
+  ### Productivity
+  ##### Mean
+  log_ar_mean_mu  ~ dnorm(0, sd = 4)
+  log_ar_mean_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_mean_region[i] ~ dnorm(0, sd = log_ar_mean_sd_region)
+  } # i
+  log_ar_mean_ak <- log_ar_mean_mu + log_ar_mean_region[1]
+  log_ar_mean_nh <- log_ar_mean_mu + log_ar_mean_region[2]
+  log_ar_mean_pr <- log_ar_mean_mu + log_ar_mean_region[3]
+
+  ##### Density dependence
+  log_ar_bpop_mu  ~ dnorm(0, sd = 4)
+  log_ar_bpop_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_bpop_region[i] ~ dnorm(0, sd = log_ar_bpop_sd_region)
+  } # i
+  log_ar_bpop_ak <- log_ar_bpop_mu + log_ar_bpop_region[1]
+  log_ar_bpop_nh <- log_ar_bpop_mu + log_ar_bpop_region[2]
+  log_ar_bpop_pr <- log_ar_bpop_mu + log_ar_bpop_region[3]
+
+  ##### Pond effect, Prairie
+  log_ar_pond_pr ~ dnorm(0, sd = 4)
+
+  ##### Crop effect, Prairie
+  log_ar_crop_pr  ~ dnorm(0, sd = 4)
+
+  ##### Pond x crop effect, Prairie
+  log_ar_pocr_pr  ~ dnorm(0, sd = 4)
+
+  ##### Precipitation effect, Alaska & Northern habitat
+  log_ar_prec_mu  ~ dnorm(0, sd = 4)
+  log_ar_prec_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_prec_region[i] ~ dnorm(0, sd = log_ar_prec_sd_region)
+  } # i
+  log_ar_prec_ak <- log_ar_prec_mu + log_ar_prec_region[1]
+  log_ar_prec_nh <- log_ar_prec_mu + log_ar_prec_region[2]
+
+  ##### Temperature effect, Alaska & Northern habitat
+  log_ar_temp_mu  ~ dnorm(0, sd = 4)
+  log_ar_temp_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_temp_region[i] ~ dnorm(0, sd = log_ar_temp_sd_region)
+  } # i
+  log_ar_temp_ak <- log_ar_temp_mu + log_ar_temp_region[1]
+  log_ar_temp_nh <- log_ar_temp_mu + log_ar_temp_region[2]
+
+  ##### Precipitation effect, Pacific Coast
+  log_ar_prpc_mu  ~ dnorm(0, sd = 4)
+  log_ar_prpc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_prpc_region[i] ~ dnorm(0, sd = log_ar_prpc_sd_region)
+  } # i
+  log_ar_prpc_ak <- log_ar_prpc_mu + log_ar_prpc_region[1]
+  log_ar_prpc_nh <- log_ar_prpc_mu + log_ar_prpc_region[2]
+  log_ar_prpc_pr <- log_ar_prpc_mu + log_ar_prpc_region[3]
+
+  ##### Temperature effect, Pacific Coast
+  log_ar_tepc_mu  ~ dnorm(0, sd = 4)
+  log_ar_tepc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_tepc_region[i] ~ dnorm(0, sd = log_ar_tepc_sd_region)
+  } # i
+  log_ar_tepc_ak <- log_ar_tepc_mu + log_ar_tepc_region[1]
+  log_ar_tepc_nh <- log_ar_tepc_mu + log_ar_tepc_region[2]
+  log_ar_tepc_pr <- log_ar_tepc_mu + log_ar_tepc_region[3]
+
+  ##### Precipitation effect, Gulf Coast, Northern habitat & Prairie
+  log_ar_prgc_mu  ~ dnorm(0, sd = 4)
+  log_ar_prgc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_prgc_region[i] ~ dnorm(0, sd = log_ar_prgc_sd_region)
+  } # i
+  log_ar_prgc_nh <- log_ar_prgc_mu + log_ar_prgc_region[2]
+  log_ar_prgc_pr <- log_ar_prgc_mu + log_ar_prgc_region[3]
+
+  ##### Temperature effect, Gulf Coast, Northern habitat & Prairie
+  log_ar_tegc_mu ~ dnorm(0, sd = 4)
+  log_ar_tegc_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
+  for (i in 1:narea) {
+    log_ar_tegc_region[i] ~ dnorm(0, sd = log_ar_tegc_sd_region)
+  } # i
+  log_ar_tegc_nh <- log_ar_tegc_mu + log_ar_tegc_region[2]
+  log_ar_tegc_pr <- log_ar_tegc_mu + log_ar_tegc_region[3]
+
+  ##### Residuals
+  log_ar_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
+
+  ##### Yearly productivity
+  for (t in 1:(nyear-1)) {
+    # Alaska
+    log_ar_mu_ak[t] <- 
+      log_ar_mean_ak + 
+      #log_ar_bpop_ak * (logBP[1,t]  - log_bpop_mean[1]) / log_bpop_se[1] + 
+      log_ar_prec_ak * prec_ak[t] + 
+      log_ar_temp_ak * temp_ak[t] + 
+      log_ar_prpc_ak * prec_pc[t] + 
+      log_ar_tepc_ak * temp_pc[t]
+
+    # Northern habitat
+    log_ar_mu_nh[t] <- 
+      log_ar_mean_nh + 
+      #log_ar_bpop_nh * (logBP[2,t]  - log_bpop_mean[2]) / log_bpop_se[2] + 
+      log_ar_prec_nh * prec_nh[t] + 
+      log_ar_temp_nh * temp_nh[t] + 
+      log_ar_prpc_nh * prec_pc[t] + 
+      log_ar_tepc_nh * temp_pc[t] + 
+      log_ar_prgc_nh * prec_gc[t] + 
+      log_ar_tegc_nh * temp_gc[t]
+
+    # Prairie
+    log_ar_mu_pr[t] <- 
+      log_ar_mean_pr + 
+     # log_ar_bpop_pr * (logBP[3,t] - log_bpop_mean[3]) / log_bpop_se[3] + 
+      log_ar_pond_pr * (log_pond[t] - log_pond_mean) / log_pond_se + 
+      log_ar_crop_pr * crop[t] + 
+      log_ar_pocr_pr * (log_pond[t] - log_pond_mean) / log_pond_se * crop[t] + 
+      log_ar_prpc_pr * prec_pc[t] + 
+      log_ar_tepc_pr * temp_pc[t] + 
+      log_ar_prgc_pr * prec_gc[t] + 
+      log_ar_tegc_pr * temp_gc[t]
+  } # t
+
+  for (t in 1:(nyear-1)) {
+    log_ar[1,t] ~ dnorm(log_ar_mu_ak[t], sd = log_ar_sd)
+    log_ar[2,t] ~ dnorm(log_ar_mu_nh[t], sd = log_ar_sd)
+    log_ar[3,t] ~ dnorm(log_ar_mu_pr[t], sd = log_ar_sd)
+  } # t
+
+  for (i in 1:narea) {
+    for (t in 1:(nyear-1)) {
+      ar[i,t] <- exp(log_ar[i,t])
+    } # t
+  } # i
+
+  ### Population
+  log_bpop0_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
+   log_bpop_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
+            m <- 0.7
+
+  # Derived quantities
+  ### Cell probability of M-array data
+  ##### Adult female & male
+  for (i in 1:narea) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0
+      pt_af[t,1,i] <- 1
+      pt_af[t,2,i] <- 1 - sur_af[i,t]
+      pt_am[t,1,i] <- 1
+      pt_am[t,2,i] <- 1 - sur_am[i,t]
+
+      # s = 1
+      for (j in 1:narea) {
+        pt_af[t,2+j,i] <- sur_af[i,t] * pi[i,j]
+        pt_am[t,2+j,i] <- sur_am[i,t] * pi[i,j]
+      } # j
+      pt_af[t,2+narea+1,i] <- sur_af[i,t] * sum(pi[i,1:narea] * (1 - sur_af[1:narea,t+1]))
+      pt_am[t,2+narea+1,i] <- sur_am[i,t] * sum(pi[i,1:narea] * (1 - sur_am[1:narea,t+1]))
+
+      # s >= 2
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1:narea) {
+          pt_af[t,2+(s-1)*(narea+1)+j,i] <- sum(pt_af[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j])
+          pt_am[t,2+(s-1)*(narea+1)+j,i] <- sum(pt_am[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j])
+        } # j
+        pt_af[t,2+s*(narea+1),i] <- sum(pt_af[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_af[1:narea,t+s]))
+        pt_am[t,2+s*(narea+1),i] <- sum(pt_am[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_am[1:narea,t+s]))
+      } # s
+    } # t
+
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_af[t,1,i] <- 1
+      pt_af[t,2,i] <- 1 - sur_af[i,t]
+      pt_am[t,1,i] <- 1
+      pt_am[t,2,i] <- 1 - sur_am[i,t]
+
+      # s = 1
+      for (j in 1:narea) {
+        pt_af[t,2+j,i] <- sur_af[i,t] * pi[i,j]
+        pt_am[t,2+j,i] <- sur_am[i,t] * pi[i,j]
+      } # j
+      pt_af[t,narea+3,i] <- sur_af[i,t] * sum(pi[i,1:narea] * (1 - sur_af[1:narea,t+1]))
+      pt_am[t,narea+3,i] <- sur_am[i,t] * sum(pi[i,1:narea] * (1 - sur_am[1:narea,t+1]))
+
+      # s >= 2
+      for (s in 2:(nyear-t)) {
+         for (j in 1:narea) {
+          pt_af[t,(s-1)*(narea+1)+2+j,i] <- sum(pt_af[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j])
+          pt_am[t,(s-1)*(narea+1)+2+j,i] <- sum(pt_am[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j])
+        } # j
+        pt_af[t,s*(narea+1)+2,i] <- sum(pt_af[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_af[1:narea,t+s]))
+        pt_am[t,s*(narea+1)+2,i] <- sum(pt_am[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_am[1:narea,t+s]))
+      } # s
+      for (k in ((nyear-t)*(narea+1)+3):((nyear_use-1)*(narea+1)+2)) {
+        pt_af[t,k,i] <- 0
+        pt_am[t,k,i] <- 0
+      } # k
+    } # t
+
+    # t = nyear - 1
+    # s = 0
+    pt_af[nyear-1,1,i] <- 1
+    pt_af[nyear-1,2,i] <- 1 - sur_af[i,nyear-1]
+    pt_am[nyear-1,1,i] <- 1
+    pt_am[nyear-1,2,i] <- 1 - sur_am[i,nyear-1]
+
+    # s = 1
+    for (j in 1:narea) {
+      pt_af[nyear-1,2+j,i] <- sur_af[i,nyear-1] * pi[i,j]
+      pt_am[nyear-1,2+j,i] <- sur_am[i,nyear-1] * pi[i,j]
+    } # j
+    pt_af[nyear-1,narea+3,i] <- sur_af[i,nyear-1] * sum(pi[i,1:narea] * (1 - sur_af[1:narea,nyear]))
+    pt_am[nyear-1,narea+3,i] <- sur_am[i,nyear-1] * sum(pi[i,1:narea] * (1 - sur_am[1:narea,nyear]))
+    for (k in (narea+4):((nyear_use-1)*(narea+1)+2)) {
+      pt_af[nyear-1,k,i] <- 0
+      pt_am[nyear-1,k,i] <- 0
+    } # k
+
+    # t = nyear
+    # s = 0
+    pt_af[nyear,1,i] <- 1
+    pt_af[nyear,2,i] <- 1 - sur_af[i,nyear]
+    pt_am[nyear,1,i] <- 1
+    pt_am[nyear,2,i] <- 1 - sur_am[i,nyear]
+    for (k in 3:((nyear_use-1)*(narea+1)+2)) {
+      pt_af[nyear,k,i] <- 0
+      pt_am[nyear,k,i] <- 0
+    } # k
+  } # i
+
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      pr_af[t,1,i] <- pt_af[t,1,i] * pcap_a
+      pr_af[t,2,i] <- pt_af[t,2,i] * rec_af[1,t]
+      pr_am[t,1,i] <- pt_am[t,1,i] * pcap_a
+      pr_am[t,2,i] <- pt_am[t,2,i] * rec_am[1,t]
+      for (s in 2:nyear_use) {
+        for (j in 1:narea) {
+          pr_af[t,(s-2)*(narea+1)+2+j,i] <- pt_af[t,(s-2)*(narea+1)+2+j,i] * ((1 - pcap_a) ^ (s - 1)) * pcap_a
+          pr_am[t,(s-2)*(narea+1)+2+j,i] <- pt_am[t,(s-2)*(narea+1)+2+j,i] * ((1 - pcap_a) ^ (s - 1)) * pcap_a
+        } # j
+        pr_af[t,(s-1)*(narea+1)+2,i] <- pt_af[t,(s-1)*(narea+1)+2,i] * ((1 - pcap_a) ^ (s - 1)) * rec_af[2,t+s-1]
+        pr_am[t,(s-1)*(narea+1)+2,i] <- pt_am[t,(s-1)*(narea+1)+2,i] * ((1 - pcap_a) ^ (s - 1)) * rec_am[2,t+s-1]
+      } # s
+      pr_af[t,(nyear_use-1)*(narea+1)+3,i] <- 1 - sum(pr_af[t,1:((nyear_use-1)*(narea+1)+2),i])
+      pr_am[t,(nyear_use-1)*(narea+1)+3,i] <- 1 - sum(pr_am[t,1:((nyear_use-1)*(narea+1)+2),i])
+    } # t
+  } # i
+
+  ##### Juvenile female & male
+  for (i in 1:narea) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0
+      pt_jf[t,1,i] <- 1
+      pt_jf[t,2,i] <- 1 - sur_jf[i,t]
+      pt_jm[t,1,i] <- 1
+      pt_jm[t,2,i] <- 1 - sur_jm[i,t]
+
+      # s = 1
+      for (j in 1:narea) {
+        pt_jf[t,2+j,i] <- sur_jf[i,t] * pi[i,j]
+        pt_jm[t,2+j,i] <- sur_jm[i,t] * pi[i,j]
+      } # j
+      pt_jf[t,2+narea+1,i] <- sur_jf[i,t] * sum(pi[i,1:narea] * (1 - sur_af[1:narea,t+1]))
+      pt_jm[t,2+narea+1,i] <- sur_jm[i,t] * sum(pi[i,1:narea] * (1 - sur_am[1:narea,t+1]))
+
+      # s >= 2
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1:narea) {
+          pt_jf[t,2+(s-1)*(narea+1)+j,i] <- sum(pt_jf[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j])
+          pt_jm[t,2+(s-1)*(narea+1)+j,i] <- sum(pt_jm[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j])
+        } # j
+        pt_jf[t,2+s*(narea+1),i] <- sum(pt_jf[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_af[1:narea,t+s]))
+        pt_jm[t,2+s*(narea+1),i] <- sum(pt_jm[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_am[1:narea,t+s]))
+      } # s
+    } # t
+
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_jf[t,1,i] <- 1
+      pt_jf[t,2,i] <- 1 - sur_jf[i,t]
+      pt_jm[t,1,i] <- 1
+      pt_jm[t,2,i] <- 1 - sur_jm[i,t]
+
+      # s = 1
+      for (j in 1:narea) {
+        pt_jf[t,2+j,i] <- sur_jf[i,t] * pi[i,j]
+        pt_jm[t,2+j,i] <- sur_jm[i,t] * pi[i,j]
+      } # j
+      pt_jf[t,narea+3,i] <- sur_jf[i,t] * sum(pi[i,1:narea] * (1 - sur_af[1:narea,t+1]))
+      pt_jm[t,narea+3,i] <- sur_jm[i,t] * sum(pi[i,1:narea] * (1 - sur_am[1:narea,t+1]))
+
+      # s >= 2
+      for (s in 2:(nyear-t)) {
+         for (j in 1:narea) {
+          pt_jf[t,(s-1)*(narea+1)+2+j,i] <- sum(pt_jf[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j])
+          pt_jm[t,(s-1)*(narea+1)+2+j,i] <- sum(pt_jm[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j])
+        } # j
+        pt_jf[t,s*(narea+1)+2,i] <- sum(pt_jf[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_af[1:narea,t+s]))
+        pt_jm[t,s*(narea+1)+2,i] <- sum(pt_jm[t,((s-2)*(narea+1)+2+1):((s-2)*(narea+1)+2+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea] * (1 - sur_am[1:narea,t+s]))
+      } # s
+      for (k in ((nyear-t)*(narea+1)+3):((nyear_use-1)*(narea+1)+2)) {
+        pt_jf[t,k,i] <- 0
+        pt_jm[t,k,i] <- 0
+      } # k
+    } # t
+
+    # t = nyear - 1
+    # s = 0
+    pt_jf[nyear-1,1,i] <- 1
+    pt_jf[nyear-1,2,i] <- 1 - sur_jf[i,nyear-1]
+    pt_jm[nyear-1,1,i] <- 1
+    pt_jm[nyear-1,2,i] <- 1 - sur_jm[i,nyear-1]
+
+    # s = 1
+    for (j in 1:narea) {
+      pt_jf[nyear-1,2+j,i] <- sur_jf[i,nyear-1] * pi[i,j]
+      pt_jm[nyear-1,2+j,i] <- sur_jm[i,nyear-1] * pi[i,j]
+    } # j
+    pt_jf[nyear-1,narea+3,i] <- sur_jf[i,nyear-1] * sum(pi[i,1:narea] * (1 - sur_af[1:narea,nyear]))
+    pt_jm[nyear-1,narea+3,i] <- sur_jm[i,nyear-1] * sum(pi[i,1:narea] * (1 - sur_am[1:narea,nyear]))
+    for (k in (narea+4):((nyear_use-1)*(narea+1)+2)) {
+      pt_jf[nyear-1,k,i] <- 0
+      pt_jm[nyear-1,k,i] <- 0
+    } # k
+
+    # t = nyear
+    # s = 0
+    pt_jf[nyear,1,i] <- 1
+    pt_jf[nyear,2,i] <- 1 - sur_jf[i,nyear]
+    pt_jm[nyear,1,i] <- 1
+    pt_jm[nyear,2,i] <- 1 - sur_jm[i,nyear]
+    for (k in 3:((nyear_use-1)*(narea+1)+2)) {
+      pt_jf[nyear,k,i] <- 0
+      pt_jm[nyear,k,i] <- 0
+    } # k
+  } # i
+
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      pr_jf[t,1,i] <- pt_jf[t,1,i] * pcap_j
+      pr_jf[t,2,i] <- pt_jf[t,2,i] * rec_jf[t]
+      pr_jm[t,1,i] <- pt_jm[t,1,i] * pcap_j
+      pr_jm[t,2,i] <- pt_jm[t,2,i] * rec_jm[t]
+      for (s in 2:nyear_use) {
+        for (j in 1:narea) {
+          pr_jf[t,(s-2)*(narea+1)+2+j,i] <- pt_jf[t,(s-2)*(narea+1)+2+j,i] * (1 - pcap_j) * ((1 - pcap_a) ^ (s - 2)) * pcap_a
+          pr_jm[t,(s-2)*(narea+1)+2+j,i] <- pt_jm[t,(s-2)*(narea+1)+2+j,i] * (1 - pcap_j) * ((1 - pcap_a) ^ (s - 2)) * pcap_a
+        } # j
+        pr_jf[t,(s-1)*(narea+1)+2,i] <- pt_jf[t,(s-1)*(narea+1)+2,i] * rec_af[2,t+s-1]
+        pr_jm[t,(s-1)*(narea+1)+2,i] <- pt_jm[t,(s-1)*(narea+1)+2,i] * rec_am[2,t+s-1]
+      } # s
+      pr_jf[t,(nyear_use-1)*(narea+1)+3,i] <- 1 - sum(pr_jf[t,1:((nyear_use-1)*(narea+1)+2),i])
+      pr_jm[t,(nyear_use-1)*(narea+1)+3,i] <- 1 - sum(pr_jm[t,1:((nyear_use-1)*(narea+1)+2),i])
+    } # t
+  } # i
+
+  # Observation
+  ### Pond
+  for (t in 1:nyear) {
+    pond_obs[t] ~ dnorm(pond[t], 1 / (pond_se[t]^2))
+  } # T
+
+  ### joint live-dead encounter data in M-array
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      marr_af[t,1:((nyear_use-1)*(narea+1)+3),i] ~ dmultinom(pr_af[t,1:((nyear_use-1)*(narea+1)+3),i], nband_af[i,t])
+      marr_am[t,1:((nyear_use-1)*(narea+1)+3),i] ~ dmultinom(pr_am[t,1:((nyear_use-1)*(narea+1)+3),i], nband_am[i,t])
+      marr_jf[t,1:((nyear_use-1)*(narea+1)+3),i] ~ dmultinom(pr_jf[t,1:((nyear_use-1)*(narea+1)+3),i], nband_jf[i,t])
+      marr_jm[t,1:((nyear_use-1)*(narea+1)+3),i] ~ dmultinom(pr_jm[t,1:((nyear_use-1)*(narea+1)+3),i], nband_jm[i,t])
+    } # t
+  } # i
+
+ ### Discrepancy between breeding pop surveys and Lincoln Estimates
+  for (i in 1:narea) {
+          mu.psi[i] ~ dnorm(0, sd = 10)
+          sd.psi[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+    for (t in 1:(nyear-1)) {
+       eps.psi[i,t] ~ dnorm(0, sd = sd.psi[i])
+           psi[i,t] <- exp(mu.psi[i] + eps.psi[i,t])
+ ### Age-ratio at banding
+             q[i,t] <- (N1F_Fall[i,t] *  f_jf[i,t]) / ((N1F_Fall[i,t] *  f_jf[i,t]) + (N2F_Fall[i,t] * f_af[i,t]))
+      nband_jf[i,t] ~ dbinom(q[i,t], nband_jf_af[i,t])
+    } # t
+  } # i
+
+  # Prior for starting age structure (intecept for the productivity model)
+          AR[1] <-   exp(log_ar_mean_ak)
+          AR[2] <-   exp(log_ar_mean_nh)
+          AR[3] <-   exp(log_ar_mean_pr)
+      for(i in 1:3){
+         mu.n[i] ~ dunif(0,10)  # Prior for starting adult population size (0 to 10 million breeding male and females)
+           sr[i] ~ dbeta(3,7)   # Proportion of the starting adult population that was female
+          n1f[i] <-   mu.n[i] *  sr[i] * AR[i]/2 # Intitial SY female population
+          n1m[i] <-   mu.n[i] *  sr[i] * AR[i]/2 # Intitial SY male population
+          n2f[i] <-   mu.n[i] *  sr[i]           # Intitial AHY female population
+          n2m[i] <-   mu.n[i] *  (1 - sr[i])     # Intitial AHY male population
+           
+          N1F[i,1] <- n1f[i]
+          N1M[i,1] <- n1m[i]
+          N2F[i,1] <- n2f[i]
+          N2M[i,1] <- n2m[i]
+          
+          NAF[i,1] <-  N1F[i,1] + N2F[i,1]                                     # Initial breeding females
+          NAM[i,1] <-  N1M[i,1] + N2M[i,1]                                     # Initial breeding males
+            N[i,1] <- (N1F[i,1] + N1M[i,1] + N2F[i,1] + N2M[i,1])              # Intitial breedig population
+       Bpop_N[i,1] <- (N1F[i,1] + N1M[i,1] + N2F[i,1] + N2M[i,1]) * mu.psi[i]  # Intitial breedig population available to the bpop surveys
+      }
+
+      for (t in 2:nyear) {
+        # Age, Region, and Sex-Structured Fall Flight Abundance 
+        N2M_Fall[1,t-1] <- NAM[1,t-1] * sur_am[1,t-1]^(1/3)
+        N2M_Fall[2,t-1] <- NAM[2,t-1] * sur_am[2,t-1]^(1/3)
+        N2M_Fall[3,t-1] <- NAM[3,t-1] * sur_am[3,t-1]^(1/3)
+        N2F_Fall[1,t-1] <- NAF[1,t-1] * sur_af[1,t-1]^(1/3)
+        N2F_Fall[2,t-1] <- NAF[3,t-1] * sur_af[2,t-1]^(1/3)
+        N2F_Fall[3,t-1] <- NAF[2,t-1] * sur_af[3,t-1]^(1/3)
+        N1M_Fall[1,t-1] <- NAF[1,t-1] * 0.5 * ar[1,t-1]
+        N1M_Fall[2,t-1] <- NAF[2,t-1] * 0.5 * ar[2,t-1]
+        N1M_Fall[3,t-1] <- NAF[3,t-1] * 0.5 * ar[3,t-1]
+        N1F_Fall[1,t-1] <- NAF[1,t-1] * 0.5 * ar[1,t-1]
+        N1F_Fall[2,t-1] <- NAF[2,t-1] * 0.5 * ar[2,t-1]
+        N1F_Fall[3,t-1] <- NAF[3,t-1] * 0.5 * ar[3,t-1]
+        
+        # Age, Region, and Sex-Structured Breeding Abundance 
+        N2M_AK_AK[t-1] <- NAM[1,t-1] * sur_am[1,t-1] * pi[1,1]
+        N2M_NH_AK[t-1] <- NAM[2,t-1] * sur_am[2,t-1] * pi[2,1]
+        N2M_PR_AK[t-1] <- NAM[3,t-1] * sur_am[3,t-1] * pi[3,1]
+        N2F_AK_AK[t-1] <- NAF[1,t-1] * sur_af[1,t-1] * pi[1,1]
+        N2F_NH_AK[t-1] <- NAF[3,t-1] * sur_af[2,t-1] * pi[2,1]
+        N2F_PR_AK[t-1] <- NAF[2,t-1] * sur_af[3,t-1] * pi[3,1]
+        
+        N1M_AK_AK[t-1] <- N1M_Fall[1,t-1] * sur_jm[1,t-1] * pi[1,1]
+        N1M_NH_AK[t-1] <- N1M_Fall[2,t-1] * sur_jm[2,t-1] * pi[2,1]
+        N1M_PR_AK[t-1] <- N1M_Fall[3,t-1] * sur_jm[3,t-1] * pi[3,1]
+        N1F_AK_AK[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,1]
+        N1F_NH_AK[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,1]
+        N1F_PR_AK[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,1]
+        
+        N2M_AK_NH[t-1] <- NAM[1,t-1] * sur_am[1,t-1] * pi[1,2]
+        N2M_NH_NH[t-1] <- NAM[2,t-1] * sur_am[2,t-1] * pi[2,2]
+        N2M_PR_NH[t-1] <- NAM[3,t-1] * sur_am[3,t-1] * pi[3,2]
+        N2F_AK_NH[t-1] <- NAF[1,t-1] * sur_af[1,t-1] * pi[1,2]
+        N2F_NH_NH[t-1] <- NAF[3,t-1] * sur_af[2,t-1] * pi[2,2]
+        N2F_PR_NH[t-1] <- NAF[2,t-1] * sur_af[3,t-1] * pi[3,2]
+        
+        N1M_AK_NH[t-1] <- N1M_Fall[1,t-1] * sur_jm[1,t-1] * pi[1,2]
+        N1M_NH_NH[t-1] <- N1M_Fall[2,t-1] * sur_jm[2,t-1] * pi[2,2]
+        N1M_PR_NH[t-1] <- N1M_Fall[3,t-1] * sur_jm[3,t-1] * pi[3,2]
+        N1F_AK_NH[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,2]
+        N1F_NH_NH[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,2]
+        N1F_PR_NH[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,2]
+        
+        N2M_AK_PR[t-1] <- NAM[1,t-1] * sur_am[1,t-1] * pi[1,3]
+        N2M_NH_PR[t-1] <- NAM[2,t-1] * sur_am[2,t-1] * pi[2,3]
+        N2M_PR_PR[t-1] <- NAM[3,t-1] * sur_am[3,t-1] * pi[3,3]
+        N2F_AK_PR[t-1] <- NAF[1,t-1] * sur_af[1,t-1] * pi[1,3]
+        N2F_NH_PR[t-1] <- NAF[3,t-1] * sur_af[2,t-1] * pi[2,3]
+        N2F_PR_PR[t-1] <- NAF[2,t-1] * sur_af[3,t-1] * pi[3,3]
+        
+        N1M_AK_PR[t-1] <- N1M_Fall[1,t-1] * sur_jm[1,t-1] * pi[1,3]
+        N1M_NH_PR[t-1] <- N1M_Fall[2,t-1] * sur_jm[2,t-1] * pi[2,3]
+        N1M_PR_PR[t-1] <- N1M_Fall[3,t-1] * sur_jm[3,t-1] * pi[3,3]
+        N1F_AK_PR[t-1] <- N1F_Fall[1,t-1] * sur_jf[1,t-1] * pi[1,3]
+        N1F_NH_PR[t-1] <- N1F_Fall[2,t-1] * sur_jf[2,t-1] * pi[2,3]
+        N1F_PR_PR[t-1] <- N1F_Fall[3,t-1] * sur_jf[2,t-1] * pi[3,3]
+        # Total Age and Sex-Structured Breeding Abundance 
+        N1F[1,t] <-  N1F_AK_AK[t-1] +  N1F_NH_AK[t-1] + N1F_PR_AK[t-1]
+        N1M[1,t] <-  N1M_AK_AK[t-1] +  N1M_NH_AK[t-1] + N1M_PR_AK[t-1]  
+        N2F[1,t] <-  N2F_AK_AK[t-1] +  N2F_NH_AK[t-1] + N2F_PR_AK[t-1]
+        N2M[1,t] <-  N2M_AK_AK[t-1] +  N2M_NH_AK[t-1] + N2M_PR_AK[t-1]
+        
+        N1F[2,t] <-  N1F_AK_NH[t-1] +  N1F_NH_NH[t-1] + N1F_PR_NH[t-1]
+        N1M[2,t] <-  N1M_AK_NH[t-1] +  N1M_NH_NH[t-1] + N1M_PR_NH[t-1]
+        N2F[2,t] <-  N2F_AK_NH[t-1] +  N2F_NH_NH[t-1] + N2F_PR_NH[t-1]
+        N2M[2,t] <-  N2M_AK_NH[t-1] +  N2M_NH_NH[t-1] + N2M_PR_NH[t-1]
+        
+        N1F[3,t] <-  N1F_AK_PR[t-1] +  N1F_NH_PR[t-1] + N1F_PR_PR[t-1] 
+        N1M[3,t] <-  N1M_AK_PR[t-1] +  N1M_NH_PR[t-1] + N1M_PR_PR[t-1] 
+        N2F[3,t] <-  N2F_AK_PR[t-1] +  N2F_NH_PR[t-1] + N2F_PR_PR[t-1] 
+        N2M[3,t] <-  N2M_AK_PR[t-1] +  N2M_NH_PR[t-1] + N2M_PR_PR[t-1]
+        for(i in 1:3){
+          NAF[i,t] <- N1F[i,t] + N2F[i,t]                                      # Female Breeding Abundance
+          NAM[i,t] <- N1M[i,t] + N2M[i,t]                                      # Male Breeding Abundance
+            N[i,t] <- NAF[i,t] + NAM[i,t]                                      # Total Breeding Population
+       Bpop_N[i,t] <- (N1F[i,t] + N1M[i,t] + N2F[i,t] + N2M[i,t]) * psi[i,t-1] # Total Breeding Population Available in bpop surveys
+        }
+        # Derive number of immigrants/emigrants
+          im_ak[t-1] <-  N1F_NH_AK[t-1] + N1F_PR_AK[t-1] + N1M_NH_AK[t-1] + N1M_PR_AK[t-1] + N2F_NH_AK[t-1] + N2F_PR_AK[t-1] + N2M_NH_AK[t-1] + N2M_PR_AK[t-1]
+          em_ak[t-1] <-  N1F_AK_NH[t-1] + N1M_AK_NH[t-1] + N2F_AK_NH[t-1] + N2M_AK_NH[t-1] + N1F_AK_PR[t-1] + N1M_AK_PR[t-1] + N2F_AK_PR[t-1] + N2M_AK_PR[t-1] 
+          im_nh[t-1] <-  N1F_AK_NH[t-1] + N1F_PR_NH[t-1] + N1M_AK_NH[t-1] + N1M_PR_NH[t-1] + N2F_AK_NH[t-1] + N2F_PR_NH[t-1] + N2M_AK_NH[t-1] + N2M_PR_NH[t-1]
+          em_nh[t-1] <-  N1F_NH_NH[t-1] + N1M_NH_NH[t-1] + N2F_NH_NH[t-1] + N2M_NH_NH[t-1] + N1F_NH_PR[t-1] + N1M_NH_PR[t-1] + N2F_NH_PR[t-1] + N2M_NH_PR[t-1]
+          im_pr[t-1] <-  N1F_NH_PR[t-1] + N1F_AK_PR[t-1] + N1M_NH_PR[t-1] + N1M_AK_PR[t-1] + N2F_NH_PR[t-1] + N2F_AK_PR[t-1] + N2M_NH_PR[t-1] + N2M_AK_PR[t-1]
+          em_pr[t-1] <-  N1F_PR_NH[t-1] + N1M_PR_NH[t-1] + N2F_PR_NH[t-1] + N2M_PR_NH[t-1] + N1F_PR_PR[t-1] + N1M_PR_PR[t-1] + N2F_PR_PR[t-1] + N2M_PR_PR[t-1]
+      }
+      # Observation error for Lincoln estimate
+      for(i in 1:4){
+        sig.lincoln[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+      }
+      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+      # Arnold et al. reporting rate prior
+      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+      for (t in 1:(nyear-1)) {
+              rr[t] ~ dbeta(alpha.rr[t], beta.rr[t])
+        alpha.rr[t] <- pow(SD.rr[t],-2) * RR.rr[t]
+         beta.rr[t] <- pow(SD.rr[t],-2) * (1 - RR.rr[t])
+        for(i in 1:3){
+         N1F.harvest[i,t] <- N1F_Fall[i,t] *( f_jf[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+         N1M.harvest[i,t] <- N1M_Fall[i,t] *( f_jm[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+         N2F.harvest[i,t] <- N2F_Fall[i,t] *( f_af[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+         N2M.harvest[i,t] <- N2M_Fall[i,t] *( f_am[i,t]/ rr[t])   # Number harvested = latent fall flight N * direct recovery/reporting rate
+        }
+        # Total number of individuals harvested
+           N1F.Lincoln[t] <- sum(N1F.harvest[1:3,t])
+           N1M.Lincoln[t] <- sum(N1M.harvest[1:3,t])
+           N2F.Lincoln[t] <- sum(N2F.harvest[1:3,t])
+           N2M.Lincoln[t] <- sum(N2M.harvest[1:3,t])
+          # Estimated number of individuals harvested ~ modeled number of individuals harvested
+                   H1F[t] ~ dnorm(N1F.Lincoln[t], sd = sig.lincoln[1])
+                   H1M[t] ~ dnorm(N1M.Lincoln[t], sd = sig.lincoln[2])
+                   H2F[t] ~ dnorm(N2F.Lincoln[t], sd = sig.lincoln[3])
+                   H2M[t] ~ dnorm(N2M.Lincoln[t], sd = sig.lincoln[4])
+      }
+      
+      ### BPOP model    
+  for (t in 2:nyear) {
+    bpop_obs[1,t] ~ dnorm(Bpop_N[1,t], sd = bpop_se[1,t])
+    bpop_obs[2,t] ~ dnorm(Bpop_N[2,t], sd = bpop_se[2,t])
+    bpop_obs[3,t] ~ dnorm(Bpop_N[3,t], sd = bpop_se[3,t])
+  } # t
+
+})
+
+#================
+# setup for Nimble
+#================
+nimble.data <- list(marr_af=marr_af, marr_am=marr_am, marr_jf=marr_jf, marr_jm=marr_jm, 
+                    pond_obs=pond_obs, pond_se=pond_se,   bpop_obs=bpop_obs, bpop_se=bpop_se,
+                    nband_af=nband_af, nband_am=nband_am, nband_jf=nband_jf, nband_jm=nband_jm,  nband_jf_af=nband_jf_af,
+                    RR.rr = MU_R, SD.rr = SD_R, 
+                    # Validate 0.73 constraint from Royle
+                    H1F  = (H_F1$harvest * 0.73)/ 1e6,
+                    H2F  = (H_F2$harvest * 0.73)/ 1e6,
+                    H1M  = (H_M1$harvest * 0.73)/ 1e6,
+                    H2M  = (H_M2$harvest * 0.73)/ 1e6)
+
+nimble.constants <- list(narea=narea, nyear=nyear, nyear_use=nyear_use, ncoho=ncoho, 
+                         log_pond_mean=log_pond_mean, log_pond_se=log_pond_se, 
+                         log_bpop0=log_bpop0, log_bpop_mean=log_bpop_mean, log_bpop_se=log_bpop_se,
+                         prec_ak=prec_ak, prec_nh=prec_nh, prec_pr=prec_pr, prec_pc=prec_pc, prec_gc=prec_gc, 
+                         temp_ak=temp_ak, temp_nh=temp_nh, temp_pr=temp_pr, temp_pc=temp_pc, temp_gc=temp_gc, 
+                         crop=crop)
+
+initsFunction <- function()list(
+  sig.lincoln = c(.5,.5,.5,.5),  rr = MU_R,mu.n = c(2,2,2), sr = c(.4,.4,.4),
+    mu.psi = c(0,0,0), sd.psi = c(1,1,1), psi = matrix(1, nrow =3, ncol = 58),
+    beta.direct = matrix(0, 2,2),
+    pond = pond_obs, bpop = bpop_obs,
+    log_pond_alpha=0, log_pond_ddp=0, log_pond_prec=0, log_pond_temp=0, log_pond_sd=1, 
+    logit_sur_mean_mu=0, logit_sur_mean_sd_region=1, logit_sur_mean_sd_cohort=1, 
+    logit_sur_bpop_mu=0, logit_sur_bpop_sd_region=1, logit_sur_bpop_sd_cohort=1, 
+    logit_sur_pond_mu=0, logit_sur_pond_sd_cohort=1, 
+    logit_sur_prec_mu=0, logit_sur_prec_sd_region=1, logit_sur_prec_sd_cohort=1, 
+    logit_sur_temp_mu=0, logit_sur_temp_sd_region=1, logit_sur_temp_sd_cohort=1, 
+    logit_sur_prpc_mu=0, logit_sur_prpc_sd_region=1, logit_sur_prpc_sd_cohort=1, 
+    logit_sur_tepc_mu=0, logit_sur_tepc_sd_region=1, logit_sur_tepc_sd_cohort=1, 
+    #logit_sur_rcpc_mu=0, logit_sur_rcpc_sd_region=1, logit_sur_rcpc_sd_cohort=1, 
+    logit_sur_prgc_mu=0, logit_sur_prgc_sd_region=1, logit_sur_prgc_sd_cohort=1, 
+    logit_sur_tegc_mu=0, logit_sur_tegc_sd_region=1, logit_sur_tegc_sd_cohort=1, 
+    logit_sur_rcgc_mu=0, logit_sur_rcgc_sd_region=1, logit_sur_rcgc_sd_cohort=1, 
+    logit_sur_sd=1, 
+    logit_sur_af=matrix(0,narea,nyear), logit_sur_am=matrix(0,narea,nyear), 
+    logit_sur_jf=matrix(0,narea,nyear), logit_sur_jm=matrix(0,narea,nyear), 
+    logit_rec_mu=0, logit_rec_sd_cohort=1, logit_rec_sd=1, 
+    eta=matrix(1,narea,narea), 
+    log_ar_mean_mu=0, log_ar_mean_sd_region=1, 
+    log_ar_bpop_mu=0, log_ar_bpop_sd_region=1, 
+    log_ar_pond_pr=0, log_ar_crop_pr=0, log_ar_pocr_pr=0, 
+    log_ar_prec_mu=0, log_ar_prec_sd_region=1, 
+    log_ar_temp_mu=0, log_ar_temp_sd_region=1, 
+    log_ar_prpc_mu=0, log_ar_prpc_sd_region=1, 
+    log_ar_tepc_mu=0, log_ar_tepc_sd_region=1, 
+    #log_ar_rcpc_mu=0, log_ar_rcpc_sd_region=1, 
+    log_ar_prgc_mu=0, log_ar_prgc_sd_region=1, 
+    log_ar_tegc_mu=0, log_ar_tegc_sd_region=1, 
+    log_ar_rcgc_mu=0, log_ar_rcgc_sd_region=1, 
+    log_ar_sd=1, 
+    log_ar=matrix(0,narea,nyear), 
+    log_bpop0_sd=1, log_bpop_sd=1
+)
+
+nimble.inits <- initsFunction() 
+
+nimble.parms <- c(
+  'pond', 'psi','mu.psi',
+  'sur_af', 'sur_am', 'sur_jf', 'sur_jm', 
+  'rec_af', 'rec_am', 'rec_jf', 'rec_jm', 
+  'ar', 
+  #'bpop_ak', 'bpop_nh', 'bpop_pr', 
+  'im_ak', 'im_nh', 'im_pr', 'em_ak', 'em_nh', 'em_pr',
+  #'epsilon_ak', 'epsilon_nh', 'epsilon_pr', 
+  'log_pond_alpha', 'log_pond_ddp', 'log_pond_prec', 'log_pond_temp', 'log_pond_sd', 
+  'logit_sur_mean_mu', 'logit_sur_mean_sd_region', 'logit_sur_mean_sd_cohort', 
+  'logit_sur_mean_ak_af', 'logit_sur_mean_ak_am', 'logit_sur_mean_ak_jf', 'logit_sur_mean_ak_jm', 
+  'logit_sur_mean_nh_af', 'logit_sur_mean_nh_am', 'logit_sur_mean_nh_jf', 'logit_sur_mean_nh_jm', 
+  'logit_sur_mean_pr_af', 'logit_sur_mean_pr_am', 'logit_sur_mean_pr_jf', 'logit_sur_mean_pr_jm', 
+  'logit_sur_bpop_mu', 'logit_sur_bpop_sd_region', 'logit_sur_bpop_sd_cohort', 
+  'logit_sur_bpop_ak_af', 'logit_sur_bpop_ak_am', 'logit_sur_bpop_ak_jf', 'logit_sur_bpop_ak_jm', 
+  'logit_sur_bpop_nh_af', 'logit_sur_bpop_nh_am', 'logit_sur_bpop_nh_jf', 'logit_sur_bpop_nh_jm', 
+  'logit_sur_bpop_pr_af', 'logit_sur_bpop_pr_am', 'logit_sur_bpop_pr_jf', 'logit_sur_bpop_pr_jm', 
+  'logit_sur_pond_mu', 'logit_sur_pond_sd_cohort', 
+  'logit_sur_pond_pr_af', 'logit_sur_pond_pr_am', 'logit_sur_pond_pr_jf', 'logit_sur_pond_pr_jm', 
+  'logit_sur_prec_mu', 'logit_sur_prec_sd_region', 'logit_sur_prec_sd_cohort', 
+  'logit_sur_prec_ak_af', 'logit_sur_prec_ak_am', 'logit_sur_prec_ak_jf', 'logit_sur_prec_ak_jm', 
+  'logit_sur_prec_nh_af', 'logit_sur_prec_nh_am', 'logit_sur_prec_nh_jf', 'logit_sur_prec_nh_jm', 
+  'logit_sur_temp_mu', 'logit_sur_temp_sd_region', 'logit_sur_temp_sd_cohort', 
+  'logit_sur_temp_ak_af', 'logit_sur_temp_ak_am', 'logit_sur_temp_ak_jf', 'logit_sur_temp_ak_jm', 
+  'logit_sur_temp_nh_af', 'logit_sur_temp_nh_am', 'logit_sur_temp_nh_jf', 'logit_sur_temp_nh_jm', 
+  'logit_sur_prpc_mu', 'logit_sur_prpc_sd_region', 'logit_sur_prpc_sd_cohort', 
+  'logit_sur_prpc_ak_af', 'logit_sur_prpc_ak_am', 'logit_sur_prpc_ak_jf', 'logit_sur_prpc_ak_jm', 
+  'logit_sur_prpc_nh_af', 'logit_sur_prpc_nh_am', 'logit_sur_prpc_nh_jf', 'logit_sur_prpc_nh_jm', 
+  'logit_sur_prpc_pr_af', 'logit_sur_prpc_pr_am', 'logit_sur_prpc_pr_jf', 'logit_sur_prpc_pr_jm', 
+  'logit_sur_tepc_mu', 'logit_sur_tepc_sd_region', 'logit_sur_tepc_sd_cohort', 
+  'logit_sur_tepc_ak_af', 'logit_sur_tepc_ak_am', 'logit_sur_tepc_ak_jf', 'logit_sur_tepc_ak_jm', 
+  'logit_sur_tepc_nh_af', 'logit_sur_tepc_nh_am', 'logit_sur_tepc_nh_jf', 'logit_sur_tepc_nh_jm', 
+  'logit_sur_tepc_pr_af', 'logit_sur_tepc_pr_am', 'logit_sur_tepc_pr_jf', 'logit_sur_tepc_pr_jm', 
+  'logit_sur_prgc_mu', 'logit_sur_prgc_sd_region', 'logit_sur_prgc_sd_cohort', 
+  'logit_sur_prgc_nh_af', 'logit_sur_prgc_nh_am', 'logit_sur_prgc_nh_jf', 'logit_sur_prgc_nh_jm', 
+  'logit_sur_prgc_pr_af', 'logit_sur_prgc_pr_am', 'logit_sur_prgc_pr_jf', 'logit_sur_prgc_pr_jm', 
+  'logit_sur_tegc_mu', 'logit_sur_tegc_sd_region', 'logit_sur_tegc_sd_cohort', 
+  'logit_sur_tegc_nh_af', 'logit_sur_tegc_nh_am', 'logit_sur_tegc_nh_jf', 'logit_sur_tegc_nh_jm', 
+  'logit_sur_tegc_pr_af', 'logit_sur_tegc_pr_am', 'logit_sur_tegc_pr_jf', 'logit_sur_tegc_pr_jm', 
+  'pi', 
+  'logit_rec_mu', 'logit_rec_sd_cohort', 'logit_rec_sd', 
+  'log_ar_mean_mu', 'log_ar_mean_sd_region', 
+  'log_ar_mean_ak', 'log_ar_mean_nh', 'log_ar_mean_pr', 
+  'log_ar_bpop_mu', 'log_ar_bpop_sd_region', 
+  'log_ar_bpop_ak', 'log_ar_bpop_nh', 'log_ar_bpop_pr', 
+  'log_ar_pond_pr', 'log_ar_crop_pr', 'log_ar_pocr_pr', 
+  'log_ar_prec_mu', 'log_ar_prec_sd_region', 
+  'log_ar_prec_ak', 'log_ar_prec_nh', 
+  'log_ar_temp_mu', 'log_ar_temp_sd_region', 
+  'log_ar_temp_ak', 'log_ar_temp_nh', 
+  'log_ar_prpc_mu', 'log_ar_prpc_sd_region', 
+  'log_ar_prpc_ak', 'log_ar_prpc_nh', 'log_ar_prpc_pr', 
+  'log_ar_tepc_mu', 'log_ar_tepc_sd_region', 
+  'log_ar_tepc_ak', 'log_ar_tepc_nh', 'log_ar_tepc_pr', 
+  'log_ar_prgc_mu', 'log_ar_prgc_sd_region', 
+  'log_ar_prgc_nh', 'log_ar_prgc_pr', 
+  'log_ar_tegc_mu', 'log_ar_tegc_sd_region', 
+  'log_ar_tegc_nh', 'log_ar_tegc_pr', 
+  'log_ar_sd', 
+  'log_bpop0_sd', 'log_bpop_sd', 
+  'pcap_a', 'pcap_j','sr',
+  'f_jf','f_af','f_jm','f_am',
+  'NAF','NAM','N1F','N1M','N2F','N2M','N','Bpop_N','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall',
+  'N2M_AK_AK',  'N2M_NH_AK',  'N2M_PR_AK',  'N2F_AK_AK',  'N2F_NH_AK',  'N2F_PR_AK',  
+  'N1M_AK_AK',  'N1M_NH_AK',  'N1M_PR_AK',  'N1F_AK_AK',  'N1F_NH_AK',  'N1F_PR_AK',  
+  'N2M_AK_NH',  'N2M_NH_NH',  'N2M_PR_NH',  'N2F_AK_NH',  'N2F_NH_NH',  'N2F_PR_NH', 
+  'N1M_AK_NH',  'N1M_NH_NH',  'N1M_PR_NH',  'N1F_AK_NH',  'N1F_NH_NH',  'N1F_PR_NH',  
+  'N2M_AK_PR',  'N2M_NH_PR',  'N2M_PR_PR',  'N2F_AK_PR',  'N2F_NH_PR',  'N2F_PR_PR',  
+  'N1M_AK_PR',  'N1M_NH_PR',  'N1M_PR_PR',  'N1F_AK_PR',  'N1F_NH_PR',  'N1F_PR_PR',
+  'N1F.harvest','N2F.harvest','N1M.harvest','N2M.harvest','N1F.Lincoln','N2F.Lincoln','N1M.Lincoln','N2M.Lincoln','rr')
+
+
+library(parallel)
+library(coda)
+
+nc      <- 3 # number of chains
+cl_new5 <-makeCluster(nc,timeout=5184000)
+clusterExport(cl_new5, c("pt_ipm", "nimble.inits", "nimble.data", "nimble.constants", "nimble.parms"))
+
+for (j in seq_along(cl_new5)) {
+  #set.seed(j)
+  nimble.inits <- initsFunction() 
+  clusterExport(cl_new5[j], "nimble.inits")
+}
+
+out <- clusterEvalQ(cl_new5, {
+  library(nimble)
+  library(coda)
+
+nimble.model <- nimbleModel( code = pt_ipm, constants = nimble.constants,  dat =  nimble.data, inits = nimble.inits)
+
+nimble.model$simulate(c('log_pond','log_pond_mu','pond','logit_sur_mean_region','logit_sur_mean_cohort','logit_sur_mean_ak_af',
+                     'logit_sur_mean_ak_am','logit_sur_mean_ak_jf','logit_sur_mean_ak_jm','logit_sur_mean_nh_af', 
+                     'logit_sur_mean_nh_am','logit_sur_mean_nh_jf','logit_sur_mean_nh_jm','logit_sur_mean_pr_af', 
+                     'logit_sur_mean_pr_am','logit_sur_mean_pr_jf','logit_sur_mean_pr_jm','logit_sur_bpop_region', 
+                     'logit_sur_bpop_cohort','logit_sur_bpop_ak_af','logit_sur_bpop_ak_am','logit_sur_bpop_ak_jf', 
+                     'logit_sur_bpop_ak_jm','logit_sur_bpop_nh_af','logit_sur_bpop_nh_am','logit_sur_bpop_nh_jf', 
+                     'logit_sur_bpop_nh_jm','logit_sur_bpop_pr_af','logit_sur_bpop_pr_am','logit_sur_bpop_pr_jf', 
+                     'logit_sur_bpop_pr_jm','logit_sur_pond_cohort','logit_sur_pond_pr_af','logit_sur_pond_pr_am', 
+                     'logit_sur_pond_pr_jf','logit_sur_pond_pr_jm','logit_sur_prec_region','logit_sur_prec_cohort',
+                     'logit_sur_prec_ak_af','logit_sur_prec_ak_am','logit_sur_prec_ak_jf','logit_sur_prec_ak_jm', 
+                     'logit_sur_prec_nh_af','logit_sur_prec_nh_am','logit_sur_prec_nh_jf','logit_sur_prec_nh_jm', 
+                     'logit_sur_temp_region','logit_sur_temp_cohort','logit_sur_temp_ak_af','logit_sur_temp_ak_am', 
+                     'logit_sur_temp_ak_jf','logit_sur_temp_ak_jm','logit_sur_temp_nh_af','logit_sur_temp_nh_am', 
+                     'logit_sur_temp_nh_jf','logit_sur_temp_nh_jm','logit_sur_prpc_region','logit_sur_prpc_cohort', 
+                     'logit_sur_prpc_ak_af','logit_sur_prpc_ak_am','logit_sur_prpc_ak_jf','logit_sur_prpc_ak_jm', 
+                     'logit_sur_prpc_nh_af','logit_sur_prpc_nh_am','logit_sur_prpc_nh_jf','logit_sur_prpc_nh_jm',
+                     'logit_sur_prpc_pr_af','logit_sur_prpc_pr_am','logit_sur_prpc_pr_jf','logit_sur_prpc_pr_jm', 
+                     'logit_sur_tepc_region','logit_sur_tepc_cohort','logit_sur_tepc_ak_af','logit_sur_tepc_ak_am', 
+                     'logit_sur_tepc_ak_jf','logit_sur_tepc_ak_jm','logit_sur_tepc_nh_af','logit_sur_tepc_nh_am', 
+                     'logit_sur_tepc_nh_jf','logit_sur_tepc_nh_jm','logit_sur_tepc_pr_af','logit_sur_tepc_pr_am', 
+                     'logit_sur_tepc_pr_jf','logit_sur_tepc_pr_jm','logit_sur_prgc_region','logit_sur_prgc_cohort', 
+                     'logit_sur_prgc_nh_af','logit_sur_prgc_nh_am','logit_sur_prgc_nh_jf','logit_sur_prgc_nh_jm', 
+                     'logit_sur_prgc_pr_af','logit_sur_prgc_pr_am','logit_sur_prgc_pr_jf','logit_sur_prgc_pr_jm', 
+                     'logit_sur_tegc_region','logit_sur_tegc_cohort','logit_sur_tegc_nh_af','logit_sur_tegc_nh_am', 
+                     'logit_sur_tegc_nh_jf','logit_sur_tegc_nh_jm','logit_sur_tegc_pr_af','logit_sur_tegc_pr_am', 
+                     'logit_sur_tegc_pr_jf','logit_sur_tegc_pr_jm','logit_sur_mu_ak_af','logit_sur_mu_ak_am', 
+                     'logit_sur_mu_ak_jf','logit_sur_mu_ak_jm','logit_sur_mu_nh_af','logit_sur_mu_nh_am','logit_sur_mu_nh_jf',
+                     'logit_sur_mu_nh_jm','logit_sur_mu_pr_af','logit_sur_mu_pr_am','logit_sur_mu_pr_jf','logit_sur_mu_pr_jm', 
+                     'logit_rec_mean','logit_rec_af','logit_rec_am','logit_rec_jf','logit_rec_jm','rec_af','rec_am', 
+                     'rec_jf','rec_jm','logit_pcap_a','logit_pcap_j','pcap_a','pcap_j','log_ar_mean_region', 
+                     'log_ar_mean_ak','log_ar_mean_nh','log_ar_mean_pr','log_ar_bpop_region','log_ar_bpop_ak', 
+                     'log_ar_bpop_nh','log_ar_bpop_pr','log_ar_prec_region','log_ar_prec_ak','log_ar_prec_nh', 
+                     'log_ar_temp_region','log_ar_temp_ak','log_ar_temp_nh','log_ar_prpc_region','log_ar_prpc_ak',
+                     'log_ar_prpc_nh','log_ar_prpc_pr','log_ar_tepc_region','log_ar_tepc_ak','log_ar_tepc_nh', 
+                     'log_ar_tepc_pr','log_ar_prgc_region','log_ar_prgc_nh','log_ar_prgc_pr','log_ar_tegc_region',
+                     'log_ar_tegc_nh','log_ar_tegc_pr','log_ar_mu_ak','log_ar_mu_nh','log_ar_mu_pr',
+                     'pr_af','pr_am', 'pr_jf','pr_jm','bpop_ak','bpop_nh','bpop_pr',
+                     'mv_ak_ak','mv_nh_ak','mv_pr_ak','mv_ak_nh','mv_nh_nh','mv_pr_nh','mv_ak_pr','mv_nh_pr',
+                     'mv_pr_pr','log_bpop_ak_mu','im_ak','em_ak','epsilon_ak','log_bpop_nh_mu','im_nh','em_nh',
+                     'epsilon_nh','log_bpop_pr_mu','im_pr','em_pr','epsilon_pr',
+                     'NAF','NAM','N1F','N1M','N2F','N2M','N','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall',
+                     'f_af', 'f_am', 'f_jf', 'f_jm','sr',
+                     'N2M_AK_AK',  'N2M_NH_AK',  'N2M_PR_AK',  'N2F_AK_AK',  'N2F_NH_AK',  'N2F_PR_AK',  
+                     'N1M_AK_AK',  'N1M_NH_AK',  'N1M_PR_AK',  'N1F_AK_AK',  'N1F_NH_AK',  'N1F_PR_AK',  
+                     'N2M_AK_NH',  'N2M_NH_NH',  'N2M_PR_NH',  'N2F_AK_NH',  'N2F_NH_NH',  'N2F_PR_NH', 
+                     'N1M_AK_NH',  'N1M_NH_NH',  'N1M_PR_NH',  'N1F_AK_NH',  'N1F_NH_NH',  'N1F_PR_NH',  
+                     'N2M_AK_PR',  'N2M_NH_PR',  'N2M_PR_PR',  'N2F_AK_PR',  'N2F_NH_PR',  'N2F_PR_PR',  
+                     'N1M_AK_PR',  'N1M_NH_PR',  'N1M_PR_PR',  'N1F_AK_PR',  'N1F_NH_PR',  'N1F_PR_PR',
+                     'N1F.harvest','N2F.harvest','N1M.harvest','N2M.harvest','N1F.Lincoln','N2F.Lincoln','N1M.Lincoln','N2M.Lincoln','rr'))
+
+nimble.model$initializeInfo()
+nimble.model$calculate()
+
+Cmodel     <- compileNimble(nimble.model)
+
+mcmc_Conf  <- configureMCMC(nimble.model, useConjugacy = FALSE,  thin = 2, thin2 = 5,monitors2 = nimble.parms)
+
+mcmc_Conf$removeSamplers(c('log_ar_bpop_mu','log_ar_bpop_sd_region',
+                           'log_ar_mean_mu','log_ar_mean_sd_region', 
+                           'log_ar_prec_mu','log_ar_prec_sd_region',
+                           'log_ar_prgc_mu','log_ar_prgc_sd_region',
+                           'log_ar_prpc_mu','log_ar_prpc_sd_region',
+                           'log_ar_tegc_mu','log_ar_tegc_sd_region',
+                           'log_ar_temp_mu','log_ar_temp_sd_region',
+                           'log_ar_tepc_mu','log_ar_tepc_sd_region',
+                           'logit_sur_bpop_mu','logit_sur_bpop_sd_cohort','logit_sur_bpop_sd_region',
+                           'logit_sur_mean_mu','logit_sur_mean_sd_cohort','logit_sur_mean_sd_region',
+                           'logit_sur_pond_mu','logit_sur_pond_sd_cohort',
+                           'logit_sur_prec_mu','logit_sur_prec_sd_cohort','logit_sur_prec_sd_region',
+                           'logit_sur_prgc_mu','logit_sur_prgc_sd_cohort','logit_sur_prgc_sd_region',
+                           'logit_sur_prpc_mu','logit_sur_prpc_sd_cohort','logit_sur_prpc_sd_region',
+                           'logit_sur_tegc_mu','logit_sur_tegc_sd_cohort','logit_sur_tegc_sd_region',
+                           'logit_sur_temp_mu','logit_sur_temp_sd_cohort','logit_sur_temp_sd_region',
+                           'logit_sur_tepc_mu','logit_sur_tepc_sd_cohort','logit_sur_tepc_sd_region'
+                           ))
+
+mcmc_Conf$addSampler(target = c('log_ar_bpop_mu','log_ar_bpop_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('log_ar_mean_mu','log_ar_mean_sd_region'), type = 'AF_slice') 
+mcmc_Conf$addSampler(target = c('log_ar_prec_mu','log_ar_prec_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('log_ar_prgc_mu','log_ar_prgc_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('log_ar_prpc_mu','log_ar_prpc_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('log_ar_tegc_mu','log_ar_tegc_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('log_ar_temp_mu','log_ar_temp_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('log_ar_tepc_mu','log_ar_tepc_sd_region'), type = 'AF_slice')
+
+mcmc_Conf$addSampler(target = c('logit_sur_bpop_mu','logit_sur_bpop_sd_cohort','logit_sur_bpop_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_mean_mu','logit_sur_mean_sd_cohort','logit_sur_mean_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_pond_mu','logit_sur_pond_sd_cohort'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_prec_mu','logit_sur_prec_sd_cohort','logit_sur_prec_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_prgc_mu','logit_sur_prgc_sd_cohort','logit_sur_prgc_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_prpc_mu','logit_sur_prpc_sd_cohort','logit_sur_prpc_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_tegc_mu','logit_sur_tegc_sd_cohort','logit_sur_tegc_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_temp_mu','logit_sur_temp_sd_cohort','logit_sur_temp_sd_region'), type = 'AF_slice')
+mcmc_Conf$addSampler(target = c('logit_sur_tepc_mu','logit_sur_tepc_sd_cohort','logit_sur_tepc_sd_region'), type = 'AF_slice')
+
+modelMCMC  <- buildMCMC(mcmc_Conf)
+CmodelMCMC <- compileNimble(modelMCMC,project = nimble.model)
+
+CmodelMCMC$run(25000, reset = FALSE, thin2 = 2)
+
+return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
+             as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
+
+})
+end_time <- Sys.time()
+end_time - start_time
+
+samples2 <- list(chain1 =   out[[1]][[1]][-1,], 
+                 chain2 =   out[[2]][[1]][-1,], 
+                 chain3 =   out[[3]][[1]][-1,])
+
+samples1    <- list(chain1 =   out[[1]][[2]][-1,], 
+                    chain2 =   out[[2]][[2]][-1,], 
+                    chain3 =   out[[3]][[2]][-1,])
+
+mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
+mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
+
+
+out2 <- clusterEvalQ(cl_new5, {
+  CmodelMCMC$run(75000, reset = FALSE)
+  return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
+               as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
+})
+
+
+samples2 <- list(chain1 =   out2[[1]][[1]][-1,], 
+                 chain2 =   out2[[2]][[1]][-1,], 
+                 chain3 =   out2[[3]][[1]][-1,])
+
+samples1    <- list(chain1 =   out2[[1]][[2]][-1,], 
+                    chain2 =   out2[[2]][[2]][-1,], 
+                    chain3 =   out2[[3]][[2]][-1,])
+
+mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
+mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
