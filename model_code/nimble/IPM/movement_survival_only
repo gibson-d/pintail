@@ -1,6 +1,5 @@
 load('NOPI_model_data.rdata')
 
-pt_sur           <- NOPI_model_data[[1]]
 nimble.inits     <- NOPI_model_data[[2]]
 nimble.data      <- NOPI_model_data[[3]]
 nimble.constants <- NOPI_model_data[[4]]
