@@ -1,0 +1,1057 @@
+
+setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
+
+load('two_season_ipm_10_23_22.rdata')
+
+mcmcList1 <- list(chain1 = file_list[[1]]$chain1, chain3 = file_list[[1]]$chain3)
+mcmcList2 <- list(chain1 = file_list[[2]]$chain1, chain3 = file_list[[2]]$chain3)
+
+library(MCMCvis)
+library(ggplot2)
+library(ggdist)
+library(see)
+library(dplyr)
+library(abind)
+library(ggpubr)
+mod <- 2
+n.chains <- 2
+ch1 <- dim(mcmcList1$chain1)[1]
+ch2 <- dim(mcmcList2$chain1)[1]
+keep1   <- seq(from = 2000, to = ch1, by = 200) 
+keep2   <- seq(from = 5000, to = ch2, by = 500)
+samples <- sample <- length(keep1)*n.chains
+
+keep1 <- c(keep1, keep1+ ch1) #, keep1 + ch1*2)
+keep2 <- c(keep2, keep2+ ch2) #, keep2 + ch2*2)
+
+#Natural Winter Survival (female)
+s_nw_hy_central_f <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_hy_central_f',type = 'chains')$h_nw_hy_central_f[,keep1])
+s_nw_hy_pacific_f <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_hy_pacific_f',type = 'chains')$h_nw_hy_pacific_f[,keep1])
+s_nw_ad_central_f <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_ad_central_f',type = 'chains')$h_nw_ad_central_f[,keep1])
+s_nw_ad_pacific_f <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_ad_pacific_f',type = 'chains')$h_nw_ad_pacific_f[,keep1])
+#Natural Winter Survival (male)
+s_nw_hy_central_m <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_hy_central_m',type = 'chains')$h_nw_hy_central_m[,keep1])
+s_nw_hy_pacific_m <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_hy_pacific_m',type = 'chains')$h_nw_hy_pacific_m[,keep1])
+s_nw_ad_central_m <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_ad_central_m',type = 'chains')$h_nw_ad_central_m[,keep1])
+s_nw_ad_pacific_m <- exp(-MCMCpstr(mcmcList1, params = 'h_nw_ad_pacific_m',type = 'chains')$h_nw_ad_pacific_m[,keep1])
+#Harvest Winter Survival (female)
+s_hk_hy_central_f <- exp(-MCMCpstr(mcmcList1, params = 'hk_central',type = 'chains')$hk_central[1,1,1:61,keep1])
+s_hk_ad_central_f <- exp(-MCMCpstr(mcmcList1, params = 'hk_central',type = 'chains')$hk_central[2,1,1:61,keep1])
+s_hk_hy_pacific_f <- exp(-MCMCpstr(mcmcList1, params = 'hk_pacific',type = 'chains')$hk_pacific[1,1,1:61,keep1])
+s_hk_ad_pacific_f <- exp(-MCMCpstr(mcmcList1, params = 'hk_pacific',type = 'chains')$hk_pacific[2,1,1:61,keep1])
+#Harvest Winter Survival (male)
+s_hk_hy_central_m <- exp(-MCMCpstr(mcmcList1, params = 'hk_central',type = 'chains')$hk_central[1,2,1:61,keep1])
+s_hk_ad_central_m <- exp(-MCMCpstr(mcmcList1, params = 'hk_central',type = 'chains')$hk_central[2,2,1:61,keep1])
+s_hk_hy_pacific_m <- exp(-MCMCpstr(mcmcList1, params = 'hk_pacific',type = 'chains')$hk_pacific[1,2,1:61,keep1])
+s_hk_ad_pacific_m <- exp(-MCMCpstr(mcmcList1, params = 'hk_pacific',type = 'chains')$hk_pacific[2,2,1:61,keep1])
+# Natural Summer Survival (female)
+s.summer_ad_ak_f <- MCMCpstr(mcmcList1, params = 's.summer_ad_ak_f', type = 'chains')$s.summer_ad_ak_f[,keep1]
+s.summer_ad_no_f <- MCMCpstr(mcmcList1, params = 's.summer_ad_no_f', type = 'chains')$s.summer_ad_no_f[,keep1]
+s.summer_ad_pr_f <- MCMCpstr(mcmcList1, params = 's.summer_ad_pr_f', type = 'chains')$s.summer_ad_pr_f[,keep1]
+# Natural Summer Survival (male)
+s.summer_ad_ak_m <- MCMCpstr(mcmcList1, params = 's.summer_ad_ak_m', type = 'chains')$s.summer_ad_ak_m[,keep1]
+s.summer_ad_no_m <- MCMCpstr(mcmcList1, params = 's.summer_ad_no_m', type = 'chains')$s.summer_ad_no_m[,keep1]
+s.summer_ad_pr_m <- MCMCpstr(mcmcList1, params = 's.summer_ad_pr_m', type = 'chains')$s.summer_ad_pr_m[,keep1]
+# Pre-migration survival
+local_f_ak <- MCMCpstr(mcmcList2,params = 'local', type = 'chains')$local[1,keep2]
+local_f_pr <- MCMCpstr(mcmcList2,params = 'local', type = 'chains')$local[2,keep2]
+local_f_no <- MCMCpstr(mcmcList2,params = 'local', type = 'chains')$local[3,keep2]
+local_m_ak <- MCMCpstr(mcmcList2,params = 'local', type = 'chains')$local[4,keep2]
+local_m_pr <- MCMCpstr(mcmcList2,params = 'local', type = 'chains')$local[5,keep2]
+local_m_no <- MCMCpstr(mcmcList2,params = 'local', type = 'chains')$local[6,keep2]
+
+bp        <- MCMCpstr(mcmcList2, params = 'bp'   , type= 'chains')$bp[,keep1]
+
+naf_ak       <- MCMCpstr(mcmcList1, params = 'N2F', type= 'chains')$N2F[1,,keep1]
+njf_ak       <- MCMCpstr(mcmcList1, params = 'N1F', type= 'chains')$N1F[1,,keep1]
+nam_ak       <- MCMCpstr(mcmcList1, params = 'N2M', type= 'chains')$N2M[1,,keep1]
+njm_ak       <- MCMCpstr(mcmcList1, params = 'N1M', type= 'chains')$N1M[1,,keep1]
+
+naf_no       <- MCMCpstr(mcmcList1, params = 'N2F', type= 'chains')$N2F[2,,keep1]
+njf_no       <- MCMCpstr(mcmcList1, params = 'N1F', type= 'chains')$N1F[2,,keep1]
+nam_no       <- MCMCpstr(mcmcList1, params = 'N2M', type= 'chains')$N2M[2,,keep1]
+njm_no       <- MCMCpstr(mcmcList1, params = 'N1M', type= 'chains')$N1M[2,,keep1]
+
+naf_pr       <- MCMCpstr(mcmcList1, params = 'N2F', type= 'chains')$N2F[3,,keep1]
+njf_pr       <- MCMCpstr(mcmcList1, params = 'N1F', type= 'chains')$N1F[3,,keep1]
+nam_pr       <- MCMCpstr(mcmcList1, params = 'N2M', type= 'chains')$N2M[3,,keep1]
+njm_pr       <- MCMCpstr(mcmcList1, params = 'N1M', type= 'chains')$N1M[3,,keep1]
+
+fecundity_ak <- MCMCpstr(mcmcList1, params = 'ar' , type= 'chains')$ar[1,,keep1]
+fecundity_no <- MCMCpstr(mcmcList1, params = 'ar' , type= 'chains')$ar[2,,keep1]
+fecundity_pr <- MCMCpstr(mcmcList1, params = 'ar' , type= 'chains')$ar[3,,keep1]
+
+ak_pac <- MCMCpstr(mcmcList1, params = 'pi_ak', type= 'chains')$pi_ak[2,keep1]
+no_pac <- MCMCpstr(mcmcList1, params = 'pi_no', type= 'chains')$pi_no[2,keep1]
+pr_pac <- MCMCpstr(mcmcList1, params = 'pi_pr', type= 'chains')$pi_pr[2,keep1]
+ak_cen <- MCMCpstr(mcmcList1, params = 'pi_ak', type= 'chains')$pi_ak[1,keep1]
+no_cen <- MCMCpstr(mcmcList1, params = 'pi_no', type= 'chains')$pi_no[1,keep1]
+pr_cen <- MCMCpstr(mcmcList1, params = 'pi_pr', type= 'chains')$pi_pr[1,keep1]
+
+
+# Movements
+pi_all <- MCMCpstr(mcmcList1, params = 'pi', type= 'chains')$pi[,,,keep1]
+
+# Step 1: Compute realized population growth rates for Canvasbacks and Redheads given the IPM output 
+library(matrixStats)
+noyears   <- 60
+n.region <- 3
+lam_tot <- array(0,dim = c(noyears,samples,n.region))
+lam_real <- array(0,dim = c(noyears,samples,n.region))
+F1       <- array(0,dim = c(noyears,samples,n.region))
+F2       <- array(0,dim = c(noyears,samples,n.region))
+Sfj_w1     <- array(0,dim = c(noyears,samples))
+Sfj_w2     <- array(0,dim = c(noyears,samples))
+Sfj_h1     <- array(0,dim = c(noyears,samples))
+Sfj_h2     <- array(0,dim = c(noyears,samples))
+Sfa_w1     <- array(0,dim = c(noyears,samples))
+Sfa_w2     <- array(0,dim = c(noyears,samples))
+Sfa_h1     <- array(0,dim = c(noyears,samples))
+Sfa_h2     <- array(0,dim = c(noyears,samples))
+Sfj2       <- array(0,dim = c(noyears,samples,n.region))
+Sfa2       <- array(0,dim = c(noyears,samples,n.region))
+Sfj_s      <- array(0,dim = c(noyears,samples,n.region))
+Sfa_s      <- array(0,dim = c(noyears,samples,n.region))
+Sfj_w1_r <- array(0,dim = c(noyears,samples,n.region))
+Sfj_w2_r <- array(0,dim = c(noyears,samples,n.region))
+Sfj_h1_r <- array(0,dim = c(noyears,samples,n.region))
+Sfj_h2_r <- array(0,dim = c(noyears,samples,n.region))
+Sfa_w1_r <- array(0,dim = c(noyears,samples,n.region))
+Sfa_w2_r <- array(0,dim = c(noyears,samples,n.region))
+Sfa_h1_r <- array(0,dim = c(noyears,samples,n.region))
+Sfa_h2_r <- array(0,dim = c(noyears,samples,n.region))
+s.winter   <- abind(abind(s_nw_hy_central_f,s_nw_hy_pacific_f,along = 0),abind(s_nw_ad_central_f,s_nw_ad_pacific_f,along = 0), along = 0)
+s.winter_m <- abind(abind(s_nw_hy_central_m,s_nw_hy_pacific_m,along = 0),abind(s_nw_ad_central_m,s_nw_ad_pacific_m,along = 0), along = 0)
+
+s.harvest   <- abind(abind(s_hk_hy_central_f,s_hk_hy_pacific_f,along = 0),abind(s_hk_ad_central_f,s_hk_ad_pacific_f,along = 0), along = 0)
+s.harvest_m <- abind(abind(s_hk_hy_central_m,s_hk_hy_pacific_m,along = 0),abind(s_hk_ad_central_m,s_hk_ad_pacific_m,along = 0), along = 0)
+
+s.summer   <- abind(s.summer_ad_ak_f,s.summer_ad_no_f,s.summer_ad_pr_f,along = 0)
+s.summer_m <- abind(s.summer_ad_ak_m,s.summer_ad_no_m,s.summer_ad_pr_m,along = 0)
+
+local      <- abind(local_f_ak,local_f_pr,local_f_no,along = 0)
+local_m    <- abind(local_m_ak,local_m_pr,local_m_no,along = 0)
+
+ms         <- apply(s.summer, c(1,3), mean)
+msm        <- apply(s.summer_m, c(1,3), mean)
+library(abind)
+
+
+
+njf <- abind(njf_ak, njf_no, njf_pr, along = 0)
+naf <- abind(naf_ak, naf_no, naf_pr, along = 0)
+
+njm <- abind(njm_ak, njm_no, njm_pr, along = 0)
+nam <- abind(nam_ak, nam_no, nam_pr, along = 0)
+
+fecundity <- abind(fecundity_ak, fecundity_no, fecundity_pr, along = 0)
+
+for (j in 1:samples){
+  for(k in 1:n.region){
+    for (i in 1){
+      Sfj2[i,j,k] <- local[k,j] * s.summer[k,i,j]^(1/2)               #  Mar - May t
+      Sfa2[i,j,k] <- ms[k,j]^(1/2) * s.summer[k,i,j]^(1/2)            # mean May - July * Mar - May t   
+      
+      lam_real[i,j,k] <- (naf[k,i+1,j] +  njf[k,i+1,j])/(naf[k,i,j] +  njf[k,i,j])   # May to May
+      lam_tot[i,j,k] <- (naf[k,i+1,j] +  njf[k,i+1,j]+ nam[k,i+1,j] +  njm[k,i+1,j])/(naf[k,i,j] +  njf[k,i,j] + nam[k,i,j] +  njm[k,i,j])   # May to May
+    }
+    for (i in 2:noyears){
+      Sfj2[i,j,k] <- local[k,j] * s.summer[k,i,j]^(1/2)               # Mar - May t
+      Sfa2[i,j,k] <- s.summer[k,i-1,j]^(1/2) * s.summer[k,i,j]^(1/2)  # May - July t-1, Mar - May t      
+      
+      lam_real[i,j,k] <- (naf[k,i+1,j] +  njf[k,i+1,j])/(naf[k,i,j] +  njf[k,i,j])   # May to May
+      lam_tot[i,j,k] <- (naf[k,i+1,j] +  njf[k,i+1,j]+ nam[k,i+1,j] +  njm[k,i+1,j])/(naf[k,i,j] +  njf[k,i,j] + nam[k,i,j] +  njm[k,i,j])   # May to May
+    }
+  }
+}
+tempvar_real  <- apply(lam_real,c(1,3),  mean)
+mu_lam        <- apply(tempvar_real,2,   function(x) exp(mean(log(x))))
+tempvar_real2 <- apply(lam_tot,c(1,3),  mean)
+mu_lam2       <- apply(tempvar_real2,2, function(x) exp(mean(log(x))))
+
+# Step 2: Calculate stage-specific proportions of abundances for each female 
+# age class at each time step and for each of the saved MCMC samples. 
+mu_psi <- data.matrix(cbind.data.frame(ak_cen,no_cen,pr_cen))
+noyears <- 60
+nf1 <- array(0,dim = c(noyears,samples,3))
+nf2 <- array(0,dim = c(noyears,samples,3))
+sr  <- array(0,dim = c(noyears,samples,3))
+for (i in 1:noyears){
+  for (j in 1:samples){
+    Sfj_w1[i,j]  <- s.winter[1,1,i,j]
+    Sfj_w2[i,j]  <- s.winter[1,2,i,j]
+    Sfj_h1[i,j]  <- s.harvest[1,1,i,j]
+    Sfj_h2[i,j]  <- s.harvest[1,2,i,j]
+    Sfa_w1[i,j]  <- s.winter[2,1,i,j]
+    Sfa_w2[i,j]  <- s.winter[2,2,i,j]
+    Sfa_h1[i,j]  <- s.harvest[2,1,i,j]
+    Sfa_h2[i,j]  <- s.harvest[2,2,i,j]
+    
+    for(k in 1:n.region){
+      Sfj_w1_r[i,j,k] <- Sfj_w1[i,j] * mu_psi[j,k]
+      Sfj_w2_r[i,j,k] <- Sfj_w2[i,j] * (1 - mu_psi[j,k])
+      Sfj_h1_r[i,j,k] <- Sfj_h1[i,j] * mu_psi[j,k]
+      Sfj_h2_r[i,j,k] <- Sfj_h2[i,j] * (1 - mu_psi[j,k])
+      Sfa_w1_r[i,j,k] <- Sfa_w1[i,j] * mu_psi[j,k]
+      Sfa_w2_r[i,j,k] <- Sfa_w2[i,j] * (1 - mu_psi[j,k])
+      Sfa_h1_r[i,j,k] <- Sfa_h1[i,j] * mu_psi[j,k]
+      Sfa_h2_r[i,j,k] <- Sfa_h2[i,j] *(1 - mu_psi[j,k])
+      
+      F1[i,j,k] <- fecundity[k,i,j] * bp[j]                           
+      F2[i,j,k] <- fecundity[k,i,j] 
+      Sfj_s[i,j,k] <- Sfj2[i,j,k]
+      Sfa_s[i,j,k] <- Sfa2[i,j,k]
+      nf1[i,j,k] <-  njf[k,i,j]/(naf[k,i,j] +  njf[k,i,j])
+      nf2[i,j,k] <-  naf[k,i,j]/(naf[k,i,j] +  njf[k,i,j])
+      sr[i,j,k] <- (naf[k,i,j] +  njf[k,i,j])/(naf[k,i,j] +  njf[k,i,j] + nam[k,i,j] +  njm[k,i,j])
+    }
+  }
+}
+
+
+# Step 3: Calculate the transient sensitivities for each demographic         
+# parameter, evaluated at temporal means of each parameter. 
+mu_pi1    <- apply(pi_all[,1,,],c(3,1), mean)
+mu_pi2    <- apply(pi_all[,2,,],c(3,1), mean)
+mu_pi3    <- apply(pi_all[,3,,],c(3,1), mean)
+
+mu_F1     <- apply(F1 ,c(2,3), mean)
+mu_F2     <- apply(F2 ,c(2,3), mean)
+mu_Sfj_w1 <- apply(Sfj_w1,2, mean)
+mu_Sfj_w2 <- apply(Sfj_w2,2, mean)
+mu_Sfj_h1 <- apply(Sfj_h1,2, mean)
+mu_Sfj_h2 <- apply(Sfj_h2,2, mean)
+mu_Sfa_w1 <- apply(Sfa_w1,2, mean)
+mu_Sfa_w2 <- apply(Sfa_w2,2, mean)
+mu_Sfa_h1 <- apply(Sfa_h1,2, mean)
+mu_Sfa_h2 <- apply(Sfa_h2,2, mean)
+mu_Sfj_s  <- apply(Sfj_s,c(2,3), mean)
+mu_Sfa_s  <- apply(Sfa_s,c(2,3), mean)
+mu_nf1    <- apply(nf1,c(2,3), mean)
+mu_nf2    <- apply(nf2,c(2,3), mean)
+
+mu_pi_ak    <- apply(pi_all[,1,,],c(3,1), mean)
+mu_pi_no    <- apply(pi_all[,2,,],c(3,1), mean)
+mu_pi_pr    <- apply(pi_all[,3,,],c(3,1), mean)
+
+mu_lamt   <- apply(lam_tot, c(2,3), mean)
+mu_lamf   <- apply(lam_real,c(2,3), mean)
+
+sd_F1     <- apply(F1 ,c(2,3), sd)
+sd_F2     <- apply(F2 ,c(2,3), sd)
+sd_Sfj_w1 <- apply(Sfj_w1,2, sd)
+sd_Sfj_w2 <- apply(Sfj_w2,2, sd)
+sd_Sfj_h1 <- apply(Sfj_h1,2, sd)
+sd_Sfj_h2 <- apply(Sfj_h2,2, sd)
+sd_Sfa_w1 <- apply(Sfa_w1,2, sd)
+sd_Sfa_w2 <- apply(Sfa_w2,2, sd)
+sd_Sfa_h1 <- apply(Sfa_h1,2, sd)
+sd_Sfa_h2 <- apply(Sfa_h2,2, sd)
+sd_Sfj_s  <- apply(Sfj_s,c(2,3), sd)
+sd_Sfa_s  <- apply(Sfa_s,c(2,3), sd)
+sd_nf1    <- apply(nf1,c(2,3), sd)
+sd_nf2    <- apply(nf2,c(2,3), sd)
+sd_lamt   <- apply(lam_tot,c(2,3), sd)
+sd_lamf   <- apply(lam_real,c(2,3), sd)
+
+cv_F1    <- sd_F1    /mu_F1     
+cv_F2    <- sd_F2    /mu_F2     
+cv_Sfj_w1<- sd_Sfj_w1/mu_Sfj_w1 
+cv_Sfj_w2<- sd_Sfj_w2/mu_Sfj_w2 
+cv_Sfj_h1<- sd_Sfj_h1/mu_Sfj_h1 
+cv_Sfj_h2<- sd_Sfj_h2/mu_Sfj_h2 
+cv_Sfa_w1<- sd_Sfa_w1/mu_Sfa_w1 
+cv_Sfa_w2<- sd_Sfa_w2/mu_Sfa_w2 
+cv_Sfa_h1<- sd_Sfa_h1/mu_Sfa_h1 
+cv_Sfa_h2<- sd_Sfa_h2/mu_Sfa_h2 
+cv_Sfj_s <- sd_Sfj_s /mu_Sfj_s  
+cv_Sfa_s <- sd_Sfa_s /mu_Sfa_s  
+cv_nf1   <- sd_nf1   /mu_nf1    
+cv_nf2   <- sd_nf2   /mu_nf2    
+cv_lamt  <- sd_lamt  /mu_lamt   
+cv_lamf  <- sd_lamf  /mu_lamf   
+
+
+
+cv_F1_mn  <- t(rbind.data.frame(mean = (apply(  cv_F1 ,2,mean)), low_95 =  (apply(  cv_F1 ,2  ,quantile, probs = 0.025)), upp_95 =  (apply(  cv_F1 ,2  ,quantile, probs = 0.975))))
+cv_F2_mn  <- t(rbind.data.frame(mean = (apply(   cv_F2 ,2,mean)), low_95 =  (apply(   cv_F2 ,2,quantile, probs = 0.025)), upp_95 =  (apply(   cv_F2 ,2,quantile, probs = 0.975))))
+cv_Sfj_w1_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_w1), low_95 = quantile(cv_Sfj_w1,probs = 0.025), upp_95 = quantile(cv_Sfj_w1 ,1,probs = 0.975)))
+cv_Sfj_w2_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_w2), low_95 = quantile(cv_Sfj_w2,probs = 0.025), upp_95 = quantile(cv_Sfj_w2 ,1,probs = 0.975)))
+cv_Sfj_h1_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_h1), low_95 = quantile(cv_Sfj_h1,probs = 0.025), upp_95 = quantile(cv_Sfj_h1 ,1,probs = 0.975)))
+cv_Sfj_h2_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_h2), low_95 = quantile(cv_Sfj_h2,probs = 0.025), upp_95 = quantile(cv_Sfj_h2 ,1,probs = 0.975)))
+cv_Sfa_w1_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_w1), low_95 = quantile(cv_Sfa_w1,probs = 0.025), upp_95 = quantile(cv_Sfa_w1 ,1,probs = 0.975)))
+cv_Sfa_w2_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_w2), low_95 = quantile(cv_Sfa_w2,probs = 0.025), upp_95 = quantile(cv_Sfa_w2 ,1,probs = 0.975)))
+cv_Sfa_h1_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_h1), low_95 = quantile(cv_Sfa_h1,probs = 0.025), upp_95 = quantile(cv_Sfa_h1 ,1,probs = 0.975)))
+cv_Sfa_h2_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_h2), low_95 = quantile(cv_Sfa_h2,probs = 0.025), upp_95 = quantile(cv_Sfa_h2 ,1,probs = 0.975)))
+cv_Sfj_s_mn  <- t(rbind.data.frame(mean = (apply( cv_Sfj_s ,2,mean)), low_95 =  (apply( cv_Sfj_s ,2,quantile, probs = 0.025)),upp_95 = (apply( cv_Sfj_s ,2,quantile, probs = 0.975))))
+cv_Sfa_s_mn  <- t(rbind.data.frame(mean = (apply( cv_Sfa_s ,2,mean)), low_95 =  (apply( cv_Sfa_s ,2,quantile, probs = 0.025)),upp_95 = (apply( cv_Sfa_s ,2,quantile, probs = 0.975))))
+cv_nf1_mn  <- t(rbind.data.frame(mean = (apply(   cv_nf1 ,2,mean)), low_95 =  (apply(   cv_nf1 ,2,quantile, probs = 0.025)),upp_95 = (apply(   cv_nf1 ,2,quantile, probs = 0.975))))
+cv_nf2_mn  <- t(rbind.data.frame(mean = (apply(   cv_nf2 ,2,mean)), low_95 =  (apply(   cv_nf2 ,2,quantile, probs = 0.025)),upp_95 = (apply(   cv_nf2 ,2,quantile, probs = 0.975))))
+cv_lamt_mn  <- t(rbind.data.frame(mean = (apply(  cv_lamt ,2,mean)), low_95 =  (apply(  cv_lamt ,2,quantile, probs = 0.025)),upp_95 = (apply(  cv_lamt ,2,quantile, probs = 0.975))))
+cv_lamf_mn  <- t(rbind.data.frame(mean = (apply(  cv_lamf ,2,mean)), low_95 =  (apply(  cv_lamf ,2,quantile, probs = 0.025)),upp_95 = (apply(  cv_lamf ,2,quantile, probs = 0.975))))
+
+
+
+
+rownames(    cv_F1_mn) <- NULL; colnames(    cv_F1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(    cv_F2_mn) <- NULL; colnames(    cv_F2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_w1_mn) <- NULL; colnames(cv_Sfj_w1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_w2_mn) <- NULL; colnames(cv_Sfj_w2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_h1_mn) <- NULL; colnames(cv_Sfj_h1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_h2_mn) <- NULL; colnames(cv_Sfj_h2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_w1_mn) <- NULL; colnames(cv_Sfa_w1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_w2_mn) <- NULL; colnames(cv_Sfa_w2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_h1_mn)  <- NULL; colnames(cv_Sfa_h1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_h2_mn ) <- NULL; colnames(cv_Sfa_h2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_Sfj_s_mn ) <- NULL; colnames( cv_Sfj_s_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_Sfa_s_mn ) <- NULL; colnames( cv_Sfa_s_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(   cv_nf1_mn ) <- NULL;colnames(   cv_nf1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(   cv_nf2_mn ) <- NULL;colnames(   cv_nf2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(  cv_lamt_mn ) <- NULL;colnames(  cv_lamt_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(  cv_lamf_mn ) <- NULL;colnames(  cv_lamf_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+
+LTRE_cv <- cbind.data.frame(rbind.data.frame(cv_f1_mn,cv_f2_mn,cv_J1_mn,cv_A1_mn,cv_J2_mn,cv_A2_mn,cv_N1_mn,cv_N2_mn, cv_t_mn, cv_f_mn,cv_Jm1_mn,cv_Am1_mn,cv_Jm2_mn,cv_Am2_mn,cv_sr_mn), 
+                            expand.grid(species = c("Canvasback", 'Redhead'),parameter = c('F[J]','F[A]','S[jw]','S[aw]','S[js]','S[as]','N[J]','N[A]','lamdbda[t]','lambda[f]','SM[jw]','SM[aw]','SM[js]','SM[as]','SR')))
+
+mu_F1_mn  <- t(rbind.data.frame(mean = (apply(  mu_F1 ,2,mean)), low_95 =  (apply(  mu_F1 ,2  ,quantile, probs = 0.025)), upp_95 =  (apply(  mu_F1 ,2  ,quantile, probs = 0.975))))
+mu_F2_mn  <- t(rbind.data.frame(mean = (apply(   mu_F2 ,2,mean)), low_95 =  (apply(   mu_F2 ,2,quantile, probs = 0.025)), upp_95 =  (apply(   mu_F2 ,2,quantile, probs = 0.975))))
+mu_Sfj_w1_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_w1), low_95 = quantile(mu_Sfj_w1,probs = 0.025), upp_95 = quantile(mu_Sfj_w1 ,1,probs = 0.975)))
+mu_Sfj_w2_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_w2), low_95 = quantile(mu_Sfj_w2,probs = 0.025), upp_95 = quantile(mu_Sfj_w2 ,1,probs = 0.975)))
+mu_Sfj_h1_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_h1), low_95 = quantile(mu_Sfj_h1,probs = 0.025), upp_95 = quantile(mu_Sfj_h1 ,1,probs = 0.975)))
+mu_Sfj_h2_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_h2), low_95 = quantile(mu_Sfj_h2,probs = 0.025), upp_95 = quantile(mu_Sfj_h2 ,1,probs = 0.975)))
+mu_Sfa_w1_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_w1), low_95 = quantile(mu_Sfa_w1,probs = 0.025), upp_95 = quantile(mu_Sfa_w1 ,1,probs = 0.975)))
+mu_Sfa_w2_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_w2), low_95 = quantile(mu_Sfa_w2,probs = 0.025), upp_95 = quantile(mu_Sfa_w2 ,1,probs = 0.975)))
+mu_Sfa_h1_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_h1), low_95 = quantile(mu_Sfa_h1,probs = 0.025), upp_95 = quantile(mu_Sfa_h1 ,1,probs = 0.975)))
+mu_Sfa_h2_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_h2), low_95 = quantile(mu_Sfa_h2,probs = 0.025), upp_95 = quantile(mu_Sfa_h2 ,1,probs = 0.975)))
+mu_Sfj_s_mn  <- t(rbind.data.frame(mean = (apply( mu_Sfj_s ,2,mean)), low_95 =  (apply( mu_Sfj_s ,2,quantile, probs = 0.025)),upp_95 = (apply( mu_Sfj_s ,2,quantile, probs = 0.975))))
+mu_Sfa_s_mn  <- t(rbind.data.frame(mean = (apply( mu_Sfa_s ,2,mean)), low_95 =  (apply( mu_Sfa_s ,2,quantile, probs = 0.025)),upp_95 = (apply( mu_Sfa_s ,2,quantile, probs = 0.975))))
+mu_nf1_mn  <- t(rbind.data.frame(mean = (apply(   mu_nf1 ,2,mean)), low_95 =  (apply(   mu_nf1 ,2,quantile, probs = 0.025)),upp_95 = (apply(   mu_nf1 ,2,quantile, probs = 0.975))))
+mu_nf2_mn  <- t(rbind.data.frame(mean = (apply(   mu_nf2 ,2,mean)), low_95 =  (apply(   mu_nf2 ,2,quantile, probs = 0.025)),upp_95 = (apply(   mu_nf2 ,2,quantile, probs = 0.975))))
+mu_lamt_mn  <- t(rbind.data.frame(mean = (apply(  mu_lamt ,2,mean)), low_95 =  (apply(  mu_lamt ,2,quantile, probs = 0.025)),upp_95 = (apply(  mu_lamt ,2,quantile, probs = 0.975))))
+mu_lamf_mn  <- t(rbind.data.frame(mean = (apply(  mu_lamf ,2,mean)), low_95 =  (apply(  mu_lamf ,2,quantile, probs = 0.025)),upp_95 = (apply(  mu_lamf ,2,quantile, probs = 0.975))))
+
+
+rownames(    mu_F1_mn) <- NULL; colnames(    mu_F1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(    mu_F2_mn) <- NULL; colnames(    mu_F2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_w1_mn) <- NULL; colnames(mu_Sfj_w1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_w2_mn) <- NULL; colnames(mu_Sfj_w2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_h1_mn) <- NULL; colnames(mu_Sfj_h1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_h2_mn) <- NULL; colnames(mu_Sfj_h2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_w1_mn) <- NULL; colnames(mu_Sfa_w1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_w2_mn) <- NULL; colnames(mu_Sfa_w2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_h1_mn)  <- NULL; colnames(mu_Sfa_h1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_h2_mn ) <- NULL; colnames(mu_Sfa_h2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames( mu_Sfj_s_mn ) <- NULL; colnames( mu_Sfj_s_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames( mu_Sfa_s_mn ) <- NULL; colnames( mu_Sfa_s_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(   mu_nf1_mn ) <- NULL;colnames(   mu_nf1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(   mu_nf2_mn ) <- NULL;colnames(   mu_nf2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(  mu_lamt_mn ) <- NULL;colnames(  mu_lamt_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(  mu_lamf_mn ) <- NULL;colnames(  mu_lamf_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+
+# LTRE_mu <- cbind.data.frame(rbind.data.frame(mu_f1_mn,mu_f2_mn,mu_J1_mn,mu_A1_mn,mu_J2_mn,mu_A2_mn,mu_N1_mn,mu_N2_mn,mu_t_mn,mu_f_mn,mu_JM1_mn,mu_AM1_mn,mu_JM2_mn,mu_AM2_mn,mu_sr_mn), 
+#                             expand.grid(species = c("Canvasback", 'Redhead'),parameter = c('F[J]','F[A]','S[jw]','S[aw]','S[js]','S[as]','N[J]','N[A]','lamdbda[t]','lambda[f]','SM[jw]','SM[aw]','SM[js]','SM[as]','SR')))
+# 
+# 
+# LTRE_mu_cv <- left_join(LTRE_mu, LTRE_cv)
+# write.csv(LTRE_mu_cv, file = 'mean_cv.csv')
+
+
+sens_F1      <- array(0,dim = c(samples,n.region,n.region))
+sens_F2      <- array(0,dim = c(samples,n.region,n.region))
+sens_Sfj_w1  <- array(0,dim = c(samples,n.region,n.region))
+sens_Sfj_w2  <- array(0,dim = c(samples,n.region,n.region))
+sens_Sfj_h1  <- array(0,dim = c(samples,n.region,n.region))
+sens_Sfj_h2  <- array(0,dim = c(samples,n.region,n.region))
+sens_Sfj_s   <- array(0,dim = c(samples,n.region,n.region))
+sens_Sfa_w1  <- array(0,dim = c(samples,n.region))
+sens_Sfa_w2  <- array(0,dim = c(samples,n.region))
+sens_Sfa_h1  <- array(0,dim = c(samples,n.region))
+sens_Sfa_h2  <- array(0,dim = c(samples,n.region))
+sens_Sfa_s   <- array(0,dim = c(samples,n.region))
+sens_pi      <- array(0,dim = c(samples,n.region,n.region))
+sens_nf1     <- array(0,dim = c(samples,n.region,n.region))
+sens_nf2     <- array(0,dim = c(samples,n.region,n.region))
+
+sens_F1_t      <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_F2_t      <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_Sfj_w1_t  <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_Sfj_w2_t  <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_Sfj_h1_t  <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_Sfj_h2_t  <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_Sfj_s_t   <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_Sfa_w1_t  <- array(0,dim = c(samples,n.region,noyears-1))
+sens_Sfa_w2_t  <- array(0,dim = c(samples,n.region,noyears-1))
+sens_Sfa_h1_t  <- array(0,dim = c(samples,n.region,noyears-1))
+sens_Sfa_h2_t  <- array(0,dim = c(samples,n.region,noyears-1))
+sens_Sfa_s_t   <- array(0,dim = c(samples,n.region,noyears-1))
+sens_pi_t     <- array(0,dim = c(samples,n.region,n.region,noyears-1))
+sens_nf1_t     <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+sens_nf2_t     <- array(0,dim = c(samples,n.region,noyears-1,n.region))
+
+
+nrf1 <- nrf2 <- array(0, dim = c(noyears,samples,n.region,n.region))
+mu_nrf1 <- mu_nrf2  <- array(0, dim = c(samples,n.region,n.region))
+for (j in 1:samples){
+  for(k in 1:n.region){
+    for(l in 1:n.region){
+      for(t in 1:noyears){
+      nrf1[t,j,k,l] <- nf1[t,j,k] * pi_all[k,l,t,j]
+      nrf2[t,j,k,l] <- nf2[t,j,k] * pi_all[k,l,t,j]
+    }
+  
+    mu_nrf1[j,k,l] <- mean( nrf1[1:noyears,j,k,l])
+    mu_nrf2[j,k,l] <- mean( nrf2[1:noyears,j,k,l])
+    
+    sens_F1[j,k,l] <- (0.5 * (mu_Sfj_w1[j]*mu_Sfj_h1[j]*mu_psi[j,k] + mu_Sfj_w2[j]*mu_Sfj_h2[j]*(1 - mu_psi[j,k])) * mu_Sfj_s[j,k] * mu_nrf1[j,k,l])
+    sens_F2[j,k,l] <- (0.5 * (mu_Sfj_w1[j]*mu_Sfj_h1[j]*mu_psi[j,k] + mu_Sfj_w2[j]*mu_Sfj_h2[j]*(1 - mu_psi[j,k])) * mu_Sfj_s[j,k] * mu_nrf2[j,k,l])
+    
+    sens_Sfj_w1[j,k,l] <- (0.5 * mu_F1[j,k]* mu_Sfj_h1[j]*mu_psi[j,k] * mu_Sfj_s[j,k] *  mu_nrf1[j,k,l] ) + 
+                          (0.5 * mu_F2[j,k]* mu_Sfj_h1[j]*mu_psi[j,k] * mu_Sfj_s[j,k] *  mu_nrf2[j,k,l] ) 
+    sens_Sfj_w2[j,k,l] <- (0.5 * mu_F1[j,k]* mu_Sfj_h2[j]* (1 - mu_psi[j,k]) * mu_Sfj_s[j,k] * mu_nrf1[j,k,l]) + 
+                          (0.5 * mu_F2[j,k]* mu_Sfj_h2[j]* (1 - mu_psi[j,k]) * mu_Sfj_s[j,k] * mu_nrf2[j,k,l]) 
+    
+    sens_Sfj_h1[j,k,l] <- (0.5 * mu_F1[j,k]* mu_Sfj_w1[j]*mu_psi[j,k] * mu_Sfj_s[j,k] * mu_nrf1[j,k,l]) + 
+                        (0.5 * mu_F2[j,k]* mu_Sfj_w1[j]*mu_psi[j,k] * mu_Sfj_s[j,k] * mu_nrf2[j,k,l]) 
+    sens_Sfj_h2[j,k,l] <- (0.5 * mu_F1[j,k]* mu_Sfj_w2[j]* (1 - mu_psi[j,k]) * mu_Sfj_s[j,k] * mu_nrf1[j,k,l]) + 
+                        (0.5 * mu_F2[j,k]* mu_Sfj_w2[j]* (1 - mu_psi[j,k]) * mu_Sfj_s[j,k] * mu_nrf2[j,k,l])          
+    
+    sens_Sfj_s[j,k,l] <- (0.5 * mu_F1[j,k]* ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k])) ) * mu_nrf1[j,k,l]) + 
+                         (0.5 * mu_F2[j,k]* ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k])) ) * mu_nrf2[j,k,l])  
+    
+    sens_Sfa_w1[j,k] <-  mu_Sfa_h1[j] * mu_psi[j,k] * mu_Sfa_s[j,k]
+    sens_Sfa_w2[j,k] <-  mu_Sfa_h2[j] * (1 -mu_psi[j,k]) * mu_Sfa_s[j,k]
+    sens_Sfa_h1[j,k] <-  mu_Sfa_w1[j] * mu_psi[j,k] * mu_Sfa_s[j,k]
+    sens_Sfa_h2[j,k] <-  mu_Sfa_w2[j] * (1 -mu_psi[j,k]) * mu_Sfa_s[j,k]
+     sens_Sfa_s[j,k] <- ((mu_Sfa_h1[j]*mu_Sfa_w1[j]*mu_psi[j,k]) + (mu_Sfa_h2[j]*mu_Sfa_w2[j]*(1 - mu_psi[j,k])) )
+    
+    sens_pi[j,1,k] <-  0.5 * mu_F1[j,k] * mu_nf1[j,1] *  mu_Sfj_s[j,k]  * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) +
+                       0.5 * mu_F2[j,k] * mu_nf2[j,1] *  mu_Sfj_s[j,k]  * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k])))
+    
+    sens_pi[j,2,k] <-  0.5 * mu_F1[j,k] * mu_nf1[j,2] *  mu_Sfj_s[j,k]  * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) +
+                       0.5 * mu_F2[j,k] * mu_nf2[j,2] *  mu_Sfj_s[j,k]  * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k])))
+    
+    sens_pi[j,3,k] <-  0.5 * mu_F1[j,k] * mu_nf1[j,3] *  mu_Sfj_s[j,k]  * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) +
+                       0.5 * mu_F2[j,k] * mu_nf2[j,3] *  mu_Sfj_s[j,k]  * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k])))
+    
+    sens_nf1[j,k,l] <-   (0.5 * mu_F1[j,k] * mu_Sfj_s[j,k] * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) +
+                                             mu_Sfa_s[j,k] * (mu_Sfa_w1[j]*mu_Sfa_h1[j]*mu_psi[j,k] + mu_Sfa_w2[j]*mu_Sfa_h2[j]*(1 - mu_psi[j,k]))) -
+                      (0.5 * mu_Sfj_s[j,k] * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) * (mu_F1[j,k] * mu_nrf1[j,k,l] + mu_F2[j,k] *  mu_nrf2[j,k,l]) +
+                        mu_Sfa_s[j,k] * (mu_Sfa_w1[j]*mu_Sfa_h1[j]*mu_psi[j,k] + mu_Sfa_w2[j]*mu_Sfa_h2[j]*(1 - mu_psi[j,k])))
+    
+    sens_nf2[j,k,l] <-   (0.5 * mu_F2[j,k] * mu_Sfj_s[j,k] * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) +
+                          mu_Sfa_s[j,k] * (mu_Sfa_w1[j]*mu_Sfa_h1[j]*mu_psi[j,k] + mu_Sfa_w2[j]*mu_Sfa_h2[j]*(1 - mu_psi[j,k]))) -
+                         (0.5 * mu_Sfj_s[j,k] * ((mu_Sfj_h1[j]*mu_Sfj_w1[j]*mu_psi[j,k]) + (mu_Sfj_h2[j]*mu_Sfj_w2[j]*(1 - mu_psi[j,k]))) * (mu_F1[j,k] * mu_nrf1[j,k,l] + mu_F2[j,k] *  mu_nrf2[j,k,l]) +
+                        mu_Sfa_s[j,k] * (mu_Sfa_w1[j]*mu_Sfa_h1[j]*mu_psi[j,k] + mu_Sfa_w2[j]*mu_Sfa_h2[j]*(1 - mu_psi[j,k])))
+    
+    sens_F1_t[j,k,1:59,l] <- 0.5 * (((Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2 * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * mu_psi[j,k]) + 
+                                   ((Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 * (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (1 - mu_psi[j,k]))) *
+                                  (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 * ( nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2
+    
+    sens_F2_t[j,k,1:59,l] <- 0.5 * (((Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2 * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * mu_psi[j,k]) + 
+                                    ((Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 * (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (1 - mu_psi[j,k]))) * 
+                                           (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 * ( nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2
+                               
+    
+    sens_Sfj_w1_t[j,k,1:59,l] <- (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * mu_psi[j,k] * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2 ) + 
+      (0.5 * (F2[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * mu_psi[j,k] * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2 )
+    
+    sens_Sfj_w2_t[j,k,1:59,l] <- (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (1 - mu_psi[j,k]) * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2 ) + 
+      (0.5 * (F2[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (1 - mu_psi[j,k]) * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2 )
+    
+    sens_Sfj_h1_t[j,k,1:59,l] <- (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2 * mu_psi[j,k] * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2 ) + 
+      (0.5 * (F2[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2 * mu_psi[j,k] * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2 )
+    
+    sens_Sfj_h2_t[j,k,1:59,l] <- (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 * (1 - mu_psi[j,k]) * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2 ) + 
+      (0.5 * (F2[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 * (1 - mu_psi[j,k]) * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2 *   ( nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2 )
+    
+    sens_Sfj_s_t[j,k,1:59,l] <- (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2 * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2 * mu_psi[j,k] * (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 * (1 - mu_psi[j,k]) * ( nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2 ) + 
+      (0.5 * (F2[1:59,j,k]+F2[2:60,j,k])/2 * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2 * mu_psi[j,k] * (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 * (1 - mu_psi[j,k]) * ( nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2 )
+    
+    sens_Sfa_w1_t[j,k,1:59] <-  (Sfa_h1[1:59,j]+Sfa_h1[2:60,j])/2  * mu_psi[j,k] *(Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2
+    sens_Sfa_w2_t[j,k,1:59] <-  (Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2  * (1 - mu_psi[j,k]) *(Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2
+    sens_Sfa_h1_t[j,k,1:59] <-  (Sfa_w1[1:59,j]+Sfa_w1[2:60,j])/2  * mu_psi[j,k] *(Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2
+    sens_Sfa_h2_t[j,k,1:59] <-  (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2  * (1 - mu_psi[j,k]) *(Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2
+    sens_Sfa_s_t[j,k,1:59] <-  (Sfa_h1[1:59,j]+Sfa_h1[2:60,j])/2 * (Sfa_w1[1:59,j]+Sfa_w1[2:60,j])/2  * mu_psi[j,k] + 
+      (Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k]) 
+    
+    sens_pi_t[j,1,k,1:59] <-  (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2  * ( nf1[1:59,j,1] +  nf1[2:60,j,1])/2  *   (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * 
+                                 (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 *(1 - mu_psi[j,k]))  +
+      (0.5 * (F2[1:59,j,k]+F2[2:60,j,k])/2  * ( nf2[1:59,j,1] +  nf2[2:60,j,1])/2  *   (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * 
+         (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 *(1 - mu_psi[j,k]) )
+    
+    sens_pi_t[j,2,k,1:59] <-  (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2  * ( nf1[1:59,j,2] +  nf1[2:60,j,2])/2  *   (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 *(1 - mu_psi[j,k])) +
+      (0.5 * (F2[1:59,j,k]+F2[2:60,j,k])/2  * ( nf2[1:59,j,2] +  nf2[2:60,j,2])/2  *   (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 *(1 - mu_psi[j,k]))
+    
+    sens_pi_t[j,3,k,1:59] <-  (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2  * ( nf1[1:59,j,3] +  nf1[2:60,j,3])/2 * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 *(1 - mu_psi[j,k])) +
+      (0.5 * (F2[1:59,j,k]+F2[2:60,j,k])/2  * ( nf2[1:59,j,3] +  nf2[2:60,j,3])/2 * (Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * (Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + (Sfj_h2[1:59,j]+Sfj_h2[2:60,j])/2 * (Sfj_w2[1:59,j]+Sfj_w2[2:60,j])/2 *(1 - mu_psi[j,k]))
+    
+    sens_nf1_t[j,k,1:59,l] <- (0.5 * (F1[1:59,j,k]+F1[2:60,j,k])/2 *(Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * ((Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + ((Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])))) +
+      ((Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2 * (Sfa_h1[1:59,j]+Sfa_h1[2:60,j])/2 * (Sfa_w1[1:59,j]+Sfa_w1[2:60,j])/2  * mu_psi[j,k] + (Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])) -
+      (0.5 *(Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * ((Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + ((Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])))) * ((F1[1:59,j,k]+F1[2:60,j,k])/2 * (nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2  + (F2[1:59,j,k]+F2[2:60,j,k])/2 * (nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2) +
+      (Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2 * (Sfa_h1[1:59,j]+Sfa_h1[2:60,j])/2 * (Sfa_w1[1:59,j]+Sfa_w1[2:60,j])/2  * mu_psi[j,k] + (Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])
+    
+    sens_nf2_t[j,k,1:59,l] <-   (0.5 * (F2[1:59,j,k]+F2[2:60,j,k])/2 *(Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * ((Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + ((Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])))) +
+      ((Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2 * (Sfa_h1[1:59,j]+Sfa_h1[2:60,j])/2 * (Sfa_w1[1:59,j]+Sfa_w1[2:60,j])/2  * mu_psi[j,k] + (Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])) -
+      (0.5 *(Sfj_s[1:59,j,k]+Sfj_s[2:60,j,k])/2  * ((Sfj_h1[1:59,j]+Sfj_h1[2:60,j])/2 * (Sfj_w1[1:59,j]+Sfj_w1[2:60,j])/2  * mu_psi[j,k] + ((Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])))) * ((F1[1:59,j,k]+F1[2:60,j,k])/2 * (nrf1[1:59,j,k,l] +  nrf1[2:60,j,k,l])/2  + (F2[1:59,j,k]+F2[2:60,j,k])/2 * (nrf2[1:59,j,k,l] +  nrf2[2:60,j,k,l])/2) +
+      (Sfa_s[1:59,j,k]+Sfa_s[2:60,j,k])/2 * (Sfa_h1[1:59,j]+Sfa_h1[2:60,j])/2 * (Sfa_w1[1:59,j]+Sfa_w1[2:60,j])/2  * mu_psi[j,k] + (Sfa_h2[1:59,j]+Sfa_h2[2:60,j])/2 * (Sfa_w2[1:59,j]+Sfa_w2[2:60,j])/2 * (1 - mu_psi[j,k])
+    
+    }
+  }
+}
+# Step 4: Calculate the LTRE contributions of temporal process (co)variation 
+# in the demographic parameters to temporal variation in the realized 
+# population growth rates.
+
+cont_F1_t     <- array(0,dim = c(samples,3,59))
+cont_F2_t     <- array(0,dim = c(samples,3,59))
+cont_Sfj_w1_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_w1_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_w2_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_w2_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_h1_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_h1_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_h2_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_h2_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_s_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_s_t <- array(0,dim = c(samples,3,59))
+cont_nf1_t   <- array(0,dim = c(samples,3,59))
+cont_nf2_t   <- array(0,dim = c(samples,3,59))
+cont_pi1_t   <- array(0,dim = c(samples,3,59))
+cont_pi2_t   <- array(0,dim = c(samples,3,59))
+cont_pi3_t   <- array(0,dim = c(samples,3,59))
+
+cont_F1     <- array(0,dim = c(samples,3))
+cont_F2     <- array(0,dim = c(samples,3))
+cont_Sfj_w1 <- array(0,dim = c(samples,3))
+cont_Sfa_w1 <- array(0,dim = c(samples,3))
+cont_Sfj_w2 <- array(0,dim = c(samples,3))
+cont_Sfa_w2 <- array(0,dim = c(samples,3))
+cont_Sfj_h1 <- array(0,dim = c(samples,3))
+cont_Sfa_h1 <- array(0,dim = c(samples,3))
+cont_Sfj_h2 <- array(0,dim = c(samples,3))
+cont_Sfa_h2 <- array(0,dim = c(samples,3))
+cont_Sfj_s  <- array(0,dim = c(samples,3))
+cont_Sfa_s  <- array(0,dim = c(samples,3))
+cont_nf1    <- array(0,dim = c(samples,3))
+cont_nf2    <- array(0,dim = c(samples,3))
+cont_pi1    <- array(0,dim = c(samples,3))
+cont_pi2    <- array(0,dim = c(samples,3))
+cont_pi3    <- array(0,dim = c(samples,3))
+
+sensvec    <- array(0,dim = c(17, samples,3))
+
+
+sens_F1       <- apply(sens_F1     ,1:2, sum)
+sens_F2       <- apply(sens_F2     ,1:2, sum)
+sens_Sfj_w1   <- apply(sens_Sfj_w1 ,1:2, sum)
+sens_Sfj_w2   <- apply(sens_Sfj_w2 ,1:2, sum)
+sens_Sfj_h1   <- apply(sens_Sfj_h1 ,1:2, sum)
+sens_Sfj_h2   <- apply(sens_Sfj_h2 ,1:2, sum)
+sens_Sfj_s    <- apply(sens_Sfj_s  ,1:2, sum)
+      
+sens_nf1   <- apply(sens_nf1,1:2,sum)  
+sens_nf2   <- apply(sens_nf2,1:2,sum)  
+
+sens_F1_t     <- apply(sens_F1_t    ,1:3,sum)
+sens_F2_t     <- apply(sens_F2_t    ,1:3,sum)
+sens_Sfj_w1_t <- apply(sens_Sfj_w1_t,1:3,sum)
+sens_Sfj_w2_t <- apply(sens_Sfj_w2_t,1:3,sum)
+sens_Sfj_h1_t <- apply(sens_Sfj_h1_t,1:3,sum)
+sens_Sfj_h2_t <- apply(sens_Sfj_h2_t,1:3,sum)
+sens_Sfj_s_t  <- apply(sens_Sfj_s_t   ,1:3,sum)
+sens_nf1_t    <- apply(sens_nf1_t   ,1:3,sum)
+sens_nf2_t    <- apply(sens_nf2_t   ,1:3,sum)
+
+pi_edit1 <- aperm(pi_all[,1,1:60,], c(2,3,1))
+pi_edit2 <- aperm(pi_all[,2,1:60,], c(2,3,1))
+pi_edit3 <- aperm(pi_all[,3,1:60,], c(2,3,1))
+
+dp_dif <- matrix(0,3,17)
+for (j in 1:samples){ #samples
+  for(k in 1:n.region){
+    dp_stoch <- abind(F1[,j,],F2[,j,],Sfj_w1_r[,j,],Sfj_w2_r[,j,],Sfj_h1_r[,j,],Sfj_h2_r[,j,],Sfj_s[,j,],Sfa_w1_r[,j,],Sfa_w2_r[,j,],Sfa_h1_r[,j,],Sfa_h2_r[,j,],
+                      Sfa_s[,j,],nf1[,j,],nf2[,j,],t(pi_all[,1,1:60,j]),t(pi_all[,2,1:60,j]),t(pi_all[,3,1:60,j]), along = 3)
+    for(t in 1:59){
+      dp_dif[k,]<- dp_stoch[t+1,k,] - dp_stoch[t,k,] 
+      
+      # Derive process variance and covariance among demographic parameters using
+      # 'shrinkage' estimates of vital rates and proportionate abundances:
+      dp_varcov <- array(apply(dp_stoch, 2, var), dim = c(17,17,3))
+      sensvec   <- abind(sens_F1[j,],sens_F2[j,],sens_Sfj_w1[j,],sens_Sfj_w2[j,],sens_Sfj_h1[j,],sens_Sfj_h2[j,],sens_Sfj_s[j,],sens_Sfa_w1[j,],sens_Sfa_w2[j,]
+                         ,sens_Sfa_h1[j,],sens_Sfa_h2[j,],sens_Sfa_s[j,],sens_nf1[j,],sens_nf2[j,],sens_pi[j,1,],sens_pi[j,2,],sens_pi[j,3,], along = 2)
+      sensvec_t <- abind(sens_F1_t[j,,t],sens_F2_t[j,,t],sens_Sfj_w1_t[j,,t],sens_Sfj_w2_t[j,,t],sens_Sfj_h1_t[j,,t],sens_Sfj_h2_t[j,,t],sens_Sfj_s_t[j,,t],
+                         sens_Sfa_w1_t[j,,t],sens_Sfa_w2_t[j,,t],sens_Sfa_h1_t[j,,t],sens_Sfa_h2_t[j,,t],sens_Sfa_s_t[j,,t],sens_nf1_t[j,,t],sens_nf2_t[j,,t],sens_pi_t[j,1,,t],sens_pi_t[j,2,,t],sens_pi_t[j,3,,t], along = 2)
+      # calculate demographic contributions
+      contvec2 <- matrix(0,17,3)
+      for (m in 1:17){
+        contvec2[m,k] <- dp_dif[k,m]*sensvec_t[k,m]
+      }
+      contmatrix <- array(0,dim = c(17,17,3))
+      for (l in 1:17){
+        for (m in 1:17){
+          contmatrix[l,m,k] <- dp_varcov[l,m,k]*sensvec[k,l]*sensvec[k,m]
+        }
+      }
+      
+      contributions_t <- contvec2
+      
+      cont_F1_t[j,k,t] <- contributions_t[1,k]    
+      cont_F2_t[j,k,t] <- contributions_t[2,k]    
+      cont_Sfj_w1_t[j,k,t] <- contributions_t[3,k]
+      cont_Sfa_w1_t[j,k,t] <- contributions_t[4,k]
+      cont_Sfj_w2_t[j,k,t] <- contributions_t[5,k]
+      cont_Sfa_w2_t[j,k,t] <- contributions_t[6,k]
+      cont_Sfj_h1_t[j,k,t] <- contributions_t[7,k]
+      cont_Sfa_h1_t[j,k,t] <- contributions_t[8,k]
+      cont_Sfj_h2_t[j,k,t] <- contributions_t[9,k]
+      cont_Sfa_h2_t[j,k,t] <- contributions_t[10,k]
+      cont_Sfj_s_t[j,k,t] <- contributions_t[11,k] 
+      cont_Sfa_s_t[j,k,t] <- contributions_t[12,k] 
+      cont_nf1_t[j,k,t] <- contributions_t[13,k]   
+      cont_nf2_t[j,k,t] <- contributions_t[14,k]   
+      cont_pi1_t[j,k,t] <- contributions_t[15,k]   
+      cont_pi2_t[j,k,t] <- contributions_t[16,k]   
+      cont_pi3_t[j,k,t] <- contributions_t[17,k]   
+      
+    }
+    contributions <- apply(contmatrix,c(1,3),sum)
+    
+       cont_F1[j,k] <- contributions[1, k]    
+        cont_F2[j,k] <- contributions[2, k]    
+    cont_Sfj_w1[j,k] <- contributions[3, k]
+    cont_Sfa_w1[j,k] <- contributions[4, k]
+    cont_Sfj_w2[j,k] <- contributions[5, k]
+    cont_Sfa_w2[j,k] <- contributions[6, k]
+    cont_Sfj_h1[j,k] <- contributions[7, k]
+    cont_Sfa_h1[j,k] <- contributions[8, k]
+    cont_Sfj_h2[j,k] <- contributions[9, k]
+    cont_Sfa_h2[j,k] <- contributions[10,k]
+     cont_Sfj_s[j,k] <- contributions[11,k] 
+     cont_Sfa_s[j,k] <- contributions[12,k] 
+       cont_nf1[j,k] <- contributions[13,k]   
+       cont_nf2[j,k] <- contributions[14,k]   
+       cont_pi1[j,k] <- contributions[15,k]   
+       cont_pi2[j,k] <- contributions[16,k]   
+       cont_pi3[j,k] <- contributions[17,k]   
+  }
+}
+
+elas_F1 <-     sens_F1 * mu_F1      /mu_lam  
+elas_F2 <-     sens_F2 * mu_F2      /mu_lam  
+elas_w1 <- sens_Sfj_w1 * mu_Sfj_w1  /mu_lam  
+elas_w2 <- sens_Sfj_w2 * mu_Sfj_w2  /mu_lam  
+elas_h1 <- sens_Sfj_h1 * mu_Sfj_h1  /mu_lam  
+elas_h2 <- sens_Sfj_h2 * mu_Sfj_h2  /mu_lam 
+elas_js <- sens_Sfj_s  * mu_Sfj_s  /mu_lam
+elas_W1 <- sens_Sfa_w1 * mu_Sfa_w1  /mu_lam 
+elas_H1 <- sens_Sfa_h1 * mu_Sfa_h1  /mu_lam 
+elas_H2 <- sens_Sfa_h2 * mu_Sfa_h2  /mu_lam
+elas_AS <-  sens_Sfa_s * mu_Sfa_s   /mu_lam  
+elas_n1 <-    sens_nf1 * mu_nf1/mu_lam    
+elas_n2 <-    sens_nf2 * mu_nf2/mu_lam         
+elas_p1 <-     sens_pi[,1,] * mu_pi1/mu_lam
+elas_p2 <-     sens_pi[,2,] * mu_pi2/mu_lam
+elas_p3 <-     sens_pi[,3,] * mu_pi3/mu_lam
+
+sens_F1 <-     sens_F1 
+sens_F2 <-     sens_F2 
+sens_w1 <- sens_Sfj_w1 
+sens_w2 <- sens_Sfj_w2 
+sens_h1 <- sens_Sfj_h1 
+sens_h2 <- sens_Sfj_h2 
+sens_js <- sens_Sfj_s  
+sens_W1 <- sens_Sfa_w1 
+sens_W2 <- sens_Sfa_w2 
+sens_H1 <- sens_Sfa_h1 
+sens_H2 <- sens_Sfa_h2 
+sens_AS <-  sens_Sfa_s 
+sens_n1 <-    sens_nf1 
+sens_n2 <-    sens_nf2 
+sens_p1 <-     sens_pi[,1,] 
+sens_p2 <-     sens_pi[,2,] 
+sens_p3 <-     sens_pi[,3,] 
+
+cont_F1 <-     cont_F1
+cont_F2 <-     cont_F2
+cont_w1 <- cont_Sfj_w1
+cont_w2 <- cont_Sfa_w1
+cont_h1 <- cont_Sfj_w2
+cont_h2 <- cont_Sfa_w2
+cont_js <-cont_Sfj_s
+cont_W1 <- cont_Sfj_h1
+cont_W2 <- cont_Sfa_h1
+cont_H1 <- cont_Sfj_h2
+cont_H2 <-  cont_Sfa_h2
+cont_AS <-  cont_Sfa_s
+cont_n1 <-    cont_nf1
+cont_n2 <-    cont_nf2
+cont_p1 <-    cont_pi1
+cont_p2 <-    cont_pi2
+cont_p3 <-    cont_pi3
+
+
+cont_F1_t  <- cont_F1_t
+cont_F2_t  <- cont_F2_t
+cont_w1_t  <- cont_Sfj_w1_t
+cont_w2_t  <- cont_Sfa_w1_t
+cont_h1_t  <- cont_Sfj_w2_t
+cont_h2_t  <- cont_Sfa_w2_t
+cont_js_t  <- cont_Sfj_s_t
+cont_W1_t  <- cont_Sfj_h1_t
+cont_W2_t  <- cont_Sfa_h1_t
+cont_H1_t  <- cont_Sfj_h2_t
+cont_H2_t  <- cont_Sfa_h2_t
+cont_AS_t  <- cont_Sfa_s_t
+cont_n1_t  <- cont_nf1_t
+cont_n2_t  <- cont_nf2_t
+cont_p1_t  <- cont_pi1_t
+cont_p2_t  <- cont_pi2_t
+cont_p3_t  <- cont_pi3_t
+
+
+elas_F1_mn <- t(rbind.data.frame(mean = (apply(elas_F1, 2, mean)), low_95 = (apply(elas_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_F1, 2,quantile, probs = 0.975) )))
+elas_F2_mn <- t(rbind.data.frame(mean = (apply(elas_F2, 2, mean)), low_95 = (apply(elas_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_F2, 2,quantile, probs = 0.975) )))
+elas_w1_mn <- t(rbind.data.frame(mean = (apply(elas_w1, 2, mean)), low_95 = (apply(elas_w1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_w1, 2,quantile, probs = 0.975) )))
+elas_w2_mn <- t(rbind.data.frame(mean = (apply(elas_w2, 2, mean)), low_95 = (apply(elas_w2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_w2, 2,quantile, probs = 0.975) )))
+elas_h1_mn <- t(rbind.data.frame(mean = (apply(elas_h1, 2, mean)), low_95 = (apply(elas_h1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_h1, 2,quantile, probs = 0.975) )))
+elas_h2_mn <- t(rbind.data.frame(mean = (apply(elas_h2, 2, mean)), low_95 = (apply(elas_h2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_h2, 2,quantile, probs = 0.975) )))
+elas_js_mn <- t(rbind.data.frame(mean = (apply(elas_js, 2, mean)), low_95 = (apply(elas_js, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_js, 2,quantile, probs = 0.975) )))
+elas_W1_mn <- t(rbind.data.frame(mean = (apply(elas_W1, 2, mean)), low_95 = (apply(elas_W1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_W1, 2,quantile, probs = 0.975) )))
+elas_W2_mn <- t(rbind.data.frame(mean = (apply(elas_W2, 2, mean)), low_95 = (apply(elas_W2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_W2, 2,quantile, probs = 0.975) )))
+elas_H1_mn <- t(rbind.data.frame(mean = (apply(elas_H1, 2, mean)), low_95 = (apply(elas_H1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_H1, 2,quantile, probs = 0.975) )))
+elas_H2_mn <- t(rbind.data.frame(mean = (apply(elas_H2, 2, mean)), low_95 = (apply(elas_H2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_H2, 2,quantile, probs = 0.975) )))
+elas_AS_mn <- t(rbind.data.frame(mean = (apply(elas_AS, 2, mean)), low_95 = (apply(elas_AS, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_AS, 2,quantile, probs = 0.975) )))
+elas_n1_mn <- t(rbind.data.frame(mean = (apply(elas_n1, 2, mean)), low_95 = (apply(elas_n1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_n1, 2,quantile, probs = 0.975) )))
+elas_n2_mn <- t(rbind.data.frame(mean = (apply(elas_n2, 2, mean)), low_95 = (apply(elas_n2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_n2, 2,quantile, probs = 0.975) )))
+elas_p1_mn <- t(rbind.data.frame(mean = (apply(elas_p1, 2, mean)), low_95 = (apply(elas_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_p1, 2,quantile, probs = 0.975) )))
+elas_p2_mn <- t(rbind.data.frame(mean = (apply(elas_p2, 2, mean)), low_95 = (apply(elas_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_p2, 2,quantile, probs = 0.975) )))
+elas_p3_mn <- t(rbind.data.frame(mean = (apply(elas_p3, 2, mean)), low_95 = (apply(elas_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_p3, 2,quantile, probs = 0.975) )))
+
+rownames(elas_F1_mn) <- NULL; colnames(elas_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_F2_mn) <- NULL; colnames(elas_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_w1_mn) <- NULL; colnames(elas_w1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_w2_mn) <- NULL; colnames(elas_w2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_h1_mn) <- NULL; colnames(elas_h1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_h2_mn) <- NULL; colnames(elas_h2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_js_mn) <- NULL; colnames(elas_js_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_W1_mn) <- NULL; colnames(elas_W1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_W2_mn) <- NULL; colnames(elas_W2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_H1_mn) <- NULL; colnames(elas_H1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_H2_mn) <- NULL; colnames(elas_H2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_AS_mn) <- NULL; colnames(elas_AS_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_n1_mn) <- NULL; colnames(elas_n1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_n2_mn) <- NULL; colnames(elas_n2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_p1_mn) <- NULL; colnames(elas_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_p2_mn) <- NULL; colnames(elas_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_p3_mn) <- NULL; colnames(elas_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_elas <- cbind.data.frame(rbind.data.frame(elas_F1_mn,elas_F2_mn,elas_w1_mn,elas_w2_mn,elas_h1_mn,elas_h2_mn,elas_js_mn,elas_W1_mn,elas_W2_mn,elas_H1_mn,elas_H2_mn,elas_AS_mn,elas_n1_mn,elas_n2_mn,elas_p1_mn,elas_p2_mn,elas_p3_mn),
+                              expand.grid(region = c('AK','NO','PR'),
+                                          parameter = c('F1','F2','w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2','P1','P2','P3') ))
+
+
+sens_F1_mn <- t(rbind.data.frame(mean = (apply(sens_F1, 2, mean)), low_95 = (apply(sens_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_F1, 2,quantile, probs = 0.975) )))
+sens_F2_mn <- t(rbind.data.frame(mean = (apply(sens_F2, 2, mean)), low_95 = (apply(sens_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_F2, 2,quantile, probs = 0.975) )))
+sens_w1_mn <- t(rbind.data.frame(mean = (apply(sens_w1, 2, mean)), low_95 = (apply(sens_w1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_w1, 2,quantile, probs = 0.975) )))
+sens_w2_mn <- t(rbind.data.frame(mean = (apply(sens_w2, 2, mean)), low_95 = (apply(sens_w2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_w2, 2,quantile, probs = 0.975) )))
+sens_h1_mn <- t(rbind.data.frame(mean = (apply(sens_h1, 2, mean)), low_95 = (apply(sens_h1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_h1, 2,quantile, probs = 0.975) )))
+sens_h2_mn <- t(rbind.data.frame(mean = (apply(sens_h2, 2, mean)), low_95 = (apply(sens_h2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_h2, 2,quantile, probs = 0.975) )))
+sens_js_mn <- t(rbind.data.frame(mean = (apply(sens_js, 2, mean)), low_95 = (apply(sens_js, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_js, 2,quantile, probs = 0.975) )))
+sens_W1_mn <- t(rbind.data.frame(mean = (apply(sens_W1, 2, mean)), low_95 = (apply(sens_W1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_W1, 2,quantile, probs = 0.975) )))
+sens_W2_mn <- t(rbind.data.frame(mean = (apply(sens_W2, 2, mean)), low_95 = (apply(sens_W2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_W2, 2,quantile, probs = 0.975) )))
+sens_H1_mn <- t(rbind.data.frame(mean = (apply(sens_H1, 2, mean)), low_95 = (apply(sens_H1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_H1, 2,quantile, probs = 0.975) )))
+sens_H2_mn <- t(rbind.data.frame(mean = (apply(sens_H2, 2, mean)), low_95 = (apply(sens_H2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_H2, 2,quantile, probs = 0.975) )))
+sens_AS_mn <- t(rbind.data.frame(mean = (apply(sens_AS, 2, mean)), low_95 = (apply(sens_AS, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_AS, 2,quantile, probs = 0.975) )))
+sens_n1_mn <- t(rbind.data.frame(mean = (apply(sens_n1, 2, mean)), low_95 = (apply(sens_n1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_n1, 2,quantile, probs = 0.975) )))
+sens_n2_mn <- t(rbind.data.frame(mean = (apply(sens_n2, 2, mean)), low_95 = (apply(sens_n2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_n2, 2,quantile, probs = 0.975) )))
+sens_p1_mn <- t(rbind.data.frame(mean = (apply(sens_p1, 2, mean)), low_95 = (apply(sens_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_p1, 2,quantile, probs = 0.975) )))
+sens_p2_mn <- t(rbind.data.frame(mean = (apply(sens_p2, 2, mean)), low_95 = (apply(sens_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_p2, 2,quantile, probs = 0.975) )))
+sens_p3_mn <- t(rbind.data.frame(mean = (apply(sens_p3, 2, mean)), low_95 = (apply(sens_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_p3, 2,quantile, probs = 0.975) )))
+
+rownames(sens_F1_mn) <- NULL; colnames(sens_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_F2_mn) <- NULL; colnames(sens_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_w1_mn) <- NULL; colnames(sens_w1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_w2_mn) <- NULL; colnames(sens_w2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_h1_mn) <- NULL; colnames(sens_h1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_h2_mn) <- NULL; colnames(sens_h2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_js_mn) <- NULL; colnames(sens_js_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_W1_mn) <- NULL; colnames(sens_W1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_W2_mn) <- NULL; colnames(sens_W2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_H1_mn) <- NULL; colnames(sens_H1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_H2_mn) <- NULL; colnames(sens_H2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_AS_mn) <- NULL; colnames(sens_AS_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_n1_mn) <- NULL; colnames(sens_n1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_n2_mn) <- NULL; colnames(sens_n2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_p1_mn) <- NULL; colnames(sens_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_p2_mn) <- NULL; colnames(sens_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_p3_mn) <- NULL; colnames(sens_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_sens <- cbind.data.frame(rbind.data.frame(sens_F1_mn,sens_F2_mn,sens_w1_mn,sens_w2_mn,sens_h1_mn,sens_h2_mn,sens_js_mn,sens_W1_mn,sens_W2_mn,sens_H1_mn,sens_H2_mn,sens_AS_mn,sens_n1_mn,sens_n2_mn,sens_p1_mn,sens_p2_mn,sens_p3_mn),
+                              expand.grid(region = c('AK','NO','PR'),
+                                          parameter = c('F1','F2','w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2','P1','P2','P3') ))
+
+cont_F1_mn <- t(rbind.data.frame(mean = (apply(cont_F1, 2, mean)), low_95 = (apply(cont_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_F1, 2,quantile, probs = 0.975) )))
+cont_F2_mn <- t(rbind.data.frame(mean = (apply(cont_F2, 2, mean)), low_95 = (apply(cont_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_F2, 2,quantile, probs = 0.975) )))
+cont_w1_mn <- t(rbind.data.frame(mean = (apply(cont_w1, 2, mean)), low_95 = (apply(cont_w1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_w1, 2,quantile, probs = 0.975) )))
+cont_w2_mn <- t(rbind.data.frame(mean = (apply(cont_w2, 2, mean)), low_95 = (apply(cont_w2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_w2, 2,quantile, probs = 0.975) )))
+cont_h1_mn <- t(rbind.data.frame(mean = (apply(cont_h1, 2, mean)), low_95 = (apply(cont_h1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_h1, 2,quantile, probs = 0.975) )))
+cont_h2_mn <- t(rbind.data.frame(mean = (apply(cont_h2, 2, mean)), low_95 = (apply(cont_h2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_h2, 2,quantile, probs = 0.975) )))
+cont_js_mn <- t(rbind.data.frame(mean = (apply(cont_js, 2, mean)), low_95 = (apply(cont_js, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_js, 2,quantile, probs = 0.975) )))
+cont_W1_mn <- t(rbind.data.frame(mean = (apply(cont_W1, 2, mean)), low_95 = (apply(cont_W1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_W1, 2,quantile, probs = 0.975) )))
+cont_W2_mn <- t(rbind.data.frame(mean = (apply(cont_W2, 2, mean)), low_95 = (apply(cont_W2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_W2, 2,quantile, probs = 0.975) )))
+cont_H1_mn <- t(rbind.data.frame(mean = (apply(cont_H1, 2, mean)), low_95 = (apply(cont_H1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_H1, 2,quantile, probs = 0.975) )))
+cont_H2_mn <- t(rbind.data.frame(mean = (apply(cont_H2, 2, mean)), low_95 = (apply(cont_H2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_H2, 2,quantile, probs = 0.975) )))
+cont_AS_mn <- t(rbind.data.frame(mean = (apply(cont_AS, 2, mean)), low_95 = (apply(cont_AS, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_AS, 2,quantile, probs = 0.975) )))
+cont_n1_mn <- t(rbind.data.frame(mean = (apply(cont_n1, 2, mean)), low_95 = (apply(cont_n1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_n1, 2,quantile, probs = 0.975) )))
+cont_n2_mn <- t(rbind.data.frame(mean = (apply(cont_n2, 2, mean)), low_95 = (apply(cont_n2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_n2, 2,quantile, probs = 0.975) )))
+cont_p1_mn <- t(rbind.data.frame(mean = (apply(cont_p1, 2, mean)), low_95 = (apply(cont_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_p1, 2,quantile, probs = 0.975) )))
+cont_p2_mn <- t(rbind.data.frame(mean = (apply(cont_p2, 2, mean)), low_95 = (apply(cont_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_p2, 2,quantile, probs = 0.975) )))
+cont_p3_mn <- t(rbind.data.frame(mean = (apply(cont_p3, 2, mean)), low_95 = (apply(cont_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_p3, 2,quantile, probs = 0.975) )))
+
+rownames(cont_F1_mn) <- NULL; colnames(cont_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_F2_mn) <- NULL; colnames(cont_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_w1_mn) <- NULL; colnames(cont_w1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_w2_mn) <- NULL; colnames(cont_w2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_h1_mn) <- NULL; colnames(cont_h1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_h2_mn) <- NULL; colnames(cont_h2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_js_mn) <- NULL; colnames(cont_js_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_W1_mn) <- NULL; colnames(cont_W1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_W2_mn) <- NULL; colnames(cont_W2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_H1_mn) <- NULL; colnames(cont_H1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_H2_mn) <- NULL; colnames(cont_H2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_AS_mn) <- NULL; colnames(cont_AS_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_n1_mn) <- NULL; colnames(cont_n1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_n2_mn) <- NULL; colnames(cont_n2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_p1_mn) <- NULL; colnames(cont_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_p2_mn) <- NULL; colnames(cont_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_p3_mn) <- NULL; colnames(cont_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_cont <- cbind.data.frame(rbind.data.frame(cont_F1_mn,cont_F2_mn,cont_w1_mn,cont_w2_mn,cont_h1_mn,cont_h2_mn,cont_js_mn,cont_W1_mn,cont_W2_mn,cont_H1_mn,cont_H2_mn,cont_AS_mn,cont_n1_mn,cont_n2_mn,cont_p1_mn,cont_p2_mn,cont_p3_mn),
+                              expand.grid(region = c('AK','NO','PR'),
+                                          parameter = c('F1','F2','w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2','P1','P2','P3') ))
+
+total <- cont_F1+cont_F2+cont_w1+cont_w2+cont_h1+cont_h2+cont_js+cont_W1+cont_W2+cont_H1+cont_H2+cont_AS+cont_n1+cont_n2+cont_p1+cont_p2+cont_p3
+
+prop_F1 <- cont_F1/total
+prop_F2 <- cont_F2/total
+prop_w1 <- cont_w1/total
+prop_w2 <- cont_w2/total
+prop_h1 <- cont_h1/total
+prop_h2 <- cont_h2/total
+prop_js <- cont_js/total
+prop_W1 <- cont_W1/total
+prop_W2 <- cont_W2/total
+prop_H1 <- cont_H1/total
+prop_H2 <- cont_H2/total
+prop_AS <- cont_AS/total
+prop_n1 <- cont_n1/total
+prop_n2 <- cont_n2/total
+prop_p1 <- cont_p1/total
+prop_p2 <- cont_p2/total
+prop_p3 <- cont_p3/total
+
+
+prop_F1_mn <- t(rbind.data.frame(mean = (apply(prop_F1, 2, mean)), low_95 = (apply(prop_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_F1, 2,quantile, probs = 0.975) )))
+prop_F2_mn <- t(rbind.data.frame(mean = (apply(prop_F2, 2, mean)), low_95 = (apply(prop_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_F2, 2,quantile, probs = 0.975) )))
+prop_w1_mn <- t(rbind.data.frame(mean = (apply(prop_w1, 2, mean)), low_95 = (apply(prop_w1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_w1, 2,quantile, probs = 0.975) )))
+prop_w2_mn <- t(rbind.data.frame(mean = (apply(prop_w2, 2, mean)), low_95 = (apply(prop_w2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_w2, 2,quantile, probs = 0.975) )))
+prop_h1_mn <- t(rbind.data.frame(mean = (apply(prop_h1, 2, mean)), low_95 = (apply(prop_h1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_h1, 2,quantile, probs = 0.975) )))
+prop_h2_mn <- t(rbind.data.frame(mean = (apply(prop_h2, 2, mean)), low_95 = (apply(prop_h2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_h2, 2,quantile, probs = 0.975) )))
+prop_js_mn <- t(rbind.data.frame(mean = (apply(prop_js, 2, mean)), low_95 = (apply(prop_js, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_js, 2,quantile, probs = 0.975) )))
+prop_W1_mn <- t(rbind.data.frame(mean = (apply(prop_W1, 2, mean)), low_95 = (apply(prop_W1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_W1, 2,quantile, probs = 0.975) )))
+prop_W2_mn <- t(rbind.data.frame(mean = (apply(prop_W2, 2, mean)), low_95 = (apply(prop_W2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_W2, 2,quantile, probs = 0.975) )))
+prop_H1_mn <- t(rbind.data.frame(mean = (apply(prop_H1, 2, mean)), low_95 = (apply(prop_H1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_H1, 2,quantile, probs = 0.975) )))
+prop_H2_mn <- t(rbind.data.frame(mean = (apply(prop_H2, 2, mean)), low_95 = (apply(prop_H2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_H2, 2,quantile, probs = 0.975) )))
+prop_AS_mn <- t(rbind.data.frame(mean = (apply(prop_AS, 2, mean)), low_95 = (apply(prop_AS, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_AS, 2,quantile, probs = 0.975) )))
+prop_n1_mn <- t(rbind.data.frame(mean = (apply(prop_n1, 2, mean)), low_95 = (apply(prop_n1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_n1, 2,quantile, probs = 0.975) )))
+prop_n2_mn <- t(rbind.data.frame(mean = (apply(prop_n2, 2, mean)), low_95 = (apply(prop_n2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_n2, 2,quantile, probs = 0.975) )))
+prop_p1_mn <- t(rbind.data.frame(mean = (apply(prop_p1, 2, mean)), low_95 = (apply(prop_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_p1, 2,quantile, probs = 0.975) )))
+prop_p2_mn <- t(rbind.data.frame(mean = (apply(prop_p2, 2, mean)), low_95 = (apply(prop_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_p2, 2,quantile, probs = 0.975) )))
+prop_p3_mn <- t(rbind.data.frame(mean = (apply(prop_p3, 2, mean)), low_95 = (apply(prop_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_p3, 2,quantile, probs = 0.975) )))
+
+rownames(prop_F1_mn) <- NULL; colnames(prop_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_F2_mn) <- NULL; colnames(prop_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_w1_mn) <- NULL; colnames(prop_w1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_w2_mn) <- NULL; colnames(prop_w2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_h1_mn) <- NULL; colnames(prop_h1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_h2_mn) <- NULL; colnames(prop_h2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_js_mn) <- NULL; colnames(prop_js_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_W1_mn) <- NULL; colnames(prop_W1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_W2_mn) <- NULL; colnames(prop_W2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_H1_mn) <- NULL; colnames(prop_H1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_H2_mn) <- NULL; colnames(prop_H2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_AS_mn) <- NULL; colnames(prop_AS_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_n1_mn) <- NULL; colnames(prop_n1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_n2_mn) <- NULL; colnames(prop_n2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_p1_mn) <- NULL; colnames(prop_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_p2_mn) <- NULL; colnames(prop_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_p3_mn) <- NULL; colnames(prop_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_prop <- cbind.data.frame(rbind.data.frame(prop_F1_mn,prop_F2_mn,prop_w1_mn,prop_w2_mn,prop_h1_mn,prop_h2_mn,prop_js_mn,prop_W1_mn,prop_W2_mn,prop_H1_mn,prop_H2_mn,prop_AS_mn,prop_n1_mn,prop_n2_mn,prop_p1_mn,prop_p2_mn,prop_p3_mn),
+                              expand.grid(region = c('AK','NO','PR'),
+                                          parameter = c('F1','F2','w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2','P1','P2','P3') ))
+
+
+
+cont_F1_t_mn <- apply(cont_F1_t, c(2,3), mean)
+cont_F2_t_mn <- apply(cont_F2_t, c(2,3), mean)
+cont_w1_t_mn <- apply(cont_w1_t, c(2,3), mean)
+cont_w2_t_mn <- apply(cont_w2_t, c(2,3), mean)
+cont_h1_t_mn <- apply(cont_h1_t, c(2,3), mean)
+cont_h2_t_mn <- apply(cont_h2_t, c(2,3), mean)
+cont_js_t_mn <- apply(cont_js_t, c(2,3), mean)
+cont_W1_t_mn <- apply(cont_W1_t, c(2,3), mean)
+cont_W2_t_mn <- apply(cont_W2_t, c(2,3), mean)
+cont_H1_t_mn <- apply(cont_H1_t, c(2,3), mean)
+cont_H2_t_mn <- apply(cont_H2_t, c(2,3), mean)
+cont_AS_t_mn <- apply(cont_AS_t, c(2,3), mean)
+cont_n1_t_mn <- apply(cont_n1_t, c(2,3), mean)
+cont_n2_t_mn <- apply(cont_n2_t, c(2,3), mean)
+cont_p1_t_mn <- apply(cont_p1_t, c(2,3), mean)
+cont_p2_t_mn <- apply(cont_p2_t, c(2,3), mean)
+cont_p3_t_mn <- apply(cont_p3_t, c(2,3), mean)
+
+cont_F_t      <- cont_F1_t + cont_F2_t
+cont_F_t_lead <-  cont_F_t[,,-59]
+cor_F <- array(NA, dim = c(3,dim(cont_F_t)[1],16))
+for(k in 1:n.region){
+  for(i in 1:dim(cor_F)[2]){
+    cor_F[k,i,1]  <- cor(cont_F_t_lead[i,k,], cont_F_t[i,k,-1])
+    cor_F[k,i,2]  <- cor(cont_F_t_lead[i,k,],cont_w1_t[i,k,-1]) 
+    cor_F[k,i,3]  <- cor(cont_F_t_lead[i,k,],cont_w2_t[i,k,-1]) 
+    cor_F[k,i,4]  <- cor(cont_F_t_lead[i,k,],cont_h1_t[i,k,-1]) 
+    cor_F[k,i,5]  <- cor(cont_F_t_lead[i,k,],cont_h2_t[i,k,-1]) 
+    cor_F[k,i,6]  <- cor(cont_F_t_lead[i,k,],cont_js_t[i,k,-1]) 
+    cor_F[k,i,7]  <- cor(cont_F_t_lead[i,k,],cont_W1_t[i,k,-1]) 
+    cor_F[k,i,8]  <- cor(cont_F_t_lead[i,k,],cont_W2_t[i,k,-1]) 
+    cor_F[k,i,9]  <- cor(cont_F_t_lead[i,k,],cont_H1_t[i,k,-1]) 
+    cor_F[k,i,10] <- cor(cont_F_t_lead[i,k,],cont_H2_t[i,k,-1]) 
+    cor_F[k,i,11] <- cor(cont_F_t_lead[i,k,],cont_AS_t[i,k,-1]) 
+    cor_F[k,i,12] <- cor(cont_F_t_lead[i,k,],cont_n1_t[i,k,-1]) 
+    cor_F[k,i,13] <- cor(cont_F_t_lead[i,k,],cont_n2_t[i,k,-1]) 
+    cor_F[k,i,14] <- cor(cont_F_t_lead[i,k,],cont_p1_t[i,k,-1]) 
+    cor_F[k,i,15] <- cor(cont_F_t_lead[i,k,],cont_p2_t[i,k,-1]) 
+    cor_F[k,i,16] <- cor(cont_F_t_lead[i,k,],cont_p3_t[i,k,-1]) 
+  }
+}
+
+lags <- cbind.data.frame( mean = c(apply(cor_F, c(1,3), mean)), 
+                          lower = c(apply(cor_F , c(1,3),quantile, probs = 0.025)),
+                          upper = c(apply(cor_F , c(1,3),quantile, probs = 0.975)), 
+                          expand.grid(region = c('AK','NO','PR'),
+                                      Parameter = c('F','w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2','P1','P2','P3'))) 
+
+library(reshape2)
+
+cont_t <- melt(rbind(
+  t(cont_F1_t_mn + cont_F2_t_mn),t(cont_w1_t_mn),t(cont_w2_t_mn),t(cont_h1_t_mn),t(cont_h2_t_mn),t(cont_js_t_mn),t(cont_W1_t_mn),t(cont_W2_t_mn),
+  t(cont_H1_t_mn),t(cont_H2_t_mn),t(cont_AS_t_mn),t(cont_n1_t_mn+cont_n2_t_mn),
+  t(cont_p1_t_mn + cont_p2_t_mn + cont_p3_t_mn)))
+
+
+cont_t <- cbind.data.frame(cont_t, 
+                           expand.grid(year = 1962:2020,  
+                                       Parameter = c('F1','S[c,w,j]','S[p,w,j]','S[c,h,j]','S[p,h,j]','S[b,s,j]',
+                                                     'S[c,w,a]','S[p,w,a]','S[c,h,a]','S[p,h,a]','S[b,s,a]','N','C'), region = c('AK','NO','PR')))
+
+library(ggplot2); library(see);library(scico)
+
+
+cont_t_growth <- cont_t %>% group_by(region,year)%>%summarize_at('value', sum)
+lam_mean <- apply(lam_real,c(1,3), mean)
+cont_t$Parameter <- factor(cont_t$Parameter, levels = c('F1','S[c,w,j]','S[p,w,j]','S[c,h,j]','S[p,h,j]','S[b,s,j]',
+                                                        'S[c,w,a]','S[p,w,a]','S[c,h,a]','S[p,h,a]','S[b,s,a]','N','C'
+))
+
+ltre_plot_big <-  ggplot(data = cont_t, aes(fill = Parameter, x = year, y = value))+ 
+  geom_bar(position="stack", stat="identity") + geom_hline(yintercept = 0) +
+  scale_fill_see_d(labels = c(expression('F',S['c,w,j'],S['p,w,j'],S['c,h,j'],S['p,h,j'],S['b,s,j'], S['c,w,a'],S['p,w,a'],
+                                           S['c,h,a'],S['p,h,a'],S['b,s,a'],'N','C'))) +
+  
+  labs(y = 'Contribution of each demographic\nparameter to population growth', x = 'Year') +
+  facet_wrap(~region, ncol = 1, scales = 'free_y')+ theme_modern(legend.position = 'top', base_size = 20, legend.text.size = 20, legend.title.size = 20, axis.title.size = 20 )
+ltre_plot_big
+
+
+elas_plot <- ggplot(data = LTRE_elas, aes(fill = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95), 
+                   size = .66, position = position_dodge2(.5), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 2.5) +  geom_vline(xintercept = 7.5) +   geom_vline(xintercept = 12.5)  + geom_vline(xintercept = 14.5) +
+  scale_x_discrete(labels = c(expression(F['b,sy'],F['b,asy'], S['c,w,j'],S['p,w,j'],S['c,h,j'],S['p,h,j'],S['b,s,j'], S['c,w,a'],S['p,w,a'],S['c,h,a'],S['p,h,a'],S['b,s,a'],N['b,sy'],N['b,asy'],P[AK],P[NO],P[PR])))+
+  labs(y = expression(atop('Estimated elasticities of population growth', paste('rates to changes in each demographic rate'))), x = 'Demographic Rate', fill = 'Species') +
+  theme_modern(legend.position = 'top', base_size = 12, axis.text.size = 18)
+elas_plot
+
+sens_plot <- ggplot(data = LTRE_sens, aes(fill = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95), 
+                   size = .66, position = position_dodge2(.25), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 2.5) +  geom_vline(xintercept = 7.5) +   geom_vline(xintercept = 12.5)  + geom_vline(xintercept = 14.5) +
+  scale_x_discrete(labels = c(expression(F['b,sy'],F['b,asy'], S['c,w,j'],S['p,w,j'],S['c,h,j'],S['p,h,j'],S['b,s,j'], S['c,w,a'],S['p,w,a'],S['c,h,a'],S['p,h,a'],S['b,s,a'],N['b,sy'],N['b,asy'],P[AK],P[NO],P[PR])))+
+  labs(y = expression(atop('Estimated sensitivities of population growth', paste('rates to changes in each demographic rate'))), x = 'Demographic Rate', fill = 'Species') +
+  theme_modern(legend.position = 'top', base_size = 12,axis.text.size = 18)
+sens_plot
+
+
+ltre_plot_prop <- ggplot(data = LTRE_prop, aes(fill = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95), 
+                   size = .66, position = position_dodge2(.5), shape = 21) +
+  geom_point(aes(fill = region, x = parameter, y = Mean),
+             size = 3, position = position_dodge2(.5), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 2.5) +  geom_vline(xintercept = 7.5) +   geom_vline(xintercept = 12.5)  + geom_vline(xintercept = 14.5) +
+  scale_x_discrete(labels = c(expression(F['b,sy'],F['b,asy'], S['c,w,j'],S['p,w,j'],S['c,h,j'],S['p,h,j'],S['b,s,j'], S['c,w,a'],S['p,w,a'],S['c,h,a'],S['p,h,a'],S['b,s,a'],N['b,sy'],N['b,asy'],P[AK],P[NO],P[PR])))+
+  labs(y = expression(atop('Estimated  transient life table response', paste('experiment contribution to population growth'))), x = 'Demographic Rate', fill = 'Species') +
+  theme_modern(legend.position = 'top', base_size = 12,axis.text.size = 18)
+ltre_plot_prop
+
+
+ltre_plot2 <- ggplot(data = LTRE_cont, aes(fill = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95), 
+                   size = .66, position = position_dodge2(.5), shape = 21) +
+  geom_point(aes(fill = region, x = parameter, y = Mean),
+             size = 3, position = position_dodge2(.5), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 2.5) +  geom_vline(xintercept = 7.5) +   geom_vline(xintercept = 12.5)  + geom_vline(xintercept = 14.5) +
+  scale_x_discrete(labels = c(expression(F['b,sy'],F['b,asy'], S['c,w,j'],S['p,w,j'],S['c,h,j'],S['p,h,j'],S['b,s,j'], S['c,w,a'],S['p,w,a'],S['c,h,a'],S['p,h,a'],S['b,s,a'],N['b,sy'],N['b,asy'],P[AK],P[NO],P[PR])))+
+  labs(y = expression(atop('Estimated  transient life table response', paste('experiment contribution to population growth'))), x = 'Demographic Rate', fill = 'Species') +
+  theme_modern(legend.position = 'top', base_size = 12,axis.text.size = 18)
+ltre_plot2
+
+
+ltre_plot3 <- ggplot(data = subset(LTRE_cont,parameter != 'F1' & parameter!= 'F2'), aes(fill = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95), 
+                   size = .66, position = position_dodge2(.5), shape = 21) +
+  geom_point(aes(fill = region, x = parameter, y = Mean),
+             size = 3, position = position_dodge2(.5), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 5.5) +  geom_vline(xintercept = 10.5) +   geom_vline(xintercept = 12.5)  +
+  scale_x_discrete(labels = c(expression(S['c,w,j'],S['p,w,j'],S['c,h,j'],S['p,h,j'],S['b,s,j'], S['c,w,a'],S['p,w,a'],S['c,h,a'],S['p,h,a'],S['b,s,a'],N['b,sy'],N['b,asy'],P[AK],P[NO],P[PR])))+
+  labs(y = expression(atop('Estimated  transient life table response', paste('experiment contribution to population growth'))), x = 'Demographic Rate', fill = 'Species') +
+  theme_modern(legend.position = 'top', base_size = 12,axis.text.size = 18)
+ltre_plot3
+
+
+lag_plot <- ggplot(data = lags, aes(fill = region, x = Parameter, y = mean)) +
+  geom_pointrange2(aes(fill = region, x = Parameter, y = mean, ymin = lower, ymax =upper),
+                   size = .66, position = position_dodge2(.5), shape = 21) +
+  geom_point(aes(fill = region, x = Parameter, y = mean),
+             size = 3, position = position_dodge2(.5), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) +
+  #scale_x_discrete(labels = c(expression('F', S[HY],S[AHY],S[SY],S[ASY],N[SY],N[ASY])))+
+  labs(y = expression(atop("Correlation between LTRE contributions of", paste("F"["t"], " and the LTRE contributions of ", theta[' t+1']))), 
+       x = 'Demographic Rate', fill = 'Species') +
+  theme_modern(legend.position = 'top', base_size = 12)
+lag_plot
+
+
+LTRE_Fig <- ggarrange(sens_plot,elas_plot,ltre_plot2,lag_plot, common.legend = TRUE, nrow = 2, ncol = 2, labels = c('A', 'B','C','D'))
+
+ggsave(LTRE_Fig, file = 'LTRE_Fig.jpeg', height = 10, width = 10, dpi = 480)
+ggsave(ltre_plot, file = 'LTREt_Fig.jpeg', height = 9, width = 12, dpi = 480)
+ltre_plot_big
+ggsave(ltre_plot_big, file = 'LTREt_Fig_big.jpeg', height = 9, width = 12, dpi = 480)
+results <- rbind.data.frame(LTRE_sens, LTRE_elas, LTRE_conts)
+write.csv(results, file = 'sens_results.csv')
+
