@@ -11,18 +11,23 @@ library(nimble
 #======================
 # define model in Nimble
 #======================
+
+#======================
+# define model in Nimble
+#======================
 pt_ipm <- nimbleCode({
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Breeding Settlement Model From Wintering Grounds
-       chi_cen_ak ~ dbeta(10,90)       # Central -> Alaska
-       chi_pac_ak ~ dbeta(50,50)       # Pacific -> Alaska
+       chi_cen_ak ~ dbeta(1,1)         # Central -> Alaska
+       chi_pac_ak ~ dbeta(1,1)         # Pacific -> Alaska
        chi_cen_pr <- 1 - chi_cen_ak    # Central -> PPR
        chi_pac_pr <- 1 - chi_pac_ak    # Pacific -> PPR
-          ch_no_ak ~ dbeta(10,90)      # North -> AK 
+         ch_no_ak ~ dbeta(1,1)         # North -> AK 
   logit(ch_pr_pr) <- mu_pr_pr          # Stay in PPR versus moving to North
           mu_pr_pr ~ dlogis(0,1)
-   beta_pr_pr_pond ~ T(dnorm(0, sd = 1),0)  # Effects of pond density on staying in PPR
+          
+   beta_pr_pr_pond ~ T(dnorm(0, sd = 1),0,)  # Effects of pond density on staying in PPR
   for(t in 1:(nyear+1)){
     logit(chi_pr_pr[t]) <- mu_pr_pr + beta_pr_pr_pond *  pond_std[t] 
     
@@ -49,10 +54,8 @@ pt_ipm <- nimbleCode({
       pi2[2,2,t] <-  chi[1,2,t] * pi_ak[2] +  chi[2,2,t] * pi_no[2] + chi[3,2,t] * pi_pr[2]     # PAC->GULF
       pi2[2,1,t] <- 1 -  pi2[2,2,t]                                                             # PAC->PAC
   }
-  
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  # Pond Model
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  ### Pond Model
  log_pond_alpha ~ dnorm(0, sd = 4)
    log_pond_ddp ~ dnorm(0, sd = 4)
   log_pond_prec ~ dnorm(0, sd = 4)
@@ -68,9 +71,8 @@ pt_ipm <- nimbleCode({
     pond_std[t] <- (pond[t] - mean_pond)/sd_pond
         pond[t] <- exp(log_pond[t])
   } # t
-  
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  # Survival Model Priors
+  # Survival Model
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Intercept adjustment terms 
        beta.direct ~ dnorm(0, sd = .5) # direct vs indirect recovery adjustment
@@ -135,10 +137,9 @@ pt_ipm <- nimbleCode({
   zeta.summ[1] ~ T(dnorm(1,sd = 1),0,)   # Association between Alaska and Prairie natural summer mortality
   zeta.summ[2] ~ T(dnorm(1,sd = 1),0,)   # Association between Northern and Prairie natural summer mortality
   zeta.summ[3] <- 1
-  
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Global intercept terms for natural winter, harvest, and natural summer mortality
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  ###########################################################################################
+  # Spatial variation in intercept terms may not be possible
   for(i in 1:n.summer){
       mu_summ[i] ~ dbeta(8,2)
     mean_summ[i] <- log(-log(mu_summ[i]))
@@ -194,12 +195,9 @@ pt_ipm <- nimbleCode({
       fp_pacific[3,a,t] <- rr[t] * kappa_pacific[3,a,t] * (1-cr)
     }
   }
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Crippling Rate Prior
   cr ~ dbeta(20, 80)
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~# 
   # Pre-harvest survival constant for male and female HY individuals from each of 3 breeding regions
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   for(i in 1:6){
     local[i] ~ dbeta(1,1)
   }
@@ -238,7 +236,7 @@ pt_ipm <- nimbleCode({
     sw_ad_no_m[t] <- (s.summer_ad_no_m[t])^(1/6)
     sw_ad_pr_f[t] <- (s.summer_ad_pr_f[t])^(1/6)
     sw_ad_pr_m[t] <- (s.summer_ad_pr_m[t])^(1/6)
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+    
     # Breeding Region Winter Survival [sum of the Winter survival x proportion of the breeding population associated with a wintering group]
     s.winter_hy_ak_f[t]  <-  (sw_hy_central_f[t] * pi_ak[1] + sw_hy_pacific_f[t] * pi_ak[2])
     s.winter_hy_mw_f[t]  <-  (sw_hy_central_f[t] * pi_mw[1] + sw_hy_pacific_f[t] * pi_mw[2])
@@ -263,7 +261,7 @@ pt_ipm <- nimbleCode({
     s.winter_ad_no_m[t]  <-  (sw_ad_central_m[t] * pi_no[1] + sw_ad_pacific_m[t] * pi_no[2])
     s.winter_ad_pc_m[t]  <-  (sw_ad_central_m[t] * pi_pc[1] + sw_ad_pacific_m[t] * pi_pc[2])
     s.winter_ad_pr_m[t]  <-  (sw_ad_central_m[t] * pi_pr[1] + sw_ad_pacific_m[t] * pi_pr[2])
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
     # Winter Region Breeding Survival
         sur_waf[2,1,t] <- s.summer_ad_ak_f[t + 1] * chi[1,1,t] + s.summer_ad_no_f[t + 1] * chi[2,1,t] + s.summer_ad_pr_f[t + 1] * chi[3,1,t]
         sur_wam[2,1,t] <- s.summer_ad_ak_m[t + 1] * chi[1,1,t] + s.summer_ad_no_m[t + 1] * chi[2,1,t] + s.summer_ad_pr_m[t + 1] * chi[3,1,t]
@@ -477,8 +475,9 @@ pt_ipm <- nimbleCode({
     }
   }
   
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  # Productivity Model
+  ##########################################################################
+  ### Productivity
+  ##### Mean
         log_ar_mean_mu  ~ dnorm(0, sd = 4)
   log_ar_mean_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
 
@@ -487,22 +486,25 @@ pt_ipm <- nimbleCode({
   }
 
   ##### Yearly productivity
-  # Spatial similarity term (relative to the prairies)
   zeta.prod[1] ~ dnorm(0, sd = 1)
   zeta.prod[2] ~ dnorm(0, sd = 1)
   zeta.prod[3] <- 1
+   zeta.pnd[1] ~ T(dnorm(0, sd = 1),0,)
+   zeta.pnd[2] ~ T(dnorm(0, sd = 1),0,)
+   zeta.pnd[3] <- 1 
+   beta.pnd_ar ~ dnorm(0, sd = 1)
   for (t in 1:nyear) {
     for(j in 1:3){
       eps_production[j,t] <-  theta.prod[t] * zeta.prod[j]
     }
     # Alaska
-    log_ar_mu_ak[t] <- log_ar_region[1] + eps_production[1,t]
-    log_ar_mu_nh[t] <- log_ar_region[2] + eps_production[2,t]
-    log_ar_mu_pr[t] <- log_ar_region[3] + eps_production[3,t]
+    log_ar_mu_ak[t] <- log_ar_region[1] + beta.pnd_ar * zeta.pnd[1] * pond_std[t] + eps_production[1,t]
+    log_ar_mu_nh[t] <- log_ar_region[2] + beta.pnd_ar * zeta.pnd[2] * pond_std[t] + eps_production[2,t]
+    log_ar_mu_pr[t] <- log_ar_region[3] + beta.pnd_ar * zeta.pnd[3] * pond_std[t] + eps_production[3,t]
 
-    log_ar[1,t] <- log_ar_mu_ak[t]
-    log_ar[2,t] <- log_ar_mu_nh[t]
-    log_ar[3,t] <- log_ar_mu_pr[t]
+    log_ar[1,t] <- log_ar_mu_ak[t] 
+    log_ar[2,t] <- log_ar_mu_nh[t] 
+    log_ar[3,t] <- log_ar_mu_pr[t] 
   } # t
 
   for (i in 1:narea) {
@@ -1273,7 +1275,6 @@ pt_ipm <- nimbleCode({
     } # t
   } # i
   
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Reporting rate likelihood
   for(t in nyear:(nyear+nyear_use)){
     rr[t] <- 1  # hack to deal with the fake 'future' recovery rates
@@ -1283,12 +1284,11 @@ pt_ipm <- nimbleCode({
     alpha.rr[t] <- pow(SD.rr[t],-2) * RR.rr[t]
      beta.rr[t] <- pow(SD.rr[t],-2) * (1 - RR.rr[t])
   }
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   ### Pond Likelihood
   for (t in 1:nyear) {
     pond_obs[t] ~ dnorm(pond[t], 1 / (pond_se[t]^2))
   } #
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
   # Production Likelihood
   ### Age-ratio at banding
   for (i in 1:narea) {
@@ -1302,10 +1302,9 @@ pt_ipm <- nimbleCode({
             q[i,t,3] <- (n2f_fall[i,t] * 1/vul[i]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
     }
   }
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~# 
+
   # Priors for starting age and sex structure
        sr ~ dbeta(4,6)
-  # Starting breeding abundance
   for(i in 1:3){
          s_a[i] <- exp(log_ar_region[i])/(1 + exp(log_ar_region[i]))
          n1f[i] <-  sn[i] * s_a[i] * sr * .5
@@ -1323,10 +1322,8 @@ pt_ipm <- nimbleCode({
          N[i,1] <- NAF[i,1] + NAM[i,1]
     Bpop_N[i,1] <-   N[i,1] * psi[i,1]
   }
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     # Informed prior for relative juvenile breeding propensity
     bp~ dbeta(8,2)
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   for (t in 2:(nyear+1)) {
     # Pre-Harvest Abundance for each wintering group (N * survival from bpop to fall * winter movement probability)
     # First index: 1) Central 2) Pacific; Second index: 1) AK 2) NO 3) PR
@@ -1422,6 +1419,9 @@ pt_ipm <- nimbleCode({
     }
   }
 
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Arnold et al. reporting rate prior
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   for(i in 1:4){
     sig.lincoln[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
   }
@@ -1472,6 +1472,7 @@ pt_ipm <- nimbleCode({
 
     # Canada proportional harvest model
      b_t ~ dlogis(0,1)
+    b_t2 ~ dlogis(0,1)
       b0 ~ dlogis(0,1)
   sig.us ~ dunif(0,1)
   for (t in 1:nyear) {
@@ -1490,6 +1491,105 @@ pt_ipm <- nimbleCode({
   } # t
 
 })
+
+logN.inits <- matrix(1, ncol = 61, nrow = 3)
+#================
+# setup for Nimble
+#================
+library(abind)
+bpop_obs.inits <- bpop_obs
+bpop_obs.inits[,60] <- bpop_obs.inits[,59]
+bpop_obs.inits[,61] <- bpop_obs.inits[,59]
+
+bpop_se_edit <- bpop_se
+bpop_se_edit[,60] <- bpop_se_edit[,59]
+bpop_se_edit[,61] <- bpop_se_edit[,59]
+
+pond_obs.inits <- pond_obs
+pond_obs.inits[60:61] <- pond_obs.inits[59]
+pond_se_edit <- pond_se
+pond_se_edit[60:61] <- pond_se_edit[59]
+
+nimble.data <- list(marr_af=marr_af, marr_am=marr_am, marr_jf=marr_jf, marr_jm=marr_jm, sn = c( rowMeans(bpop_obs[,1:5],1)),
+                    marr_w_af=marr_w_af, marr_w_am=marr_w_am, 
+                    pond_obs=pond_obs, pond_se=pond_se_edit,   bpop_obs=data.matrix(bpop_obs), bpop_se=data.matrix(bpop_se_edit),
+                    nband_af=nband_af, nband_am=nband_am, nband_jf=nband_jf, nband_jm=nband_jm,  
+                    nband_jf_af=nband_jf_af,nband_jf_jm_af =nband_jf_jm_af, bands = bands,
+                    w_nband_af=w_nband_af, w_nband_am=w_nband_am,
+                    RR.rr = c(MU_R,0.781, 0.781), SD.rr = c(SD_R,0.077, 0.077), 
+                    H1F  = (H_F1 * 0.73)/ 1e6,
+                    H2F  = (H_F2 * 0.73)/ 1e6,
+                    H1M  = (H_M1 * 0.73)/ 1e6,
+                    H2M  = (H_M2 * 0.73)/ 1e6,
+                    H_CAN = (H_CAN_COR)/ 1e6,
+                    HC1F = (Canada_HY_F * 0.73)/ 1e6,   
+                    HC1M = (Canada_HY_M * 0.73)/ 1e6,  
+                    HC2F = (Canada_AHY_F* 0.73)/ 1e6,    
+                    HC2M = (Canada_AHY_M* 0.73)/ 1e6   )
+
+H_USA <- H_F1$harvest + H_F2$harvest + H_M1$harvest + H_M2$harvest
+
+H_CAN.inits <- H_CAN_COR/ 1e6
+H_CAN.inits[is.na(H_CAN.inits)] <- mean(H_CAN.inits, na.rm = TRUE)
+
+HC1F.inits <- (Canada_HY_F * 0.73)/ 1e6
+HC1M.inits <- (Canada_HY_M * 0.73)/ 1e6
+HC2F.inits <- (Canada_AHY_F* 0.73)/ 1e6
+HC2M.inits <- (Canada_AHY_M* 0.73)/ 1e6
+
+HC1F.inits[is.na(HC1F.inits )] <- mean(HC1F.inits , na.rm = TRUE)
+HC1M.inits[is.na(HC1M.inits )] <- mean(HC1M.inits , na.rm = TRUE)
+HC2F.inits[is.na(HC2F.inits )] <- mean(HC2F.inits , na.rm = TRUE)
+HC2M.inits[is.na(HC2M.inits )] <- mean(HC2M.inits , na.rm = TRUE)
+
+nimble.constants <- list(narea=narea, nyear=nyear, nyear_use=nyear_use, ncoho=ncoho, time = scale(c(1:61))[,1], cut = cut, nwint = 3,
+                         log_pond_mean= log_pond_mean, log_pond_se=log_pond_se,  warea = 2, K = 4,
+                         mean_pond = mean(pond_obs, na.rm = TRUE), sd_pond = sd(pond_obs,na.rm = TRUE), n.summer = 3, n.winter = 2,
+                         log_N_mean =c(1.1365896, 0.1946357, 0.9895127), 
+                         log_N_se=c(0.1693641, 0.2739492, 0.2992044))
+
+initsFunction <- function()list(
+  chi_cen_ak  = .05, 
+  chi_pac_ak  = 0.50, 
+     ch_no_ak = .05, 
+     ch_pr_pr = .90,
+  
+  beta.sex.mort = c(0,0), beta.age.mort = c(0), mu_wint = c(.9,.9), mu_summ = c(.9,.9,.9), mu_harv = c(.9,.9), 
+  tau = c(1,1,1,1), A = diag(4) * .5, L = matrix(0,4,4), xi = matrix(0,62,4), zeta = c(1,1), zeta.prod = c(1,1,1),
+  sig = c(1,1), beta.age.rec = 0, beta.sex.rec = c(0,0),
+  beta.wint = c(1,1), beta.summ = c(1,1,1), beta.harv = c(1,1), beta.prod =c(1,1,1),
+  theta.summ = rep(0,62), theta.wint = rep(0,62),theta.harv = rep(0,75), theta.prime = rep(0,62),
+  theta.mod = c(0,0,0,1),
+  beta.direct = 0, mu.r = -2, sig.rec = c(1,1), sig.sum = c(1,1,1),u.rec = c(2,2),
+  sig.prod =1, beta.prod = c(1,1,1), theta.prod = rnorm(62,0,.15), sig.theta = 1,
+  wpcap_a = .01, logit_pcap_a = -5, logit_pcap_j = -5,
+  pi_prime = matrix(c(.95,.025,.025,.025,.95,.025,.025,.025,.95),3,3), psi_other  = c(.5,.5),
+  pi_harv2 = matrix(1/3,2,3),
+  psi_ak = c(.1,.6,.3), psi_no = c(.3,.4,.3), psi_pr = c(.4,.3,.3),
+  psi_mw = c(.3,.3,.4), psi_pc = c(.05,.9,.05),
+  beta_pr_pr_pond = .5,
+  log_ar_region = c(0,0,0),
+  H_CAN = H_CAN.inits,b_t =0,b_t2=0, b0 = 2,sig.us = 1,
+  HC1F = HC1F.inits,  HC1M = HC1M.inits,  HC2F = HC2F.inits,  HC2M = HC2M.inits, 
+  mean.psi =-.5, sd.psi = .1,
+  rho.theta = c(0.25,-.25,.25,1),
+  mu_log_ar = 0, sd_log_ar = .2,
+  logN = logN.inits, N = exp(logN.inits),eps.usa= rep(0,61),
+  sig.lincoln = c(.5,.5,.5,.5),  rr = c(MU_R,0.781 ,0.781, rep(1,15) ), mu.n = 6, sr = c(.4), sp = apply(bpop_obs[,1:10], 1, mean)/sum(apply(bpop_obs[,1:10], 1, mean)),
+  mu.psi = c(.8,.8,.8), sig.psi = 1, log_psi_ponds = c(0,0,0), eps.psi = matrix(0,3,61), psi = matrix(.5,3,61),
+  pond_obs = pond_obs.inits, bpop_obs = bpop_obs.inits,
+  log_pond_alpha=0, log_pond_ddp=0, log_pond_prec=0, log_pond_temp=0, log_pond_sd=1, 
+  sig.eta_p =1, sig.eta_c =1,
+  
+  log_eta_pond_pr = rep(0, 3), beta.pnd_ar = 0, zeta.pnd = c(1,1,1),
+  local = rbeta(6,95,5),
+  log_ar_mean_mu=0, log_ar_mean_sd_region=1, 
+  log_ar_sd=1, 
+  log_ar=matrix(0,narea,nyear), 
+  log_bpop0_sd=1, log_bpop_sd=1,
+  vul = c(2,2,2), tau_band = c(50,50,50), bp = .8, cr = .15
+  
+)
 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
  # Run Model
@@ -1570,7 +1670,7 @@ out <- clusterEvalQ(cl_new5, {
   
   mcmc_Conf  <- configureMCMC(nimble.model, useConjugacy = FALSE,  thin = 2, thin2 = 5,
                               monitors  = c('beta.direct','beta.age.rec','beta.sex.mort', 'sigma','tau',
-                                            'zeta.wint','zeta.prod','zeta.harv','zeta.summ',
+                                            'zeta.wint','zeta.prod','zeta.harv','zeta.summ','zeta.pnd','beta.pnd_ar',
                                             'beta.sex.rec','beta.age.mort', 'local','s_a','bp','mu_pr_pr', 'beta_pr_pr_pond',
                                             'pcap_a','pcap_j','wpcap_a','rho', 'mu.psi','sr','vul','tau_band',
                                             'mu_summ','mu_harv','mu_wint','pi_gulf','pi_pac','psi_gulf','psi_pac',
