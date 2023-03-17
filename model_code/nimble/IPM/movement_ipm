@@ -1,76 +1,118 @@
-load('NOPI_model_data.rdata')
-
-nimble.inits     <- NOPI_model_data[[2]]
-nimble.data      <- NOPI_model_data[[3]]
-nimble.constants <- NOPI_model_data[[4]]
-initsFunction    <- NOPI_model_data[[5]]
-
-library(parallel)
-library(coda)
-library(nimble
-#======================
-# define model in Nimble
-#======================
-
+#Editted 3-17-2023
 #======================
 # define model in Nimble
 #======================
 pt_ipm <- nimbleCode({
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  # Breeding Settlement Model From Wintering Grounds
-       chi_cen_ak ~ dbeta(1,1)         # Central -> Alaska
-       chi_pac_ak ~ dbeta(1,1)         # Pacific -> Alaska
-       chi_cen_pr <- 1 - chi_cen_ak    # Central -> PPR
-       chi_pac_pr <- 1 - chi_pac_ak    # Pacific -> PPR
-         ch_no_ak ~ dbeta(1,1)         # North -> AK 
-  logit(ch_pr_pr) <- mu_pr_pr          # Stay in PPR versus moving to North
-          mu_pr_pr ~ dlogis(0,1)
-          
-   beta_pr_pr_pond ~ T(dnorm(0, sd = 1),0,)  # Effects of pond density on staying in PPR
-  for(t in 1:(nyear+1)){
-    logit(chi_pr_pr[t]) <- mu_pr_pr + beta_pr_pr_pond *  pond_std[t] 
-    
-      chi[1,1,t] <- chi_cen_ak + chi_cen_pr * (1 - chi_pr_pr[t]) * ch_no_ak   # Gulf -> AK
-      chi[2,1,t] <- chi_cen_pr * (1 - chi_pr_pr[t]) * (1 - ch_no_ak)          # Gulf -> North
-      chi[3,1,t] <- chi_cen_pr * chi_pr_pr[t]                                 # Gulf -> PPR
-      chi[1,2,t] <- chi_pac_ak + chi_pac_pr * (1 - chi_pr_pr[t]) * ch_no_ak   # Pacific -> AK
-      chi[2,2,t] <- chi_pac_pr * (1 - chi_pr_pr[t]) * (1 - ch_no_ak)          # Pacific -> North
-      chi[3,2,t] <- chi_pac_pr * chi_pr_pr[t]                                 # Pacific -> PPR
-      
-      pi[1,1,t] <- pi_ak[1] *  chi[1,1,t] +  pi_ak[2] * chi[1,2,t]   #AK ->AK
-      pi[1,2,t] <- pi_ak[1] *  chi[2,1,t] +  pi_ak[2] * chi[2,2,t]   #AK->North
-      pi[1,3,t] <- pi_ak[1] *  chi[3,1,t] +  pi_ak[2] * chi[3,2,t]   #AK->PPR
-      pi[2,1,t] <- pi_no[1] *  chi[1,1,t] +  pi_no[2] * chi[1,2,t]   #North->AK
-      pi[2,2,t] <- pi_no[1] *  chi[2,1,t] +  pi_no[2] * chi[2,2,t]   #North->North
-      pi[2,3,t] <- pi_no[1] *  chi[3,1,t] +  pi_no[2] * chi[3,2,t]   #North->PPR
-      pi[3,1,t] <- pi_pr[1] *  chi[1,1,t] +  pi_pr[2] * chi[1,2,t]   #PPR->AK
-      pi[3,2,t] <- pi_pr[1] *  chi[2,1,t] +  pi_pr[2] * chi[2,2,t]   #PPR->North
-      pi[3,3,t] <- pi_pr[1] *  chi[3,1,t] +  pi_pr[2] * chi[3,2,t]   #PPR->PPR
-  }
-   for(t in 1:nyear){
-      pi2[1,1,t] <-  chi[1,1,t] * pi_ak[1] +  chi[2,1,t] * pi_no[1] + chi[3,1,t] * pi_pr[1]     # GULF->GULF
-      pi2[1,2,t] <-  1 -  pi2[1,1,t]                                                            # GULF->PAC
-      pi2[2,2,t] <-  chi[1,2,t] * pi_ak[2] +  chi[2,2,t] * pi_no[2] + chi[3,2,t] * pi_pr[2]     # PAC->GULF
-      pi2[2,1,t] <- 1 -  pi2[2,2,t]                                                             # PAC->PAC
-  }
+  # Standardize covariates with uncertainty
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  ### Pond Model
- log_pond_alpha ~ dnorm(0, sd = 4)
-   log_pond_ddp ~ dnorm(0, sd = 4)
-  log_pond_prec ~ dnorm(0, sd = 4)
-  log_pond_temp ~ dnorm(0, sd = 4)
-    log_pond_sd ~ T(dt(0, pow(2.5, -2), 1),0,)
-    log_pond[1] ~ dnorm(0, sd = 4)
-  for (t in 2:nyear) {
-    log_pond_mu[t-1] <- log_pond_alpha + log_pond_ddp * log_pond[t-1]
-         log_pond[t] ~ dnorm(log_pond_mu[t-1], sd = log_pond_sd)
-  } # t
-    pond_std[nyear+1] <- pond_std[nyear]
-  for (t in 1:nyear) {
-    pond_std[t] <- (pond[t] - mean_pond)/sd_pond
-        pond[t] <- exp(log_pond[t])
-  } # t
+  for(t in 1:62){
+        pond[t] ~ dnorm(ponds_mean[t], sd = ponds_sd[t])
+    pond.std[t] <- (pond[t] - mu_pond)/sd_pond
+
+       crops[t] ~ dnorm(Crop_Mean[t], sd = Crop_sd[t])
+    crop.std[t] <- (crops[t]-mean.crop)/sd.crop
+
+  }
+  for(t in 1:60){
+    rice_std[t,1] ~ dnorm(rice_gulf_mean[t], sd = rice_gulf_sd[t])
+    rice_std[t,2] ~ dnorm(rice_cv_mean[t], sd = rice_cv_sd[t])
+  }
+  rice_std[61,1] <- rice_std[60,1]
+  rice_std[61,2] <- rice_std[60,2]
+  rice_std[62,1] <- rice_std[60,1]
+  rice_std[62,2] <- rice_std[60,2]
+  
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Breeding Settlement Model From Wintering Grounds
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+       mu_cen_pr  ~ dlogis(0,1)        # Central -> Alaska
+       mu_pac_pr  ~ dlogis(0,1)        # Pacific -> Alaska
+         
+       mu_pr_pr[1] ~ dlogis(0,1)       
+       mu_pr_pr[2] ~ dlogis(0,1)    
+  for(l in 1:3){   
+    for(i in 1:3){
+      beta_pr_pond[i,l] ~ dnorm(0, sd = .5)    # Effects of pond density on staying in PPR
+    }
+  }
+          
+          for(t in 1){
+            chi_pr_pr[1,t] <- exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t])/ (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]) + exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]))
+            chi_pr_pr[2,t] <- exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t])/ (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]) + exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]))
+            chi_pr_pr[3,t] <- 1 - chi_pr_pr[1,t]  - chi_pr_pr[2,t]  
+            
+            logit(chi_pac_pr[t]) <- mu_pac_pr + beta_pr_pond[3,1] *  pond.std[t]  
+            logit(chi_cen_pr[t]) <- mu_cen_pr 
+            
+            chi_pac_ak[t]  <- 1 - chi_pac_pr[t]
+            chi_cen_ak[t]  <- 1 - chi_cen_pr[t]
+          }
+          
+          for(t in 2){
+            chi_pr_pr[1,t] <- exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1] )/
+                        (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1] ) + 
+                              exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1] ))
+            
+            chi_pr_pr[2,t] <- exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1])/
+                        (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]) + 
+                              exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]))
+            
+            chi_pr_pr[3,t] <- 1 - chi_pr_pr[1,t]  - chi_pr_pr[2,t]  
+            
+            logit(chi_pac_pr[t]) <- mu_pac_pr + beta_pr_pond[3,1] *  pond.std[t]  +  beta_pr_pond[3,2] *  pond.std[t-1] 
+            logit(chi_cen_pr[t]) <- mu_cen_pr 
+                  chi_pac_ak[t]  <- 1 - chi_pac_pr[t]
+                  chi_cen_ak[t]  <- 1 - chi_cen_pr[t]
+          }
+          
+                  
+  for(t in 3:(nyear+1)){
+           chi_pr_pr[1,t] <- exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]  +  beta_pr_pond[1,3] *  pond.std[t-2] )/
+                       (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]  +  beta_pr_pond[1,3] *  pond.std[t-2] ) + 
+                             exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]  +  beta_pr_pond[2,3] *  pond.std[t-2] ))
+           
+           
+           chi_pr_pr[2,t] <- exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]  +  beta_pr_pond[2,3] *  pond.std[t-2] )/
+                       (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]  +  beta_pr_pond[1,3] *  pond.std[t-2] ) + 
+                             exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]  +  beta_pr_pond[2,3] *  pond.std[t-2] ))
+           chi_pr_pr[3,t] <- 1 - chi_pr_pr[1,t]  - chi_pr_pr[2,t]  
+          
+           
+      logit(chi_pac_pr[t]) <- mu_pac_pr + beta_pr_pond[3,1] *  pond.std[t]  +  beta_pr_pond[3,2] *  pond.std[t-1]  +  beta_pr_pond[3,3] *  pond.std[t-2] 
+      logit(chi_cen_pr[t]) <- mu_cen_pr 
+            chi_pac_ak[t]  <- 1 - chi_pac_pr[t]
+            chi_cen_ak[t]  <- 1 - chi_cen_pr[t]
+  }
+      # Winter -> Breeding transitions
+      for(t in 1:(nyear+1)){         
+      chi[1,1,t] <- chi_cen_ak[t] + chi_cen_pr[t] * chi_pr_pr[1,t]                    # Gulf -> AK
+      chi[2,1,t] <- chi_cen_pr[t] * chi_pr_pr[2,t]                                    # Gulf -> North
+      chi[3,1,t] <- chi_cen_pr[t] * chi_pr_pr[3,t]                                    # Gulf -> PPR
+      
+      chi[1,2,t] <- chi_pac_ak[t] + chi_pac_pr[t] * chi_pr_pr[1,t]                    # Pacific -> AK
+      chi[2,2,t] <- chi_pac_pr[t] * chi_pr_pr[2,t]                                    # Pacific -> North
+      chi[3,2,t] <- chi_pac_pr[t] * chi_pr_pr[3,t]                                    # Pacific -> PPR
+      
+      # Breeding -> Breeding transitions
+      pi[1,1,t] <- pi_ak[1,t] *  chi[1,1,t] +  pi_ak[2,t] * chi[1,2,t]                # AK ->AK
+      pi[1,2,t] <- pi_ak[1,t] *  chi[2,1,t] +  pi_ak[2,t] * chi[2,2,t]                # AK->North
+      pi[1,3,t] <- pi_ak[1,t] *  chi[3,1,t] +  pi_ak[2,t] * chi[3,2,t]                # AK->PPR
+      pi[2,1,t] <- pi_no[1,t] *  chi[1,1,t] +  pi_no[2,t] * chi[1,2,t]                # North->AK
+      pi[2,2,t] <- pi_no[1,t] *  chi[2,1,t] +  pi_no[2,t] * chi[2,2,t]                # North->North
+      pi[2,3,t] <- pi_no[1,t] *  chi[3,1,t] +  pi_no[2,t] * chi[3,2,t]                # North->PPR
+      pi[3,1,t] <- pi_pr[1,t] *  chi[1,1,t] +  pi_pr[2,t] * chi[1,2,t]                # PPR->AK
+      pi[3,2,t] <- pi_pr[1,t] *  chi[2,1,t] +  pi_pr[2,t] * chi[2,2,t]                # PPR->North
+      pi[3,3,t] <- pi_pr[1,t] *  chi[3,1,t] +  pi_pr[2,t] * chi[3,2,t]                # PPR->PPR
+      }
+       # Winter -> Winter transitions
+   for(t in 1:nyear){
+      pi2[1,1,t] <-  chi[1,1,t] * pi_ak[1,t] +  chi[2,1,t] * pi_no[1,t] + chi[3,1,t] * pi_pr[1,t]     # GULF->GULF
+      pi2[1,2,t] <-  1 -  pi2[1,1,t]                                                                  # GULF->PAC
+      pi2[2,2,t] <-  chi[1,2,t] * pi_ak[2,t] +  chi[2,2,t] * pi_no[2,t] + chi[3,2,t] * pi_pr[2,t]     # PAC->GULF
+      pi2[2,1,t] <- 1 -  pi2[2,2,t]                                                                   # PAC->PAC
+  }
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Survival Model
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -79,149 +121,190 @@ pt_ipm <- nimbleCode({
       beta.age.rec ~ dnorm(0, sd = .5) # HY vs AHY direct recovery adjustment
      beta.age.mort ~ dnorm(0, sd = .5) # HY vs AHY natural winter adjustment
     
-   beta.sex.rec[1] ~ dlogis(0,1)       # male vs female recovery adjustment
-   beta.sex.rec[2] <- 0
-   
-  beta.sex.mort[1] ~ dnorm(0, sd = .5) # male vs female natural winter adjustment
-  beta.sex.mort[2] ~ dnorm(0, sd = .5) # male vs female natural summer adjustment
-  
-  ###########################################################################################
-  # Cholesky decomposition
-  for (k in 1:K){
-        A[k,k] ~ T(dnorm(0, 0.444),0,)
-    Delta[k,k] <- 1/tau[k]
-        tau[k] ~ dgamma(5,5)
-    L[k,k] <- 1
-  }
-  
-  Sigma[1:K,1:K] <- A[1:K,1:K] %*% L[1:K,1:K] %*% Delta[1:K,1:K] %*% t(L[1:K,1:K]) %*% A[1:K,1:K] # V-C matrix
-  
-  for (j in 1:(K-1)){
-    for (k in (j+1):K){
-          L[j,k] <- 0
-          A[j,k] <- 0
-      Delta[j,k] <- 0
-      
-           L[k,j] ~ dnorm(0,2)
-           A[k,j] <- 0
-       Delta[k,j] <- 0
-    }
-  }
-  
-  for (k in 1:K){
-    sigma[k] <- sqrt(Sigma[k,k])
-    for(j in 1:K){
-      rho[j,k] <- Sigma[j,k]/sqrt(Sigma[j, j] * Sigma[k, k])
-    }
-  }
-  
-  # Correlated annual variation in population dynamics
-  for(t in 1:(nyear+1)){
-    theta.harv[t] <- A[1,1] * (L[1,1] * xi[t,1])
-    theta.wint[t] <- A[2,2] * (L[2,1] * xi[t,1] + L[2,2] * xi[t,2])
-    theta.summ[t] <- A[3,3] * (L[3,1] * xi[t,1] + L[3,2] * xi[t,2] + L[3,3] * xi[t,3])
-    theta.prod[t] <- A[4,4] * (L[4,1] * xi[t,1] + L[4,2] * xi[t,2] + L[4,3] * xi[t,3] + L[4,4] * xi[t,4])
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Cholesky decomposition [annual covariance in demographic rates]
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  for(i in 1:3){
+          mu[i] <- 0
+         sig[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+     Delta[i,i] <- pow(Q[i,i], -0.5)
+    Lambda[i,i] <- sig[i]
     
-    for (k in 1:K){
-     xi[t,k] ~ dnorm(0, sd = tau[k])   
+  }
+  for (i in 2:3){
+    for (j in 1:(i-1)){
+      Lambda[i,j] <- 0
+       Delta[i,j] <- 0
     }
   }
-  for(t in (nyear+2):75){
-    theta.harv[t] <- 0   
+  Sigma[1:3,1:3] <- Lambda[1:3,1:3] %*% P[1:3,1:3] %*% Lambda[1:3,1:3]
+      Q[1:3,1:3] ~ dinvwish(S = I_m[1:3,1:3], df = 3 + 1)
+      P[1:3,1:3] <- Delta[1:3,1:3] %*% Q[1:3,1:3] %*% Delta[1:3,1:3]
+  
+  for (i in 1:3){
+    for (j in 1:3){
+      rho[i,j] <- Sigma[i,j]/sqrt(Sigma[i,i] * Sigma[j,j])
+    }
+  }
+
+  for(i in 1:4){
+          mu_f[i] <- 0
+         sig_f[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+     Delta_f[i,i] <- pow(Q_f[i,i], -0.5)
+    Lambda_f[i,i] <- sig_f[i]
+    
+  }
+  for (i in 2:4){
+    for (j in 1:(i-1)){
+      Lambda_f[i,j] <- 0
+       Delta_f[i,j] <- 0
+    }
+  }
+  Sigma_f[1:4,1:4] <- Lambda_f[1:4,1:4] %*% P_f[1:4,1:4] %*% Lambda_f[1:4,1:4]
+      Q_f[1:4,1:4] ~ dinvwish(S = I_f[1:4,1:4], df = 4 + 1)
+      P_f[1:4,1:4] <- Delta_f[1:4,1:4] %*% Q_f[1:4,1:4] %*% Delta_f[1:4,1:4]
+  
+  for (i in 1:4){
+    for (j in 1:4){
+      rho_f[i,j] <- Sigma_f[i,j]/sqrt(Sigma_f[i,i] * Sigma_f[j,j])
+    }
+  }    
+  
+  for (t in 1:(nyear-2)){
+    epsilon_m[t, 1:3] ~ dmnorm(mu[1:3], cov = Sigma[1:3, 1:3])
+    epsilon_f[t, 1:4] ~ dmnorm(mu_f[1:4], cov = Sigma_f[1:4, 1:4])
+  }
+
+  # Sum to zero constraint    
+  for(k in 1:3){
+    epsilon_m[nyear-1, k] <- -(sum(epsilon_m[1:(nyear-2), k]) )
+    epsilon_f[nyear-1, k] <- -(sum(epsilon_f[1:(nyear-2), k]) )
+      epsilon_m[nyear, k] <- 0
+      epsilon_f[nyear, k] <- 0
+  }  
+    epsilon_f[nyear-1, 4] <- -(sum(epsilon_f[1:(nyear-2), 4]) )
+      epsilon_f[nyear, 4] <- 0
+      
+  # Correlated annual variation in population dynamics
+  for(t in 1:(nyear)){
+    theta.harv[1,t] <-epsilon_f[t,1]
+    theta.wint[1,t] <-epsilon_f[t,2]
+    theta.summ[1,t] <-epsilon_f[t,3]
+    
+    theta.harv[2,t] <-epsilon_m[t,1]
+    theta.wint[2,t] <-epsilon_m[t,2]
+    theta.summ[2,t] <-epsilon_m[t,3]
+    
+      theta.prod[t] <-epsilon_f[t,4]
+  }
+  for(t in (nyear+1):75){
+    theta.harv[1,t] <- 0   
+    theta.harv[2,t] <- 0   
   }
   # SEM inspired correlation between cause-specific mortality among regions
-  zeta.harv[1] <- 1
-  zeta.harv[2] ~ T(dnorm(1,sd = 1),0,)   # Association between pacific and central harvest mortality
-  zeta.wint[1] <- 1
-  zeta.wint[2] ~ T(dnorm(1,sd = 1),0,)   # Association between pacific and central natural winter mortality
-  zeta.summ[1] ~ T(dnorm(1,sd = 1),0,)   # Association between Alaska and Prairie natural summer mortality
-  zeta.summ[2] ~ T(dnorm(1,sd = 1),0,)   # Association between Northern and Prairie natural summer mortality
-  zeta.summ[3] <- 1
+    for(a in 1:2){
+     zeta.harv[a,1] <- 1
+     zeta.harv[a,2] ~ T(dnorm(1, sd = 0.25),0,)   # Association between pacific and central harvest mortality
+     
+     zeta.wint[a,1] <- 1
+     zeta.wint[a,2] ~  T(dnorm(1, sd = 0.25),0,)     # Association between pacific and central natural winter mortality
+     
+     zeta.summ[a,1] ~  T(dnorm(1, sd = 0.25),0,)     # Association between Alaska and Prairie natural summer mortality
+     zeta.summ[a,2] ~  T(dnorm(1, sd = 0.25),0,)     # Association between Northern and Prairie natural summer mortality
+     zeta.summ[a,3] <- 1
+    }
   # Global intercept terms for natural winter, harvest, and natural summer mortality
   ###########################################################################################
-  # Spatial variation in intercept terms may not be possible
-  for(i in 1:n.summer){
-      mu_summ[i] ~ dbeta(8,2)
-    mean_summ[i] <- log(-log(mu_summ[i]))
+      for(k in 1:2){
+        for(i in 1:n.summer){
+      mu_summ[i,k] ~ dbeta(8,2)
+    mean_summ[i,k] <- log(-log(mu_summ[i,k]))
   }
  # Winter mortality process
   for(i in 1:n.winter){
-    mu_wint[i] ~ dbeta(8,2)
-    mu_harv[i] ~ dbeta(8,2)
-    mean_harv[i] <- log(-log(mu_harv[i]))
-    mean_wint[i] <- log(-log(mu_wint[i]))
+      mu_wint[i,k] ~ dbeta(8,2)
+      mu_harv[i,k] ~ dbeta(8,2)
+    mean_harv[i,k] <- log(-log(mu_harv[i,k]))
+    mean_wint[i,k] <- log(-log(mu_wint[i,k]))
   }  
-  
-  # Risk of natural summer mortality 
-  for(t in 1:(nyear+1)){
-    log(h_ns_ad_ak_f[t])   <- mean_summ[1] + theta.summ[t]*zeta.summ[1] + beta.sex.mort[1]  
-    log(h_ns_ad_no_f[t])   <- mean_summ[2] + theta.summ[t]*zeta.summ[2] + beta.sex.mort[1]  
-    log(h_ns_ad_pr_f[t])   <- mean_summ[3] + theta.summ[t]*zeta.summ[3] + beta.sex.mort[1]  
-    log(h_ns_ad_ak_m[t])   <- mean_summ[1] + theta.summ[t]*zeta.summ[1] 
-    log(h_ns_ad_no_m[t])   <- mean_summ[2] + theta.summ[t]*zeta.summ[2]  
-    log(h_ns_ad_pr_m[t])   <- mean_summ[3] + theta.summ[t]*zeta.summ[3] 
-
-    #Summer Survival
-    s.summer_ad_ak_f[t]    <-  exp(-(h_ns_ad_ak_f[t]))
-    s.summer_ad_no_f[t]    <-  exp(-(h_ns_ad_no_f[t]))
-    s.summer_ad_pr_f[t]    <-  exp(-(h_ns_ad_pr_f[t]))
-    s.summer_ad_ak_m[t]    <-  exp(-(h_ns_ad_ak_m[t]))
-    s.summer_ad_no_m[t]    <-  exp(-(h_ns_ad_no_m[t]))
-    s.summer_ad_pr_m[t]    <-  exp(-(h_ns_ad_pr_m[t]))
-
+}
+  for(a in 1:2){
+    for(j in 1:2){
+         beta_bag[j,a] ~ dnorm(0, sd = 0.25)
+    }
+        beta_rice_w[a] ~ dnorm(0, sd = 0.25)
   }
+
+  
+  for(t in 1:nyear){
+    #Summer Survival
+    s.summer_ad_ak_f[t]    <-  exp(-(exp(mean_summ[1,1] +  theta.summ[1,t]*zeta.summ[1,1] )))
+    s.summer_ad_no_f[t]    <-  exp(-(exp(mean_summ[2,1] +  theta.summ[1,t]*zeta.summ[1,2] )))
+    s.summer_ad_pr_f[t]    <-  exp(-(exp(mean_summ[3,1] +  theta.summ[1,t]*zeta.summ[1,3] )))
+    s.summer_ad_ak_m[t]    <-  exp(-(exp(mean_summ[1,2] +  theta.summ[2,t]*zeta.summ[2,1] )))
+    s.summer_ad_no_m[t]    <-  exp(-(exp(mean_summ[2,2] +  theta.summ[2,t]*zeta.summ[2,2] )))
+    s.summer_ad_pr_m[t]    <-  exp(-(exp(mean_summ[3,2] +  theta.summ[2,t]*zeta.summ[2,3] )))
+  }
+    for(t in (nyear+1)){
+      #Summer Survival
+      s.summer_ad_ak_f[t]    <-  exp(-(exp(mean_summ[1,1])))
+      s.summer_ad_no_f[t]    <-  exp(-(exp(mean_summ[2,1])))
+      s.summer_ad_pr_f[t]    <-  exp(-(exp(mean_summ[3,1])))
+      s.summer_ad_ak_m[t]    <-  exp(-(exp(mean_summ[1,2])))
+      s.summer_ad_no_m[t]    <-  exp(-(exp(mean_summ[2,2])))
+      s.summer_ad_pr_m[t]    <-  exp(-(exp(mean_summ[3,2])))
+    }
   # Risk of harvest mortality
   for(t in 1:(nyear + nyear_use-1)){
     for(a in 1:2){
-      log(hk_central[1,a,t]) <- mean_harv[1] + theta.harv[t] * zeta.harv[1] + beta.sex.rec[a] + beta.direct + beta.age.rec
-      log(hk_pacific[1,a,t]) <- mean_harv[2] + theta.harv[t] * zeta.harv[2] + beta.sex.rec[a] + beta.direct + beta.age.rec
-      log(hk_central[2,a,t]) <- mean_harv[1] + theta.harv[t] * zeta.harv[1] + beta.sex.rec[a] + beta.direct 
-      log(hk_pacific[2,a,t]) <- mean_harv[2] + theta.harv[t] * zeta.harv[2] + beta.sex.rec[a] + beta.direct 
-      log(hk_central[3,a,t]) <- mean_harv[1] + theta.harv[t] * zeta.harv[1] + beta.sex.rec[a] 
-      log(hk_pacific[3,a,t]) <- mean_harv[2] + theta.harv[t] * zeta.harv[2] + beta.sex.rec[a] 
       # Kill Rates
-       kappa_central[1,a,t] <-  1 - exp(-(hk_central[1,a,t]))
-       kappa_pacific[1,a,t] <-  1 - exp(-(hk_pacific[1,a,t]))
-       kappa_central[2,a,t] <-  1 - exp(-(hk_central[2,a,t]))
-       kappa_pacific[2,a,t] <-  1 - exp(-(hk_pacific[2,a,t]))
-       kappa_central[3,a,t] <-  1 - exp(-(hk_central[3,a,t]))
-       kappa_pacific[3,a,t] <-  1 - exp(-(hk_pacific[3,a,t]))
+       kappa_central[1,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + theta.harv[a,t] * zeta.harv[a,1] + beta_bag[1,a] * bag[t] + beta.direct + beta.age.rec)))
+       kappa_pacific[1,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + theta.harv[a,t] * zeta.harv[a,2] + beta_bag[2,a] * bag[t] + beta.direct + beta.age.rec)))
+       kappa_central[2,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + theta.harv[a,t] * zeta.harv[a,1] + beta_bag[1,a] * bag[t] + beta.direct )))
+       kappa_pacific[2,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + theta.harv[a,t] * zeta.harv[a,2] + beta_bag[2,a] * bag[t] + beta.direct )))
+       kappa_central[3,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + theta.harv[a,t] * zeta.harv[a,1] + beta_bag[1,a] * bag[t] )))
+       kappa_pacific[3,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + theta.harv[a,t] * zeta.harv[a,2] + beta_bag[2,a] * bag[t] )))
       # Reporting rate adjusted kill rates
-      fp_central[1,a,t] <- rr[t] * kappa_central[1,a,t] * (1-cr)
-      fp_pacific[1,a,t] <- rr[t] * kappa_pacific[1,a,t] * (1-cr)
-      fp_central[2,a,t] <- rr[t] * kappa_central[2,a,t] * (1-cr)
-      fp_pacific[2,a,t] <- rr[t] * kappa_pacific[2,a,t] * (1-cr)
-      fp_central[3,a,t] <- rr[t] * kappa_central[3,a,t] * (1-cr)
-      fp_pacific[3,a,t] <- rr[t] * kappa_pacific[3,a,t] * (1-cr)
+       fp_central[1,a,t] <- rr[t] * kappa_central[1,a,t] * (1-cr)
+       fp_pacific[1,a,t] <- rr[t] * kappa_pacific[1,a,t] * (1-cr)
+       fp_central[2,a,t] <- rr[t] * kappa_central[2,a,t] * (1-cr)
+       fp_pacific[2,a,t] <- rr[t] * kappa_pacific[2,a,t] * (1-cr)
+       fp_central[3,a,t] <- rr[t] * kappa_central[3,a,t] * (1-cr)
+       fp_pacific[3,a,t] <- rr[t] * kappa_pacific[3,a,t] * (1-cr)
     }
   }
+
   # Crippling Rate Prior
   cr ~ dbeta(20, 80)
   # Pre-harvest survival constant for male and female HY individuals from each of 3 breeding regions
   for(i in 1:6){
-    local[i] ~ dbeta(1,1)
+    local[i] ~ dbeta(80,20)
   }
-  # Risk of natural winter mortality
-  for(t in 1:nyear){
-    log(h_nw_hy_central_f[t]) <-  mean_wint[1] + theta.wint[t]*zeta.wint[1]  + beta.age.mort
-    log(h_nw_hy_pacific_f[t]) <-  mean_wint[2] + theta.wint[t]*zeta.wint[2]  + beta.age.mort
-    log(h_nw_ad_central_f[t]) <-  mean_wint[1] + theta.wint[t]*zeta.wint[1]  
-    log(h_nw_ad_pacific_f[t]) <-  mean_wint[2] + theta.wint[t]*zeta.wint[2] 
-    log(h_nw_hy_central_m[t]) <-  mean_wint[1] + theta.wint[t]*zeta.wint[1]  + beta.age.mort 
-    log(h_nw_hy_pacific_m[t]) <-  mean_wint[2] + theta.wint[t]*zeta.wint[2]  + beta.age.mort 
-    log(h_nw_ad_central_m[t]) <-  mean_wint[1] + theta.wint[t]*zeta.wint[1]  
-    log(h_nw_ad_pacific_m[t]) <-  mean_wint[2] + theta.wint[t]*zeta.wint[2]  
-    
+  
+  for(t in 1:24){
     # Winter Survival
-    sw_hy_central_f[t] <-  exp(-(h_nw_hy_central_f[t] + hk_central[1,1,t]))
-    sw_hy_pacific_f[t] <-  exp(-(h_nw_hy_pacific_f[t] + hk_pacific[1,1,t]))
-    sw_ad_central_f[t] <-  exp(-(h_nw_ad_central_f[t] + hk_central[2,1,t]))
-    sw_ad_pacific_f[t] <-  exp(-(h_nw_ad_pacific_f[t] + hk_pacific[2,1,t]))
-    sw_hy_central_m[t] <-  exp(-(h_nw_hy_central_m[t] + hk_central[1,2,t]))
-    sw_hy_pacific_m[t] <-  exp(-(h_nw_hy_pacific_m[t] + hk_pacific[1,2,t]))
-    sw_ad_central_m[t] <-  exp(-(h_nw_ad_central_m[t] + hk_central[2,2,t]))
-    sw_ad_pacific_m[t] <-  exp(-(h_nw_ad_pacific_m[t] + hk_pacific[2,2,t]))
-    
+    sw_hy_central_f[t] <- exp(-exp(mean_wint[1,1] + theta.wint[1,t]*zeta.wint[1,1]  + beta.age.mort))   * (1 - kappa_central[1,1,t])
+    sw_hy_pacific_f[t] <- exp(-exp(mean_wint[2,1] + theta.wint[1,t]*zeta.wint[1,2]  + beta.age.mort))   * (1 - kappa_pacific[1,1,t])
+    sw_ad_central_f[t] <- exp(-exp(mean_wint[1,1] + theta.wint[1,t]*zeta.wint[1,1] ))                   * (1 - kappa_central[2,1,t])
+    sw_ad_pacific_f[t] <- exp(-exp(mean_wint[2,1] + theta.wint[1,t]*zeta.wint[1,2] ))                   * (1 - kappa_pacific[2,1,t])
+    sw_hy_central_m[t] <- exp(-exp(mean_wint[1,2] + theta.wint[2,t]*zeta.wint[2,1]  + beta.age.mort ))  * (1 - kappa_central[1,2,t])
+    sw_hy_pacific_m[t] <- exp(-exp(mean_wint[2,2] + theta.wint[2,t]*zeta.wint[2,2]  + beta.age.mort ))  * (1 - kappa_pacific[1,2,t])
+    sw_ad_central_m[t] <- exp(-exp(mean_wint[1,2] + theta.wint[2,t]*zeta.wint[2,1]  ))                  * (1 - kappa_central[2,2,t])
+    sw_ad_pacific_m[t] <- exp(-exp(mean_wint[2,2] + theta.wint[2,t]*zeta.wint[2,2]  ))                  * (1 - kappa_pacific[2,2,t])
+  }
+  
+  for(t in 25:nyear){
+    # Winter Survival
+    sw_hy_central_f[t] <- exp(-exp(mean_wint[1,1] + beta_rice_w[1] * rice_std[t,1] + theta.wint[1,t]*zeta.wint[1,1]  + beta.age.mort))   * (1 - kappa_central[1,1,t])
+    sw_hy_pacific_f[t] <- exp(-exp(mean_wint[2,1] + beta_rice_w[2] * rice_std[t,2] + theta.wint[1,t]*zeta.wint[1,2]  + beta.age.mort))   * (1 - kappa_pacific[1,1,t])
+    sw_ad_central_f[t] <- exp(-exp(mean_wint[1,1] + beta_rice_w[1] * rice_std[t,1] + theta.wint[1,t]*zeta.wint[1,1] ))                   * (1 - kappa_central[2,1,t])
+    sw_ad_pacific_f[t] <- exp(-exp(mean_wint[2,1] + beta_rice_w[2] * rice_std[t,2] + theta.wint[1,t]*zeta.wint[1,2] ))                   * (1 - kappa_pacific[2,1,t])
+    sw_hy_central_m[t] <- exp(-exp(mean_wint[1,2] + beta_rice_w[1] * rice_std[t,1] + theta.wint[2,t]*zeta.wint[2,1]  + beta.age.mort ))  * (1 - kappa_central[1,2,t])
+    sw_hy_pacific_m[t] <- exp(-exp(mean_wint[2,2] + beta_rice_w[2] * rice_std[t,2] + theta.wint[2,t]*zeta.wint[2,2]  + beta.age.mort ))  * (1 - kappa_pacific[1,2,t])
+    sw_ad_central_m[t] <- exp(-exp(mean_wint[1,2] + beta_rice_w[1] * rice_std[t,1] + theta.wint[2,t]*zeta.wint[2,1]  ))                  * (1 - kappa_central[2,2,t])
+    sw_ad_pacific_m[t] <- exp(-exp(mean_wint[2,2] + beta_rice_w[2] * rice_std[t,2] + theta.wint[2,t]*zeta.wint[2,2]  ))                  * (1 - kappa_pacific[2,2,t])
+  }
+  for(t in 1:nyear){
     # Pre-harvest HY Survival (1 month)
     sw_hy_ak_f[t]    <-  local[1]
     sw_hy_ak_m[t]    <-  local[2]
@@ -238,29 +321,29 @@ pt_ipm <- nimbleCode({
     sw_ad_pr_m[t] <- (s.summer_ad_pr_m[t])^(1/6)
     
     # Breeding Region Winter Survival [sum of the Winter survival x proportion of the breeding population associated with a wintering group]
-    s.winter_hy_ak_f[t]  <-  (sw_hy_central_f[t] * pi_ak[1] + sw_hy_pacific_f[t] * pi_ak[2])
-    s.winter_hy_mw_f[t]  <-  (sw_hy_central_f[t] * pi_mw[1] + sw_hy_pacific_f[t] * pi_mw[2])
-    s.winter_hy_no_f[t]  <-  (sw_hy_central_f[t] * pi_no[1] + sw_hy_pacific_f[t] * pi_no[2])
-    s.winter_hy_pc_f[t]  <-  (sw_hy_central_f[t] * pi_pc[1] + sw_hy_pacific_f[t] * pi_pc[2])
-    s.winter_hy_pr_f[t]  <-  (sw_hy_central_f[t] * pi_pr[1] + sw_hy_pacific_f[t] * pi_pr[2])
+    s.winter_hy_ak_f[t]  <-  (sw_hy_central_f[t] * pi_ak[1,t] + sw_hy_pacific_f[t] * pi_ak[2,t])
+    s.winter_hy_mw_f[t]  <-  (sw_hy_central_f[t] * pi_mw[1,t] + sw_hy_pacific_f[t] * pi_mw[2,t])
+    s.winter_hy_no_f[t]  <-  (sw_hy_central_f[t] * pi_no[1,t] + sw_hy_pacific_f[t] * pi_no[2,t])
+    s.winter_hy_pc_f[t]  <-  (sw_hy_central_f[t] * pi_pc[1,t] + sw_hy_pacific_f[t] * pi_pc[2,t])
+    s.winter_hy_pr_f[t]  <-  (sw_hy_central_f[t] * pi_pr[1,t] + sw_hy_pacific_f[t] * pi_pr[2,t])
     
-    s.winter_ad_ak_f[t]  <-  (sw_ad_central_f[t] * pi_ak[1] + sw_ad_pacific_f[t] * pi_ak[2])
-    s.winter_ad_mw_f[t]  <-  (sw_ad_central_f[t] * pi_mw[1] + sw_ad_pacific_f[t] * pi_mw[2])
-    s.winter_ad_no_f[t]  <-  (sw_ad_central_f[t] * pi_no[1] + sw_ad_pacific_f[t] * pi_no[2])
-    s.winter_ad_pc_f[t]  <-  (sw_ad_central_f[t] * pi_pc[1] + sw_ad_pacific_f[t] * pi_pc[2])
-    s.winter_ad_pr_f[t]  <-  (sw_ad_central_f[t] * pi_pr[1] + sw_ad_pacific_f[t] * pi_pr[2])
+    s.winter_ad_ak_f[t]  <-  (sw_ad_central_f[t] * pi_ak[1,t] + sw_ad_pacific_f[t] * pi_ak[2,t])
+    s.winter_ad_mw_f[t]  <-  (sw_ad_central_f[t] * pi_mw[1,t] + sw_ad_pacific_f[t] * pi_mw[2,t])
+    s.winter_ad_no_f[t]  <-  (sw_ad_central_f[t] * pi_no[1,t] + sw_ad_pacific_f[t] * pi_no[2,t])
+    s.winter_ad_pc_f[t]  <-  (sw_ad_central_f[t] * pi_pc[1,t] + sw_ad_pacific_f[t] * pi_pc[2,t])
+    s.winter_ad_pr_f[t]  <-  (sw_ad_central_f[t] * pi_pr[1,t] + sw_ad_pacific_f[t] * pi_pr[2,t])
     
-    s.winter_hy_ak_m[t]  <-  (sw_hy_central_m[t] * pi_ak[1] + sw_hy_pacific_m[t] * pi_ak[2])
-    s.winter_hy_mw_m[t]  <-  (sw_hy_central_m[t] * pi_mw[1] + sw_hy_pacific_m[t] * pi_mw[2])
-    s.winter_hy_no_m[t]  <-  (sw_hy_central_m[t] * pi_no[1] + sw_hy_pacific_m[t] * pi_no[2])
-    s.winter_hy_pc_m[t]  <-  (sw_hy_central_m[t] * pi_pc[1] + sw_hy_pacific_m[t] * pi_pc[2])
-    s.winter_hy_pr_m[t]  <-  (sw_hy_central_m[t] * pi_pr[1] + sw_hy_pacific_m[t] * pi_pr[2])
+    s.winter_hy_ak_m[t]  <-  (sw_hy_central_m[t] * pi_ak[1,t] + sw_hy_pacific_m[t] * pi_ak[2,t])
+    s.winter_hy_mw_m[t]  <-  (sw_hy_central_m[t] * pi_mw[1,t] + sw_hy_pacific_m[t] * pi_mw[2,t])
+    s.winter_hy_no_m[t]  <-  (sw_hy_central_m[t] * pi_no[1,t] + sw_hy_pacific_m[t] * pi_no[2,t])
+    s.winter_hy_pc_m[t]  <-  (sw_hy_central_m[t] * pi_pc[1,t] + sw_hy_pacific_m[t] * pi_pc[2,t])
+    s.winter_hy_pr_m[t]  <-  (sw_hy_central_m[t] * pi_pr[1,t] + sw_hy_pacific_m[t] * pi_pr[2,t])
     
-    s.winter_ad_ak_m[t]  <-  (sw_ad_central_m[t] * pi_ak[1] + sw_ad_pacific_m[t] * pi_ak[2])
-    s.winter_ad_mw_m[t]  <-  (sw_ad_central_m[t] * pi_mw[1] + sw_ad_pacific_m[t] * pi_mw[2])
-    s.winter_ad_no_m[t]  <-  (sw_ad_central_m[t] * pi_no[1] + sw_ad_pacific_m[t] * pi_no[2])
-    s.winter_ad_pc_m[t]  <-  (sw_ad_central_m[t] * pi_pc[1] + sw_ad_pacific_m[t] * pi_pc[2])
-    s.winter_ad_pr_m[t]  <-  (sw_ad_central_m[t] * pi_pr[1] + sw_ad_pacific_m[t] * pi_pr[2])
+    s.winter_ad_ak_m[t]  <-  (sw_ad_central_m[t] * pi_ak[1,t] + sw_ad_pacific_m[t] * pi_ak[2,t])
+    s.winter_ad_mw_m[t]  <-  (sw_ad_central_m[t] * pi_mw[1,t] + sw_ad_pacific_m[t] * pi_mw[2,t])
+    s.winter_ad_no_m[t]  <-  (sw_ad_central_m[t] * pi_no[1,t] + sw_ad_pacific_m[t] * pi_no[2,t])
+    s.winter_ad_pc_m[t]  <-  (sw_ad_central_m[t] * pi_pc[1,t] + sw_ad_pacific_m[t] * pi_pc[2,t])
+    s.winter_ad_pr_m[t]  <-  (sw_ad_central_m[t] * pi_pr[1,t] + sw_ad_pacific_m[t] * pi_pr[2,t])
 
     # Winter Region Breeding Survival
         sur_waf[2,1,t] <- s.summer_ad_ak_f[t + 1] * chi[1,1,t] + s.summer_ad_no_f[t + 1] * chi[2,1,t] + s.summer_ad_pr_f[t + 1] * chi[3,1,t]
@@ -326,36 +409,10 @@ pt_ipm <- nimbleCode({
     sur_jf[5,t] <- s.winter_hy_pc_f[t] * (s.summer_ad_ak_f[t] * chi[1,2,t] + s.summer_ad_no_f[t] * chi[2,2,t] + s.summer_ad_pr_f[t] * chi[3,2,t])
     sur_jm[5,t] <- s.winter_hy_pc_m[t] * (s.summer_ad_ak_m[t] * chi[1,2,t] + s.summer_ad_no_m[t] * chi[2,2,t] + s.summer_ad_pr_m[t] * chi[3,2,t])   
     
-    # Observed recovery rates = migration survival * recovery rate
-    f_hy_pacific[1,1,t]  <- sw_hy_ak_f[t] * fp_pacific[1,1,t]
-    f_hy_central[1,1,t]  <- sw_hy_ak_f[t] * fp_central[1,1,t]
-    f_hy_pacific[2,1,t]  <- sw_hy_ak_m[t] * fp_pacific[1,2,t]
-    f_hy_central[2,1,t]  <- sw_hy_ak_m[t] * fp_central[1,2,t]
-    f_ad_pacific[1,1,t]  <- sw_ad_ak_f[t] * fp_pacific[2,1,t]
-    f_ad_central[1,1,t]  <- sw_ad_ak_f[t] * fp_central[2,1,t]
-    f_ad_pacific[2,1,t]  <- sw_ad_ak_m[t] * fp_pacific[2,2,t]
-    f_ad_central[2,1,t]  <- sw_ad_ak_m[t] * fp_central[2,2,t]
-    f_hy_pacific[1,2,t]  <- sw_hy_no_f[t] * fp_pacific[1,1,t]
-    f_hy_central[1,2,t]  <- sw_hy_no_f[t] * fp_central[1,1,t]
-    f_hy_pacific[2,2,t]  <- sw_hy_no_m[t] * fp_pacific[1,2,t]
-    f_hy_central[2,2,t]  <- sw_hy_no_m[t] * fp_central[1,2,t]
-    f_ad_pacific[1,2,t]  <- sw_ad_no_f[t] * fp_pacific[2,1,t]
-    f_ad_central[1,2,t]  <- sw_ad_no_f[t] * fp_central[2,1,t]
-    f_ad_pacific[2,2,t]  <- sw_ad_no_m[t] * fp_pacific[2,2,t]
-    f_ad_central[2,2,t]  <- sw_ad_no_m[t] * fp_central[2,2,t]
-    f_hy_pacific[1,3,t]  <- sw_hy_pr_f[t] * fp_pacific[1,1,t]
-    f_hy_central[1,3,t]  <- sw_hy_pr_f[t] * fp_central[1,1,t]
-    f_hy_pacific[2,3,t]  <- sw_hy_pr_m[t] * fp_pacific[1,2,t]
-    f_hy_central[2,3,t]  <- sw_hy_pr_m[t] * fp_central[1,2,t]
-    f_ad_pacific[1,3,t]  <- sw_ad_pr_f[t] * fp_pacific[2,1,t]
-    f_ad_central[1,3,t]  <- sw_ad_pr_f[t] * fp_central[2,1,t]
-    f_ad_pacific[2,3,t]  <- sw_ad_pr_m[t] * fp_pacific[2,2,t]
-    f_ad_central[2,3,t]  <- sw_ad_pr_m[t] * fp_central[2,2,t]
-    
-              f_wf[2,t] <- f_ad_pacific[1,3,t]
-              f_wf[1,t] <- f_ad_central[1,3,t]
-              f_wm[2,t] <- f_ad_pacific[2,3,t]
-              f_wm[1,t] <- f_ad_central[2,3,t]
+              f_wf[2,t] <- sw_ad_pr_f[t] * fp_pacific[2,1,t]
+              f_wf[1,t] <- sw_ad_pr_f[t] * fp_central[2,1,t]
+              f_wm[2,t] <- sw_ad_pr_m[t] * fp_pacific[2,2,t]
+              f_wm[1,t] <- sw_ad_pr_m[t] * fp_central[2,2,t]
   }
   
   for(t in (nyear+1):(nyear + nyear_use-1)){
@@ -365,148 +422,175 @@ pt_ipm <- nimbleCode({
     }
   }
   for(t in 1:(nyear + nyear_use-1)){
-    for(a in 1:2){
-      # Breeding Region Recoveries (f)
-      f_ak[1,a,t] <- fp_central[1,a,t] * pi_ak[1] + fp_pacific[1,a,t] * pi_ak[2] 
-      f_mw[1,a,t] <- fp_central[1,a,t] * pi_mw[1] + fp_pacific[1,a,t] * pi_mw[2] 
-      f_no[1,a,t] <- fp_central[1,a,t] * pi_no[1] + fp_pacific[1,a,t] * pi_no[2] 
-      f_pc[1,a,t] <- fp_central[1,a,t] * pi_pc[1] + fp_pacific[1,a,t] * pi_pc[2] 
-      f_pr[1,a,t] <- fp_central[1,a,t] * pi_pr[1] + fp_pacific[1,a,t] * pi_pr[2] 
-      
-      f_ak[2,a,t] <- fp_central[2,a,t] * pi_ak[1] + fp_pacific[2,a,t] * pi_ak[2] 
-      f_mw[2,a,t] <- fp_central[2,a,t] * pi_mw[1] + fp_pacific[2,a,t] * pi_mw[2] 
-      f_no[2,a,t] <- fp_central[2,a,t] * pi_no[1] + fp_pacific[2,a,t] * pi_no[2] 
-      f_pc[2,a,t] <- fp_central[2,a,t] * pi_pc[1] + fp_pacific[2,a,t] * pi_pc[2] 
-      f_pr[2,a,t] <- fp_central[2,a,t] * pi_pr[1] + fp_pacific[2,a,t] * pi_pr[2] 
-      
-      f_ak[3,a,t] <- fp_central[3,a,t] * pi_ak[1] + fp_pacific[3,a,t] * pi_ak[2] 
-      f_mw[3,a,t] <- fp_central[3,a,t] * pi_mw[1] + fp_pacific[3,a,t] * pi_mw[2] 
-      f_no[3,a,t] <- fp_central[3,a,t] * pi_no[1] + fp_pacific[3,a,t] * pi_no[2] 
-      f_pc[3,a,t] <- fp_central[3,a,t] * pi_pc[1] + fp_pacific[3,a,t] * pi_pc[2] 
-      f_pr[3,a,t] <- fp_central[3,a,t] * pi_pr[1] + fp_pacific[3,a,t] * pi_pr[2] 
-      
-      f_cen2[a,t]  <-  fp_central[3,a,t]
-      f_pac2[a,t]  <-  fp_pacific[3,a,t]
-    }
-    f_jf[1,t]   <-  f_ak[1,1,t]
-    f_jf[2,t]   <-  f_no[1,1,t]
-    f_jf[3,t]   <-  f_pr[1,1,t]
-    f_jf[4,t]   <-  f_mw[1,1,t]
-    f_jf[5,t]   <-  f_pc[1,1,t]
-    f_af[1,1,t] <-  f_ak[2,1,t]
-    f_af[1,2,t] <-  f_no[2,1,t]
-    f_af[1,3,t] <-  f_pr[2,1,t]
-    f_af[1,4,t] <-  f_mw[2,1,t]
-    f_af[1,5,t] <-  f_pc[2,1,t]
-    f_af[2,1,t] <-  f_ak[3,1,t]
-    f_af[2,2,t] <-  f_no[3,1,t]
-    f_af[2,3,t] <-  f_pr[3,1,t]
-    f_af[2,4,t] <-  f_mw[3,1,t]
-    f_af[2,5,t] <-  f_pc[3,1,t] 
-    f_jm[1,t]   <-  f_ak[1,2,t]
-    f_jm[2,t]   <-  f_no[1,2,t]
-    f_jm[3,t]   <-  f_pr[1,2,t]
-    f_jm[4,t]   <-  f_mw[1,2,t]
-    f_jm[5,t]   <-  f_pc[1,2,t]
-    f_am[1,1,t] <-  f_ak[2,2,t]
-    f_am[1,2,t] <-  f_no[2,2,t]
-    f_am[1,3,t] <-  f_pr[2,2,t]
-    f_am[1,4,t] <-  f_mw[2,2,t]
-    f_am[1,5,t] <-  f_pc[2,2,t]
-    f_am[2,1,t] <-  f_ak[3,2,t]
-    f_am[2,2,t] <-  f_no[3,2,t]
-    f_am[2,3,t] <-  f_pr[3,2,t]
-    f_am[2,4,t] <-  f_mw[3,2,t]
-    f_am[2,5,t] <-  f_pc[3,2,t]
+    f_jf[1,t]   <-  fp_central[1,1,t] * pi_ak[1,t] + fp_pacific[1,1,t] * pi_ak[2,t]
+    f_jf[2,t]   <-  fp_central[1,1,t] * pi_mw[1,t] + fp_pacific[1,1,t] * pi_mw[2,t]
+    f_jf[3,t]   <-  fp_central[1,1,t] * pi_no[1,t] + fp_pacific[1,1,t] * pi_no[2,t]
+    f_jf[4,t]   <-  fp_central[1,1,t] * pi_pc[1,t] + fp_pacific[1,1,t] * pi_pc[2,t]
+    f_jf[5,t]   <-  fp_central[1,1,t] * pi_pr[1,t] + fp_pacific[1,1,t] * pi_pr[2,t]
+    f_af[1,1,t] <-  fp_central[2,1,t] * pi_ak[1,t] + fp_pacific[2,1,t] * pi_ak[2,t]
+    f_af[1,2,t] <-  fp_central[2,1,t] * pi_mw[1,t] + fp_pacific[2,1,t] * pi_mw[2,t]
+    f_af[1,3,t] <-  fp_central[2,1,t] * pi_no[1,t] + fp_pacific[2,1,t] * pi_no[2,t]
+    f_af[1,4,t] <-  fp_central[2,1,t] * pi_pc[1,t] + fp_pacific[2,1,t] * pi_pc[2,t]
+    f_af[1,5,t] <-  fp_central[2,1,t] * pi_pr[1,t] + fp_pacific[2,1,t] * pi_pr[2,t]
+    f_af[2,1,t] <-  fp_central[3,1,t] * pi_ak[1,t] + fp_pacific[3,1,t] * pi_ak[2,t]
+    f_af[2,2,t] <-  fp_central[3,1,t] * pi_mw[1,t] + fp_pacific[3,1,t] * pi_mw[2,t]
+    f_af[2,3,t] <-  fp_central[3,1,t] * pi_no[1,t] + fp_pacific[3,1,t] * pi_no[2,t]
+    f_af[2,4,t] <-  fp_central[3,1,t] * pi_pc[1,t] + fp_pacific[3,1,t] * pi_pc[2,t]
+    f_af[2,5,t] <-  fp_central[3,1,t] * pi_pr[1,t] + fp_pacific[3,1,t] * pi_pr[2,t]
+    f_jm[1,t]   <-  fp_central[1,2,t] * pi_ak[1,t] + fp_pacific[1,2,t] * pi_ak[2,t]
+    f_jm[2,t]   <-  fp_central[1,2,t] * pi_mw[1,t] + fp_pacific[1,2,t] * pi_mw[2,t]
+    f_jm[3,t]   <-  fp_central[1,2,t] * pi_no[1,t] + fp_pacific[1,2,t] * pi_no[2,t]
+    f_jm[4,t]   <-  fp_central[1,2,t] * pi_pc[1,t] + fp_pacific[1,2,t] * pi_pc[2,t]
+    f_jm[5,t]   <-  fp_central[1,2,t] * pi_pr[1,t] + fp_pacific[1,2,t] * pi_pr[2,t]
+    f_am[1,1,t] <-  fp_central[2,2,t] * pi_ak[1,t] + fp_pacific[2,2,t] * pi_ak[2,t]
+    f_am[1,2,t] <-  fp_central[2,2,t] * pi_mw[1,t] + fp_pacific[2,2,t] * pi_mw[2,t]
+    f_am[1,3,t] <-  fp_central[2,2,t] * pi_no[1,t] + fp_pacific[2,2,t] * pi_no[2,t]
+    f_am[1,4,t] <-  fp_central[2,2,t] * pi_pc[1,t] + fp_pacific[2,2,t] * pi_pc[2,t]
+    f_am[1,5,t] <-  fp_central[2,2,t] * pi_pr[1,t] + fp_pacific[2,2,t] * pi_pr[2,t]
+    f_am[2,1,t] <-  fp_central[3,2,t] * pi_ak[1,t] + fp_pacific[3,2,t] * pi_ak[2,t]
+    f_am[2,2,t] <-  fp_central[3,2,t] * pi_mw[1,t] + fp_pacific[3,2,t] * pi_mw[2,t]
+    f_am[2,3,t] <-  fp_central[3,2,t] * pi_no[1,t] + fp_pacific[3,2,t] * pi_no[2,t]
+    f_am[2,4,t] <-  fp_central[3,2,t] * pi_pc[1,t] + fp_pacific[3,2,t] * pi_pc[2,t]
+    f_am[2,5,t] <-  fp_central[3,2,t] * pi_pr[1,t] + fp_pacific[3,2,t] * pi_pr[2,t]
   }
   
-  # Breeding region composition of harvest
-  for(i in 1:3){
-       alpha_ak[i] <- 1
-       alpha_mw[i] <- 1
-       alpha_no[i] <- 1
-       alpha_pc[i] <- 1
-       alpha_pr[i] <- 1
-     alpha_gulf[i] <- 1
-      alpha_pac[i] <- 1
-      
-       pi_harv[1,i] <- psi_ak[i]
-       pi_harv[2,i] <- psi_no[i]
-       pi_harv[3,i] <- psi_pr[i]
-       pi_harv[4,i] <- psi_mw[i]
-       pi_harv[5,i] <- psi_pc[i]
-      pi_harv2[1,i] <- psi_gulf[i]
-      pi_harv2[2,i] <- psi_pac[i]
-  }
-  
+
   # Standardized regional harvest distributions
-  for(i in 1:2){
-      pi_ak[i] <- psi_ak[i]/(1 - psi_ak[3])
-      pi_mw[i] <- psi_mw[i]/(1 - psi_mw[3])
-      pi_no[i] <- psi_no[i]/(1 - psi_no[3])
-      pi_pc[i] <- psi_pc[i]/(1 - psi_pc[3])
-      pi_pr[i] <- psi_pr[i]/(1 - psi_pr[3])
-    pi_gulf[i] <- psi_gulf[i]/(1 - psi_gulf[3])
-     pi_pac[i] <- psi_pac[i]/(1 - psi_pac[3])
+  
+  for(j in 1:5){
+    pi_mod[j] ~ dbeta(1,1)
+     mu_pi[j] ~ dlogis(0, 1)
+    sig_pi[j] ~ dunif(0, 10)
+    for(k in 1:2){
+      beta_temp[k,j] ~ dnorm(0, sd = 1)
+      beta_prec[k,j] ~ dnorm(0, sd = 1)
+    }
   }
-    psi_ak[1:3] ~ ddirch(alpha_ak[1:3])
-    psi_mw[1:3] ~ ddirch(alpha_mw[1:3])
-    psi_no[1:3] ~ ddirch(alpha_no[1:3])
-    psi_pc[1:3] ~ ddirch(alpha_pc[1:3])
-    psi_pr[1:3] ~ ddirch(alpha_pr[1:3])
-  psi_gulf[1:3] ~ ddirch(alpha_gulf[1:3])
-   psi_pac[1:3] ~ ddirch(alpha_pac[1:3])
+  
+  
+for(t in 1:(nyear + nyear_use-1)){
+          l_pi_ak[t] ~ dnorm(mu_pi[1] + beta_temp[1,1] * T_GC[t] + beta_temp[2,1] * T_PC[t] + beta_prec[1,1] * P_GC[t] + beta_prec[2,1] * P_PC[t], sd = sig_pi[1])
+          l_pi_mw[t] ~ dnorm(mu_pi[4] + beta_temp[1,2] * T_GC[t] + beta_temp[2,2] * T_PC[t] + beta_prec[1,2] * P_GC[t] + beta_prec[2,2] * P_PC[t], sd = sig_pi[4])
+          l_pi_no[t] ~ dnorm(mu_pi[2] + beta_temp[1,3] * T_GC[t] + beta_temp[2,3] * T_PC[t] + beta_prec[1,3] * P_GC[t] + beta_prec[2,3] * P_PC[t], sd = sig_pi[2])
+          l_pi_pc[t] ~ dnorm(mu_pi[5] + beta_temp[1,4] * T_GC[t] + beta_temp[2,4] * T_PC[t] + beta_prec[1,4] * P_GC[t] + beta_prec[2,4] * P_PC[t], sd = sig_pi[5])
+          l_pi_pr[t] ~ dnorm(mu_pi[3] + beta_temp[1,5] * T_GC[t] + beta_temp[2,5] * T_PC[t] + beta_prec[1,5] * P_GC[t] + beta_prec[2,5] * P_PC[t], sd = sig_pi[3])
+      logit(pi_ak[1,t]) <- l_pi_ak[t]                   # ak -> gulf
+      logit(pi_mw[1,t]) <- l_pi_mw[t]                   # mw -> gulf
+      logit(pi_no[1,t]) <- l_pi_no[t]                   # no -> gulf
+      logit(pi_pc[1,t]) <- l_pi_pc[t]                   # pc -> gulf
+      logit(pi_pr[1,t]) <- l_pi_pr[t]                   # pr -> gulf
+            pi_ak[2,t] <- 1 - pi_ak[1,t]
+            pi_mw[2,t] <- 1 - pi_mw[1,t]
+            pi_no[2,t] <- 1 - pi_no[1,t]
+            pi_pc[2,t] <- 1 - pi_pc[1,t]
+            pi_pr[2,t] <- 1 - pi_pr[1,t]
+      
+    for(i in 1:2){   
+      pi_harv[1,i,t] <- pi_ak[i,t] - (pi_ak[i,t] * pi_mod[1])
+      pi_harv[4,i,t] <- pi_mw[i,t] - (pi_mw[i,t] * pi_mod[4])
+      pi_harv[2,i,t] <- pi_no[i,t] - (pi_no[i,t] * pi_mod[2])
+      pi_harv[5,i,t] <- pi_pc[i,t] - (pi_pc[i,t] * pi_mod[5])
+      pi_harv[3,i,t] <- pi_pr[i,t] - (pi_pr[i,t] * pi_mod[3])
+    }
+      pi_harv[1,3,t] <- 1 - (pi_harv[1,1,t] + pi_harv[1,2,t])
+      pi_harv[4,3,t] <- 1 - (pi_harv[4,1,t] + pi_harv[4,2,t])
+      pi_harv[2,3,t] <- 1 - (pi_harv[2,1,t] + pi_harv[2,2,t])
+      pi_harv[5,3,t] <- 1 - (pi_harv[5,1,t] + pi_harv[5,2,t])
+      pi_harv[3,3,t] <- 1 - (pi_harv[3,1,t] + pi_harv[3,2,t])
+            
+   }
+      
+      for(i in 1:2){    
+    pi_gulf[i] <- pi_harv2[1,i]/(1 - pi_harv2[1,3])
+     pi_pac[i] <- pi_harv2[2,i]/(1 - pi_harv2[2,3])
+  }
+  # Breeding region composition of harvest
+
+  pi_harv2[1,1:3] ~ ddirch(alpha_gulf[1:3])
+  pi_harv2[2,1:3] ~ ddirch(alpha_pac[1:3])
 
   ### Capture probability
-  logit_pcap_a ~ dnorm(logit(.00072), 44.44)
-  logit_pcap_j ~ dnorm(logit(.00144), 90.70)
-       pcap_a <- ilogit(logit_pcap_a)
-       pcap_j <- ilogit(logit_pcap_j)
-       wpcap_a ~ dbeta(5,95)
+  for(i in 1:narea){
+       mu_p[i] ~ dbeta(1,1)
+       sd_p[i] ~ dexp(.1)
+    alpha_p[i] <- mu_p[i] * sd_p[i]
+     beta_p[i] <- (1 - mu_p[i]) * sd_p[i]
+     
+       pcap_af[i] ~ dbeta(alpha_p[i],beta_p[i])
+       pcap_jf[i] ~ dbeta(alpha_p[i],beta_p[i])
+       pcap_am[i] ~ dbeta(alpha_p[i],beta_p[i])
+       pcap_jm[i] ~ dbeta(alpha_p[i],beta_p[i])
+     }
+       wpcap_af[1] ~ dbeta(5,95)
+       wpcap_af[2] ~ dbeta(5,95)
+       
+       wpcap_am[1] ~ dbeta(5,95)
+       wpcap_am[2] ~ dbeta(5,95)
   ### Availability
   ##### Mean
-  sig.psi ~ T(dt(0, pow(2.5, -2), 1),0,)
+ 
   for (i in 1:narea) {
-    log_psi_ponds[i] ~ dlogis(0, 1)
            mu.psi[i] ~ dbeta(25, 5)
+          sig.psi[i]~ T(dt(0, pow(2.5, -2), 1),0,)
+          
+          alpha.psi[i] <-   mu.psi[i] *  sig.psi[i]
+           beta.psi[i] <-   (1 - mu.psi[i]) *  sig.psi[i]
     for(t in 1:nyear){
-      #eps.psi[i,t] ~ dnorm(mu.psi[i], sd = sig.psi)
-           psi[i,t] <-   mu.psi[i]# eps.psi[i,t] #+ log_psi_ponds[i] * ((log_pond[t] - log_pond_mean) / log_pond_se)
+           psi[i,t] ~ dbeta(alpha.psi[i], beta.psi[i])
     }
   }
   
   ##########################################################################
   ### Productivity
   ##### Mean
-        log_ar_mean_mu  ~ dnorm(0, sd = 4)
-  log_ar_mean_sd_region ~ T(dt(0, pow(2.5, -2), 1),0,)
-
   for(j in 1:3){
-    log_ar_region[j] ~ dnorm(log_ar_mean_mu, sd = log_ar_mean_sd_region)
+    log_ar_region[j] ~ dunif(-0.75,0.75)
+      beta_rice_p[j] ~ dnorm(0, sd = .5)
+      beta_rice_g[j] ~ dnorm(0, sd = .5)
   }
 
   ##### Yearly productivity
-  zeta.prod[1] ~ dnorm(0, sd = 1)
-  zeta.prod[2] ~ dnorm(0, sd = 1)
+  zeta.prod[1] ~ dnorm(1, sd = .25)
+  zeta.prod[2] ~ dnorm(1, sd = .25)
   zeta.prod[3] <- 1
-   zeta.pnd[1] ~ T(dnorm(0, sd = 1),0,)
-   zeta.pnd[2] ~ T(dnorm(0, sd = 1),0,)
-   zeta.pnd[3] <- 1 
-   beta.pnd_ar ~ dnorm(0, sd = 1)
+  for(i in 1:3){  
+   beta.pnd_ar[i] ~ dnorm(0, sd = .5)
+  }
+  beta.crop_ar ~ dnorm(0, sd = .5)
+   beta.pnd_cr ~ dnorm(0, sd = .5)
+
   for (t in 1:nyear) {
     for(j in 1:3){
       eps_production[j,t] <-  theta.prod[t] * zeta.prod[j]
     }
-    # Alaska
-    log_ar_mu_ak[t] <- log_ar_region[1] + beta.pnd_ar * zeta.pnd[1] * pond_std[t] + eps_production[1,t]
-    log_ar_mu_nh[t] <- log_ar_region[2] + beta.pnd_ar * zeta.pnd[2] * pond_std[t] + eps_production[2,t]
-    log_ar_mu_pr[t] <- log_ar_region[3] + beta.pnd_ar * zeta.pnd[3] * pond_std[t] + eps_production[3,t]
-
     log_ar[1,t] <- log_ar_mu_ak[t] 
     log_ar[2,t] <- log_ar_mu_nh[t] 
     log_ar[3,t] <- log_ar_mu_pr[t] 
+  }
+  for(t in 1:25){
+  log_ar_mu_ak[t] <- log_ar_region[1] + beta.pnd_ar[1] * def_a[t] + eps_production[1,t]
+  log_ar_mu_nh[t] <- log_ar_region[2] + beta.pnd_ar[2] * def_b[t] + eps_production[2,t]
+  log_ar_mu_pr[t] <- log_ar_region[3] + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t]  + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
+} # t
+  for(t in 26:60){
+    log_ar_mu_ak[t] <- log_ar_region[1] +  (beta_rice_g[1] * rice_std[t-1,1]) + (beta_rice_p[1] * rice_std[t-1,2]) + beta.pnd_ar[1] * def_a[t] + eps_production[1,t]
+    log_ar_mu_nh[t] <- log_ar_region[2] +  (beta_rice_g[2] * rice_std[t-1,1]) + (beta_rice_p[2] * rice_std[t-1,2]) + beta.pnd_ar[2] * def_b[t] + eps_production[2,t]
+    log_ar_mu_pr[t] <- log_ar_region[3] +  (beta_rice_g[3] * rice_std[t-1,1]) + (beta_rice_p[3] * rice_std[t-1,2]) + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t] + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
   } # t
-
+   
+   for(t in 61){
+     log_ar_mu_ak[t] <- log_ar_region[1] + eps_production[1,t]
+     log_ar_mu_nh[t] <- log_ar_region[2] + eps_production[2,t]
+     log_ar_mu_pr[t] <- log_ar_region[3] + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t] + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
+   } # t
+   
+   # for(t in 26:nyear){
+   #   log_ar_mu_ak[t] <- log_ar_region[1] +  (beta_rice_p[1] * chi[1,1,t] * rice_std[t-1,1]) + (beta_rice_p[1] * chi[1,2,t] * rice_std[t-1,2]) + beta.pnd_ar[1] * pdsi_a[t] + eps_production[1,t]
+   #   log_ar_mu_nh[t] <- log_ar_region[2] +  (beta_rice_p[2] * chi[2,1,t] * rice_std[t-1,1]) + (beta_rice_p[2] * chi[2,2,t] * rice_std[t-1,2]) + beta.pnd_ar[2] * pdsi_b[t] + eps_production[2,t]
+   #   log_ar_mu_pr[t] <- log_ar_region[3] +  (beta_rice_p[3] * chi[3,1,t] * rice_std[t-1,1]) + (beta_rice_p[3] * chi[3,2,t] * rice_std[t-1,2]) + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t] + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
+   # } # t
+   # 
+   
   for (i in 1:narea) {
     for (t in 1:nyear) {
       ar[i,t] <- exp(log_ar[i,t])
@@ -521,13 +605,13 @@ pt_ipm <- nimbleCode({
     for (t in 1:(nyear-nyear_use+1)) {
       # s = 0 
       pt_af[t,1,i] <- 1
-      pt_af[t,2,i] <- pre_harv_af[i,t] * pi_harv[i,1]
-      pt_af[t,3,i] <- pre_harv_af[i,t] * pi_harv[i,2]
-      pt_af[t,4,i] <- pre_harv_af[i,t] * pi_harv[i,3]
+      pt_af[t,2,i] <- pre_harv_af[i,t] * pi_harv[i,1,t]
+      pt_af[t,3,i] <- pre_harv_af[i,t] * pi_harv[i,2,t]
+      pt_af[t,4,i] <- pre_harv_af[i,t] * pi_harv[i,3,t]
       pt_am[t,1,i] <- 1
-      pt_am[t,2,i] <- pre_harv_am[i,t] * pi_harv[i,1]
-      pt_am[t,3,i] <- pre_harv_am[i,t] * pi_harv[i,2]
-      pt_am[t,4,i] <- pre_harv_am[i,t] * pi_harv[i,3]
+      pt_am[t,2,i] <- pre_harv_am[i,t] * pi_harv[i,1,t]
+      pt_am[t,3,i] <- pre_harv_am[i,t] * pi_harv[i,2,t]
+      pt_am[t,4,i] <- pre_harv_am[i,t] * pi_harv[i,3,t]
       
       # s = 1 
       for (j in 1:narea) {
@@ -535,8 +619,8 @@ pt_ipm <- nimbleCode({
         pt_am[t,4+j,i] <- pre_harv_am[i,t] * sur_am[i,t] * pi[i,j,t]
       } # j
       for(k in 1:nwint){ 
-        pt_af[t,4+narea+k,i] <- pre_harv_af[i,t] * sur_af[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
-        pt_am[t,4+narea+k,i] <- pre_harv_am[i,t] * sur_am[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
+        pt_af[t,4+narea+k,i] <- pre_harv_af[i,t] * sur_af[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- pre_harv_am[i,t] * sur_am[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
       } #k  
       # s >= 2 [11-13]
       for (s in 2:(nyear_use-1)) {
@@ -545,8 +629,8 @@ pt_ipm <- nimbleCode({
           pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
         } # j [14-16]
         for(k in 1:nwint){ 
-          pt_af[t,s*(narea+nwint)+k+1,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
-          pt_am[t,s*(narea+nwint)+k+1,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
+          pt_af[t,s*(narea+nwint)+k+1,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
         } #k
       } # s
     } # t
@@ -554,13 +638,13 @@ pt_ipm <- nimbleCode({
     for (t in (nyear-nyear_use+2):(nyear-2)) {
       # s = 0
       pt_af[t,1,i] <- 1
-      pt_af[t,2,i] <- pre_harv_af[i,t] * pi_harv[i,1]
-      pt_af[t,3,i] <- pre_harv_af[i,t] * pi_harv[i,2]
-      pt_af[t,4,i] <- pre_harv_af[i,t] * pi_harv[i,3]
+      pt_af[t,2,i] <- pre_harv_af[i,t] * pi_harv[i,1,t]
+      pt_af[t,3,i] <- pre_harv_af[i,t] * pi_harv[i,2,t]
+      pt_af[t,4,i] <- pre_harv_af[i,t] * pi_harv[i,3,t]
       pt_am[t,1,i] <- 1
-      pt_am[t,2,i] <- pre_harv_am[i,t] * pi_harv[i,1]
-      pt_am[t,3,i] <- pre_harv_am[i,t] * pi_harv[i,2]
-      pt_am[t,4,i] <- pre_harv_am[i,t] * pi_harv[i,3]
+      pt_am[t,2,i] <- pre_harv_am[i,t] * pi_harv[i,1,t]
+      pt_am[t,3,i] <- pre_harv_am[i,t] * pi_harv[i,2,t]
+      pt_am[t,4,i] <- pre_harv_am[i,t] * pi_harv[i,3,t]
       
       # s = 1
       for (j in 1:narea) {
@@ -569,8 +653,8 @@ pt_ipm <- nimbleCode({
       } # j
       
       for(k in 1:nwint){ 
-        pt_af[t,4+narea+k,i] <- pre_harv_af[i,t] * sur_af[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
-        pt_am[t,4+narea+k,i] <- pre_harv_am[i,t] * sur_am[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
+        pt_af[t,4+narea+k,i] <- pre_harv_af[i,t] * sur_af[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- pre_harv_am[i,t] * sur_am[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
       } #k  
       # s >= 2 [11-13]
       for (s in 2:(nyear-t)) {
@@ -579,8 +663,8 @@ pt_ipm <- nimbleCode({
           pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
         } # j [14-16]
         for(k in 1:nwint){ 
-          pt_af[t,s*(narea+nwint)+k+1,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
-          pt_am[t,s*(narea+nwint)+k+1,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
+          pt_af[t,s*(narea+nwint)+k+1,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
         }  #k
       } # s
       for (k in ((nyear-t)*(narea+nwint)+5):((nyear_use-1)*(narea+nwint)+4)) {
@@ -592,13 +676,13 @@ pt_ipm <- nimbleCode({
     # t = nyear - 1
     # s = 0
     pt_af[nyear-1,1,i] <- 1
-    pt_af[nyear-1,2,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,1]
-    pt_af[nyear-1,3,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,2]
-    pt_af[nyear-1,4,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,3]
+    pt_af[nyear-1,2,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_af[nyear-1,3,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_af[nyear-1,4,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,3,nyear-1]
     pt_am[nyear-1,1,i] <- 1
-    pt_am[nyear-1,2,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,1]
-    pt_am[nyear-1,3,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,2]
-    pt_am[nyear-1,4,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,3]
+    pt_am[nyear-1,2,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_am[nyear-1,3,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_am[nyear-1,4,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,3,nyear-1]
     
     # s = 1
     for (j in 1:narea) {
@@ -607,8 +691,8 @@ pt_ipm <- nimbleCode({
     } # j
     
     for(k in 1:nwint){ 
-      pt_af[nyear-1,4+narea+k,i] <- pre_harv_af[i,nyear-1] * sur_af[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k]
-      pt_am[nyear-1,4+narea+k,i] <- pre_harv_am[i,nyear-1] * sur_am[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k]
+      pt_af[nyear-1,4+narea+k,i] <- pre_harv_af[i,nyear-1] * sur_af[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
+      pt_am[nyear-1,4+narea+k,i] <- pre_harv_am[i,nyear-1] * sur_am[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
     } #k  
     for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
       pt_af[nyear-1,k,i] <- 0
@@ -618,13 +702,13 @@ pt_ipm <- nimbleCode({
     # t = nyear
     # s = 0
     pt_af[nyear,1,i] <- 1
-    pt_af[nyear,2,i] <- pre_harv_af[i,nyear] * pi_harv[i,1]
-    pt_af[nyear,3,i] <- pre_harv_af[i,nyear] * pi_harv[i,2]
-    pt_af[nyear,4,i] <- pre_harv_af[i,nyear] * pi_harv[i,3]
+    pt_af[nyear,2,i] <- pre_harv_af[i,nyear] * pi_harv[i,1,nyear]
+    pt_af[nyear,3,i] <- pre_harv_af[i,nyear] * pi_harv[i,2,nyear]
+    pt_af[nyear,4,i] <- pre_harv_af[i,nyear] * pi_harv[i,3,nyear]
     pt_am[nyear,1,i] <- 1
-    pt_am[nyear,2,i] <- pre_harv_am[i,nyear] * pi_harv[i,1]
-    pt_am[nyear,3,i] <- pre_harv_am[i,nyear] * pi_harv[i,2]
-    pt_am[nyear,4,i] <- pre_harv_am[i,nyear] * pi_harv[i,3]
+    pt_am[nyear,2,i] <- pre_harv_am[i,nyear] * pi_harv[i,1,nyear]
+    pt_am[nyear,3,i] <- pre_harv_am[i,nyear] * pi_harv[i,2,nyear]
+    pt_am[nyear,4,i] <- pre_harv_am[i,nyear] * pi_harv[i,3,nyear]
     
     for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
       pt_af[nyear,k,i] <- 0
@@ -634,20 +718,20 @@ pt_ipm <- nimbleCode({
 
   for (i in 1:narea) {
     for (t in 1:nyear) {
-      pr_af[t,1,i] <- pt_af[t,1,i] * pcap_a
-      pr_am[t,1,i] <- pt_am[t,1,i] * pcap_a
+      pr_af[t,1,i] <- pt_af[t,1,i] * pcap_af[i]
+      pr_am[t,1,i] <- pt_am[t,1,i] * pcap_am[i]
       for(k in 1:nwint){
         pr_af[t,1+k,i] <- pt_af[t,1+k,i] * f_af[1,k,t]
         pr_am[t,1+k,i] <- pt_am[t,1+k,i] * f_am[1,k,t]
       }
       for (s in 2:nyear_use) {
         for (j in 1:narea) {
-          pr_af[t,(s-2)*(narea+nwint)+4+j,i] <- pt_af[t,(s-2)*(narea+nwint)+4+j,i] * ((1 - pcap_a) ^ (s - 1)) * pcap_a
-          pr_am[t,(s-2)*(narea+nwint)+4+j,i] <- pt_am[t,(s-2)*(narea+nwint)+4+j,i] * ((1 - pcap_a) ^ (s - 1)) * pcap_a
+          pr_af[t,(s-2)*(narea+nwint)+4+j,i] <- pt_af[t,(s-2)*(narea+nwint)+4+j,i] * ((1 - pcap_af[i]) ^ (s - 1)) *  pcap_af[i]
+          pr_am[t,(s-2)*(narea+nwint)+4+j,i] <- pt_am[t,(s-2)*(narea+nwint)+4+j,i] * ((1 - pcap_am[i]) ^ (s - 1)) *  pcap_am[i]
         } # j
         for(k in 1:nwint){
-          pr_af[t,(s-1)*(narea+nwint)+k+1,i] <- pt_af[t,(s-1)*(narea+nwint)+k+1,i] * ((1 - pcap_a) ^ (s - 1)) * f_af[2,k,t+s-1]
-          pr_am[t,(s-1)*(narea+nwint)+k+1,i] <- pt_am[t,(s-1)*(narea+nwint)+k+1,i] * ((1 - pcap_a) ^ (s - 1)) * f_am[2,k,t+s-1]
+          pr_af[t,(s-1)*(narea+nwint)+k+1,i] <- pt_af[t,(s-1)*(narea+nwint)+k+1,i] * ((1 - pcap_af[i]) ^ (s - 1)) * f_af[2,k,t+s-1]
+          pr_am[t,(s-1)*(narea+nwint)+k+1,i] <- pt_am[t,(s-1)*(narea+nwint)+k+1,i] * ((1 - pcap_am[i]) ^ (s - 1)) * f_am[2,k,t+s-1]
         } #k
       } # s
       pr_af[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_af[t,1:((nyear_use-1)*(narea+nwint)+4),i])
@@ -660,13 +744,13 @@ pt_ipm <- nimbleCode({
     for (t in 1:(nyear-nyear_use+1)) {
       # s = 0 
       pt_jf[t,1,i] <- 1
-      pt_jf[t,2,i] <- pre_harv_jf[i,t] * pi_harv[i,1]
-      pt_jf[t,3,i] <- pre_harv_jf[i,t] * pi_harv[i,2]
-      pt_jf[t,4,i] <- pre_harv_jf[i,t] * pi_harv[i,3]
+      pt_jf[t,2,i] <- pre_harv_jf[i,t] * pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pre_harv_jf[i,t] * pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pre_harv_jf[i,t] * pi_harv[i,3,t]
       pt_jm[t,1,i] <- 1
-      pt_jm[t,2,i] <- pre_harv_jm[i,t] * pi_harv[i,1]
-      pt_jm[t,3,i] <- pre_harv_jm[i,t] * pi_harv[i,2]
-      pt_jm[t,4,i] <- pre_harv_jm[i,t] * pi_harv[i,3]
+      pt_jm[t,2,i] <- pre_harv_jm[i,t] * pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pre_harv_jm[i,t] * pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pre_harv_jm[i,t] * pi_harv[i,3,t]
       
       # s = 1 
       for (j in 1:narea) {
@@ -674,8 +758,8 @@ pt_ipm <- nimbleCode({
         pt_jm[t,4+j,i] <- pre_harv_jm[i,t] * sur_jm[i,t] * pi[i,j,t]
       } # j
       for(k in 1:nwint){ 
-        pt_jf[t,4+narea+k,i] <- pre_harv_jf[i,t] * sur_jf[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
-        pt_jm[t,4+narea+k,i] <- pre_harv_jm[i,t] * sur_jm[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
+        pt_jf[t,4+narea+k,i] <- pre_harv_jf[i,t] * sur_jf[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <- pre_harv_jm[i,t] * sur_jm[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
       } #k  
       # s >= 2 [11-13]
       for (s in 2:(nyear_use-1)) {
@@ -684,8 +768,8 @@ pt_ipm <- nimbleCode({
           pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
         } # j [14-16]
         for(k in 1:nwint){ 
-          pt_jf[t,s*(narea+nwint)+k+1,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
-          pt_jm[t,s*(narea+nwint)+k+1,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
         } #k
       } # s
     } # t
@@ -693,13 +777,13 @@ pt_ipm <- nimbleCode({
     for (t in (nyear-nyear_use+2):(nyear-2)) {
       # s = 0
       pt_jf[t,1,i] <- 1
-      pt_jf[t,2,i] <- pre_harv_jf[i,t] * pi_harv[i,1]
-      pt_jf[t,3,i] <- pre_harv_jf[i,t] * pi_harv[i,2]
-      pt_jf[t,4,i] <- pre_harv_jf[i,t] * pi_harv[i,3]
+      pt_jf[t,2,i] <- pre_harv_jf[i,t] * pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pre_harv_jf[i,t] * pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pre_harv_jf[i,t] * pi_harv[i,3,t]
       pt_jm[t,1,i] <- 1
-      pt_jm[t,2,i] <- pre_harv_jm[i,t] * pi_harv[i,1]
-      pt_jm[t,3,i] <- pre_harv_jm[i,t] * pi_harv[i,2]
-      pt_jm[t,4,i] <- pre_harv_jm[i,t] * pi_harv[i,3]
+      pt_jm[t,2,i] <- pre_harv_jm[i,t] * pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pre_harv_jm[i,t] * pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pre_harv_jm[i,t] * pi_harv[i,3,t]
       
       # s = 1
       for (j in 1:narea) {
@@ -708,8 +792,8 @@ pt_ipm <- nimbleCode({
       } # j
       
       for(k in 1:nwint){ 
-        pt_jf[t,4+narea+k,i] <-pre_harv_jf[i,t] * sur_jf[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
-        pt_jm[t,4+narea+k,i] <-pre_harv_jm[i,t] * sur_jm[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k]
+        pt_jf[t,4+narea+k,i] <-pre_harv_jf[i,t] * sur_jf[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <-pre_harv_jm[i,t] * sur_jm[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
       } #k  
       # s >= 2 [11-13]
       for (s in 2:(nyear-t)) {
@@ -718,8 +802,8 @@ pt_ipm <- nimbleCode({
           pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
         } # j [14-16]
         for(k in 1:nwint){ 
-          pt_jf[t,s*(narea+nwint)+k+1,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
-          pt_jm[t,s*(narea+nwint)+k+1,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k]
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
         }  #k
       } # s
       for (k in ((nyear-t)*(narea+nwint)+5):((nyear_use-1)*(narea+nwint)+4)) {
@@ -731,13 +815,13 @@ pt_ipm <- nimbleCode({
     # t = nyear - 1
     # s = 0
     pt_jf[nyear-1,1,i] <- 1
-    pt_jf[nyear-1,2,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,1]
-    pt_jf[nyear-1,3,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,2]
-    pt_jf[nyear-1,4,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,3]
+    pt_jf[nyear-1,2,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_jf[nyear-1,3,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_jf[nyear-1,4,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,3,nyear-1]
     pt_jm[nyear-1,1,i] <- 1
-    pt_jm[nyear-1,2,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,1]
-    pt_jm[nyear-1,3,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,2]
-    pt_jm[nyear-1,4,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,3]
+    pt_jm[nyear-1,2,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_jm[nyear-1,3,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_jm[nyear-1,4,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,3,nyear-1]
     
     # s = 1
     for (j in 1:narea) {
@@ -746,8 +830,8 @@ pt_ipm <- nimbleCode({
     } # j
     
     for(k in 1:nwint){ 
-      pt_jf[nyear-1,4+narea+k,i] <- pre_harv_jf[i,nyear-1] * sur_jf[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k]
-      pt_jm[nyear-1,4+narea+k,i] <- pre_harv_jm[i,nyear-1] * sur_jm[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k]
+      pt_jf[nyear-1,4+narea+k,i] <- pre_harv_jf[i,nyear-1] * sur_jf[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
+      pt_jm[nyear-1,4+narea+k,i] <- pre_harv_jm[i,nyear-1] * sur_jm[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
     } #k  
     for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
       pt_jf[nyear-1,k,i] <- 0
@@ -757,13 +841,13 @@ pt_ipm <- nimbleCode({
     # t = nyear
     # s = 0
     pt_jf[nyear,1,i] <- 1
-    pt_jf[nyear,2,i] <- pre_harv_jf[i,nyear] * pi_harv[i,1]
-    pt_jf[nyear,3,i] <- pre_harv_jf[i,nyear] * pi_harv[i,2]
-    pt_jf[nyear,4,i] <- pre_harv_jf[i,nyear] * pi_harv[i,3]
+    pt_jf[nyear,2,i] <- pre_harv_jf[i,nyear] * pi_harv[i,1,nyear]
+    pt_jf[nyear,3,i] <- pre_harv_jf[i,nyear] * pi_harv[i,2,nyear]
+    pt_jf[nyear,4,i] <- pre_harv_jf[i,nyear] * pi_harv[i,3,nyear]
     pt_jm[nyear,1,i] <- 1
-    pt_jm[nyear,2,i] <- pre_harv_jm[i,nyear] * pi_harv[i,1]
-    pt_jm[nyear,3,i] <- pre_harv_jm[i,nyear] * pi_harv[i,2]
-    pt_jm[nyear,4,i] <- pre_harv_jm[i,nyear] * pi_harv[i,3]
+    pt_jm[nyear,2,i] <- pre_harv_jm[i,nyear] * pi_harv[i,1,nyear]
+    pt_jm[nyear,3,i] <- pre_harv_jm[i,nyear] * pi_harv[i,2,nyear]
+    pt_jm[nyear,4,i] <- pre_harv_jm[i,nyear] * pi_harv[i,3,nyear]
     
     for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
       pt_jf[nyear,k,i] <- 0
@@ -774,16 +858,16 @@ pt_ipm <- nimbleCode({
   
   for (i in 1:narea) {
     for (t in 1:nyear) {
-      pr_jf[t,1,i] <- pt_jf[t,1,i] * pcap_j
-      pr_jm[t,1,i] <- pt_jm[t,1,i] * pcap_j
+      pr_jf[t,1,i] <- pt_jf[t,1,i] * pcap_jf[i]
+      pr_jm[t,1,i] <- pt_jm[t,1,i] * pcap_jm[i]
       for(k in 1:nwint){
         pr_jf[t,1+k,i] <- pt_jf[t,1+k,i] * f_jf[k,t]
         pr_jm[t,1+k,i] <- pt_jm[t,1+k,i] * f_jm[k,t]
       }
       for (s in 2:nyear_use) {
         for (j in 1:narea) {
-          pr_jf[t,(s-2)*(narea+nwint)+4+j,i] <- pt_jf[t,(s-2)*(narea+nwint)+4+j,i] * (1 - pcap_j) *  ((1 - pcap_j) ^ (s - 2))  * pcap_a
-          pr_jm[t,(s-2)*(narea+nwint)+4+j,i] <- pt_jm[t,(s-2)*(narea+nwint)+4+j,i] * (1 - pcap_j) *  ((1 - pcap_j) ^ (s - 2))  * pcap_a
+          pr_jf[t,(s-2)*(narea+nwint)+4+j,i] <- pt_jf[t,(s-2)*(narea+nwint)+4+j,i] * (1 - pcap_jf[i]) *  ((1 - pcap_af[i]) ^ (s - 2))  * pcap_af[i]
+          pr_jm[t,(s-2)*(narea+nwint)+4+j,i] <- pt_jm[t,(s-2)*(narea+nwint)+4+j,i] * (1 - pcap_jm[i]) *  ((1 - pcap_am[i]) ^ (s - 2))  * pcap_am[i]
         } # j
         for(k in 1:nwint){
           pr_jf[t,(s-1)*(narea+nwint)+k+1,i] <- pt_jf[t,(s-1)*(narea+nwint)+k+1,i]  * f_af[2,k,t+s-1]
@@ -804,13 +888,13 @@ pt_ipm <- nimbleCode({
     for (t in 1:(nyear-nyear_use+1)) {
       # s = 0 
       pt_af[t,1,i] <- 1
-      pt_af[t,2,i] <- pi_harv[i,1]
-      pt_af[t,3,i] <- pi_harv[i,2]
-      pt_af[t,4,i] <- pi_harv[i,3]
+      pt_af[t,2,i] <- pi_harv[i,1,t]
+      pt_af[t,3,i] <- pi_harv[i,2,t]
+      pt_af[t,4,i] <- pi_harv[i,3,t]
       pt_am[t,1,i] <- 1
-      pt_am[t,2,i] <- pi_harv[i,1]
-      pt_am[t,3,i] <- pi_harv[i,2]
-      pt_am[t,4,i] <- pi_harv[i,3]
+      pt_am[t,2,i] <- pi_harv[i,1,t]
+      pt_am[t,3,i] <- pi_harv[i,2,t]
+      pt_am[t,4,i] <- pi_harv[i,3,t]
       
       # s = 1 
       for (j in 1) {
@@ -822,8 +906,8 @@ pt_ipm <- nimbleCode({
         pt_am[t,4+j,i] <- 0
       } # j 
       for(k in 1:nwint){ 
-        pt_af[t,4+narea+k,i] <- sur_af[i,t] * pi_harv[i,k]
-        pt_am[t,4+narea+k,i] <- sur_am[i,t] * pi_harv[i,k]
+        pt_af[t,4+narea+k,i] <- sur_af[i,t] * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- sur_am[i,t] * pi_harv[i,k,t]
       } #k  
       # s >= 2 
       for (s in 2:(nyear_use-1)) {
@@ -836,8 +920,8 @@ pt_ipm <- nimbleCode({
           pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- 0
         }
         for(k in 1:nwint){ 
-          pt_af[t,s*(narea+nwint)+k+1,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k]
-          pt_am[t,s*(narea+nwint)+k+1,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k]
+          pt_af[t,s*(narea+nwint)+k+1,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
         } #k
       } # s
     } # t
@@ -845,13 +929,13 @@ pt_ipm <- nimbleCode({
     for (t in (nyear-nyear_use+2):(nyear-2)) {
       # s = 0
       pt_af[t,1,i] <- 1
-      pt_af[t,2,i] <- pi_harv[i,1]
-      pt_af[t,3,i] <- pi_harv[i,2]
-      pt_af[t,4,i] <- pi_harv[i,3]
+      pt_af[t,2,i] <- pi_harv[i,1,t]
+      pt_af[t,3,i] <- pi_harv[i,2,t]
+      pt_af[t,4,i] <- pi_harv[i,3,t]
       pt_am[t,1,i] <- 1
-      pt_am[t,2,i] <- pi_harv[i,1]
-      pt_am[t,3,i] <- pi_harv[i,2]
-      pt_am[t,4,i] <- pi_harv[i,3]
+      pt_am[t,2,i] <- pi_harv[i,1,t]
+      pt_am[t,3,i] <- pi_harv[i,2,t]
+      pt_am[t,4,i] <- pi_harv[i,3,t]
       
       # s = 1
       for (j in 1) {
@@ -863,8 +947,8 @@ pt_ipm <- nimbleCode({
         pt_am[t,4+j,i] <- 0
       } # j
       for(k in 1:nwint){ 
-        pt_af[t,4+narea+k,i] <- sur_af[i,t] * pi_harv[i,k]
-        pt_am[t,4+narea+k,i] <- sur_am[i,t] * pi_harv[i,k]
+        pt_af[t,4+narea+k,i] <- sur_af[i,t] * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- sur_am[i,t] * pi_harv[i,k,t]
       } #k  
       # s >= 2 [11-13]
       for (s in 2:(nyear-t)) {
@@ -877,8 +961,8 @@ pt_ipm <- nimbleCode({
           pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- 0
         } # j [14-16]
         for(k in 1:nwint){ 
-          pt_af[t,s*(narea+nwint)+k+1,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k]
-          pt_am[t,s*(narea+nwint)+k+1,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k]
+          pt_af[t,s*(narea+nwint)+k+1,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
         } # s
       } # t
       
@@ -891,13 +975,13 @@ pt_ipm <- nimbleCode({
     # t = nyear - 1
     # s = 0
     pt_af[nyear-1,1,i] <- 1
-    pt_af[nyear-1,2,i] <-  pi_harv[i,1]
-    pt_af[nyear-1,3,i] <-  pi_harv[i,2]
-    pt_af[nyear-1,4,i] <-  pi_harv[i,3]
+    pt_af[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_af[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_af[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
     pt_am[nyear-1,1,i] <- 1
-    pt_am[nyear-1,2,i] <-  pi_harv[i,1]
-    pt_am[nyear-1,3,i] <-  pi_harv[i,2]
-    pt_am[nyear-1,4,i] <-  pi_harv[i,3]
+    pt_am[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_am[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_am[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
     
     # s = 1
     for (j in 1) {
@@ -909,8 +993,8 @@ pt_ipm <- nimbleCode({
       pt_am[nyear-1,4+j,i] <- 0
     } # j
     for(k in 1:nwint){ 
-      pt_af[nyear-1,4+narea+k,i] <- sur_af[i,nyear-1] * pi_harv[i,k]
-      pt_am[nyear-1,4+narea+k,i] <- sur_am[i,nyear-1] * pi_harv[i,k]
+      pt_af[nyear-1,4+narea+k,i] <- sur_af[i,nyear-1] * pi_harv[i,k,nyear-1]
+      pt_am[nyear-1,4+narea+k,i] <- sur_am[i,nyear-1] * pi_harv[i,k,nyear-1]
     } #k  
     for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
       pt_af[nyear-1,k,i] <- 0
@@ -920,13 +1004,13 @@ pt_ipm <- nimbleCode({
     # t = nyear
     # s = 0
     pt_af[nyear,1,i] <- 1
-    pt_af[nyear,2,i] <- pre_harv_af[i,nyear] * pi_harv[i,1]
-    pt_af[nyear,3,i] <- pre_harv_af[i,nyear] * pi_harv[i,2]
-    pt_af[nyear,4,i] <- pre_harv_af[i,nyear] * pi_harv[i,3]
+    pt_af[nyear,2,i] <- pre_harv_af[i,nyear] * pi_harv[i,1,nyear]
+    pt_af[nyear,3,i] <- pre_harv_af[i,nyear] * pi_harv[i,2,nyear]
+    pt_af[nyear,4,i] <- pre_harv_af[i,nyear] * pi_harv[i,3,nyear]
     pt_am[nyear,1,i] <- 1
-    pt_am[nyear,2,i] <- pre_harv_am[i,nyear] * pi_harv[i,1]
-    pt_am[nyear,3,i] <- pre_harv_am[i,nyear] * pi_harv[i,2]
-    pt_am[nyear,4,i] <- pre_harv_am[i,nyear] * pi_harv[i,3]
+    pt_am[nyear,2,i] <- pre_harv_am[i,nyear] * pi_harv[i,1,nyear]
+    pt_am[nyear,3,i] <- pre_harv_am[i,nyear] * pi_harv[i,2,nyear]
+    pt_am[nyear,4,i] <- pre_harv_am[i,nyear] * pi_harv[i,3,nyear]
     
     for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
       pt_af[nyear,k,i] <- 0
@@ -962,13 +1046,13 @@ pt_ipm <- nimbleCode({
     for (t in 1:(nyear-nyear_use+1)) {
       # s = 0 
       pt_jf[t,1,i] <- 1
-      pt_jf[t,2,i] <- pi_harv[i,1]
-      pt_jf[t,3,i] <- pi_harv[i,2]
-      pt_jf[t,4,i] <- pi_harv[i,3]
+      pt_jf[t,2,i] <- pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pi_harv[i,3,t]
       pt_jm[t,1,i] <- 1
-      pt_jm[t,2,i] <- pi_harv[i,1]
-      pt_jm[t,3,i] <- pi_harv[i,2]
-      pt_jm[t,4,i] <- pi_harv[i,3]
+      pt_jm[t,2,i] <- pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pi_harv[i,3,t]
       
       # s = 1 
       for (j in 1) {
@@ -980,8 +1064,8 @@ pt_ipm <- nimbleCode({
         pt_jm[t,4+j,i] <- 0
       } # j 
       for(k in 1:nwint){ 
-        pt_jf[t,4+narea+k,i] <- sur_jf[i,t] * pi_harv[i,k]
-        pt_jm[t,4+narea+k,i] <- sur_jm[i,t] * pi_harv[i,k]
+        pt_jf[t,4+narea+k,i] <- sur_jf[i,t] * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <- sur_jm[i,t] * pi_harv[i,k,t]
       } #k  
       # s >= 2 
       for (s in 2:(nyear_use-1)) {
@@ -994,8 +1078,8 @@ pt_ipm <- nimbleCode({
           pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- 0
         }
         for(k in 1:nwint){ 
-          pt_jf[t,s*(narea+nwint)+k+1,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k]
-          pt_jm[t,s*(narea+nwint)+k+1,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k]
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
         } #k
       } # s
     } # t
@@ -1003,13 +1087,13 @@ pt_ipm <- nimbleCode({
     for (t in (nyear-nyear_use+2):(nyear-2)) {
       # s = 0
       pt_jf[t,1,i] <- 1
-      pt_jf[t,2,i] <- pi_harv[i,1]
-      pt_jf[t,3,i] <- pi_harv[i,2]
-      pt_jf[t,4,i] <- pi_harv[i,3]
+      pt_jf[t,2,i] <- pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pi_harv[i,3,t]
       pt_jm[t,1,i] <- 1
-      pt_jm[t,2,i] <- pi_harv[i,1]
-      pt_jm[t,3,i] <- pi_harv[i,2]
-      pt_jm[t,4,i] <- pi_harv[i,3]
+      pt_jm[t,2,i] <- pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pi_harv[i,3,t]
       
       # s = 1
       for (j in 1) {
@@ -1021,8 +1105,8 @@ pt_ipm <- nimbleCode({
         pt_jm[t,4+j,i] <- 0
       } # j
       for(k in 1:nwint){ 
-        pt_jf[t,4+narea+k,i] <- sur_jf[i,t] * pi_harv[i,k]
-        pt_jm[t,4+narea+k,i] <- sur_jm[i,t] * pi_harv[i,k]
+        pt_jf[t,4+narea+k,i] <- sur_jf[i,t] * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <- sur_jm[i,t] * pi_harv[i,k,t]
       } #k  
       # s >= 2 [11-13]
       for (s in 2:(nyear-t)) {
@@ -1035,8 +1119,8 @@ pt_ipm <- nimbleCode({
           pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- 0
         } # j [14-16]
         for(k in 1:nwint){ 
-          pt_jf[t,s*(narea+nwint)+k+1,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k]
-          pt_jm[t,s*(narea+nwint)+k+1,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k]
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
         } # s
       } # t
       
@@ -1049,13 +1133,13 @@ pt_ipm <- nimbleCode({
     # t = nyear - 1
     # s = 0
     pt_jf[nyear-1,1,i] <- 1
-    pt_jf[nyear-1,2,i] <-  pi_harv[i,1]
-    pt_jf[nyear-1,3,i] <-  pi_harv[i,2]
-    pt_jf[nyear-1,4,i] <-  pi_harv[i,3]
+    pt_jf[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_jf[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_jf[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
     pt_jm[nyear-1,1,i] <- 1
-    pt_jm[nyear-1,2,i] <-  pi_harv[i,1]
-    pt_jm[nyear-1,3,i] <-  pi_harv[i,2]
-    pt_jm[nyear-1,4,i] <-  pi_harv[i,3]
+    pt_jm[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_jm[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_jm[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
     
     # s = 1
     for (j in 1) {
@@ -1067,8 +1151,8 @@ pt_ipm <- nimbleCode({
       pt_jm[nyear-1,4+j,i] <- 0
     } # j
     for(k in 1:nwint){ 
-      pt_jf[nyear-1,4+narea+k,i] <- sur_jf[i,nyear-1] * pi_harv[i,k]
-      pt_jm[nyear-1,4+narea+k,i] <- sur_jm[i,nyear-1] * pi_harv[i,k]
+      pt_jf[nyear-1,4+narea+k,i] <- sur_jf[i,nyear-1] * pi_harv[i,k,nyear-1]
+      pt_jm[nyear-1,4+narea+k,i] <- sur_jm[i,nyear-1] * pi_harv[i,k,nyear-1]
     } #k  
     for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
       pt_jf[nyear-1,k,i] <- 0
@@ -1078,13 +1162,13 @@ pt_ipm <- nimbleCode({
     # t = nyear
     # s = 0
     pt_jf[nyear,1,i] <- 1
-    pt_jf[nyear,2,i] <- pi_harv[i,1]
-    pt_jf[nyear,3,i] <- pi_harv[i,2]
-    pt_jf[nyear,4,i] <- pi_harv[i,3]
+    pt_jf[nyear,2,i] <- pi_harv[i,1,nyear]
+    pt_jf[nyear,3,i] <- pi_harv[i,2,nyear]
+    pt_jf[nyear,4,i] <- pi_harv[i,3,nyear]
     pt_jm[nyear,1,i] <- 1
-    pt_jm[nyear,2,i] <- pi_harv[i,1]
-    pt_jm[nyear,3,i] <- pi_harv[i,2]
-    pt_jm[nyear,4,i] <- pi_harv[i,3]
+    pt_jm[nyear,2,i] <- pi_harv[i,1,nyear]
+    pt_jm[nyear,3,i] <- pi_harv[i,2,nyear]
+    pt_jm[nyear,4,i] <- pi_harv[i,3,nyear]
     
     for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
       pt_jf[nyear,k,i] <- 0
@@ -1251,20 +1335,20 @@ pt_ipm <- nimbleCode({
   
   for (i in 1:warea) {
     for (t in 1:nyear) {
-      pr_w_af[t,1,i] <- pt_w_af[t,1,i] * wpcap_a
-      pr_w_am[t,1,i] <- pt_w_am[t,1,i] * wpcap_a
+      pr_w_af[t,1,i] <- pt_w_af[t,1,i] * wpcap_af[i]
+      pr_w_am[t,1,i] <- pt_w_am[t,1,i] * wpcap_am[i]
       for(k in 1:nwint){
         pr_w_af[t,1+k,i] <- pt_w_af[t,1+k,i] * f_wf[i,t]
         pr_w_am[t,1+k,i] <- pt_w_am[t,1+k,i] * f_wm[i,t]
       }
       for (s in 2:nyear_use) {
         for (j in 1:warea) {
-          pr_w_af[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] <- pt_w_af[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] * ((1 - wpcap_a) ^ (s - 1)) * wpcap_a
-          pr_w_am[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] <- pt_w_am[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] * ((1 - wpcap_a) ^ (s - 1)) * wpcap_a
+          pr_w_af[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] <- pt_w_af[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] * ((1 - wpcap_af[i]) ^ (s - 1)) * wpcap_af[i]
+          pr_w_am[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] <- pt_w_am[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] * ((1 - wpcap_am[i]) ^ (s - 1)) * wpcap_am[i]
         } # j
         for(k in 1:nwint){
-          pr_w_af[t,(s-1)*(warea+nwint)+k+1,i] <- pt_w_af[t,(s-1)*(warea+nwint)+k+1,i] * ((1 - wpcap_a) ^ (s - 1)) * f_wf[i,t+s-1]
-          pr_w_am[t,(s-1)*(warea+nwint)+k+1,i] <- pt_w_am[t,(s-1)*(warea+nwint)+k+1,i] * ((1 - wpcap_a) ^ (s - 1)) * f_wm[i,t+s-1]
+          pr_w_af[t,(s-1)*(warea+nwint)+k+1,i] <- pt_w_af[t,(s-1)*(warea+nwint)+k+1,i] * ((1 - wpcap_af[i]) ^ (s - 1)) * f_wf[i,t+s-1]
+          pr_w_am[t,(s-1)*(warea+nwint)+k+1,i] <- pt_w_am[t,(s-1)*(warea+nwint)+k+1,i] * ((1 - wpcap_am[i]) ^ (s - 1)) * f_wm[i,t+s-1]
         } #k
       } # s
       pr_w_af[t,(nyear_use-1)*(warea+nwint)+(nwint+2),i] <- 1 - sum(pr_w_af[t,1:((nyear_use-1)*(warea+nwint)+(nwint+1)),i])
@@ -1275,20 +1359,26 @@ pt_ipm <- nimbleCode({
     } # t
   } # i
   
-  # Reporting rate likelihood
-  for(t in nyear:(nyear+nyear_use)){
-    rr[t] <- 1  # hack to deal with the fake 'future' recovery rates
-  }
-  for (t in 1:(nyear-1)) {
-          rr[t] ~ dbeta(alpha.rr[t], beta.rr[t])
-    alpha.rr[t] <- pow(SD.rr[t],-2) * RR.rr[t]
-     beta.rr[t] <- pow(SD.rr[t],-2) * (1 - RR.rr[t])
-  }
-  ### Pond Likelihood
-  for (t in 1:nyear) {
-    pond_obs[t] ~ dnorm(pond[t], 1 / (pond_se[t]^2))
-  } #
+   # Reporting rate likelihood
+   for(t in nyear:(nyear+nyear_use)){
+     rr[t] <- 1  # hack to deal with the fake 'future' recovery rates
+   }
+   for (t in 1:(nyear-1)) {
+           rr[t] ~ dbeta(alpha.rr[t], beta.rr[t])
+     alpha.rr[t] <- pow(SD.rr[t],-2) * RR.rr[t]
+      beta.rr[t] <- pow(SD.rr[t],-2) * (1 - RR.rr[t])
+   }
 
+#    for(k in 1:2){
+#         mu.r[k] ~ dbeta(6,3)
+#         sd.r[k] ~ dexp(1)
+#      
+#      r.alpha[k] <-  mu.r[k] * sd.r[k]
+#       r.beta[k] <-  (1 - mu.r[k]) * sd.r[k]
+# }
+#    for (t in 1:(nyear-1)) {
+#      rr[t] <- mu.r[r_opt[t]]
+#    }
   # Production Likelihood
   ### Age-ratio at banding
   for (i in 1:narea) {
@@ -1296,7 +1386,7 @@ pt_ipm <- nimbleCode({
     tau_band[i] ~ dlnorm(0, 0.04)               # overdisperion parameter
     for (t in 1:nyear) {
       # USA wing-bee data: 1961-2019
-      bands[i,t,1:3] ~ ddirchmulti(q[i,t,1:3]*  tau_band[i] , nband_jf_jm_af[i,t])
+      bands[i,t,1:3] ~ ddirchmulti(q[i,t,1:3], nband_jf_jm_af[i,t]) # *  tau_band[i] 
             q[i,t,1] <- (n1f_fall[i,t]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
             q[i,t,2] <- (n1m_fall[i,t]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
             q[i,t,3] <- (n2f_fall[i,t] * 1/vul[i]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
@@ -1304,13 +1394,13 @@ pt_ipm <- nimbleCode({
   }
 
   # Priors for starting age and sex structure
-       sr ~ dbeta(4,6)
+        sr ~ dbeta(40,60)
+       a_r ~ dbeta(20,80)
   for(i in 1:3){
-         s_a[i] <- exp(log_ar_region[i])/(1 + exp(log_ar_region[i]))
-         n1f[i] <-  sn[i] * s_a[i] * sr * .5
-         n1m[i] <-  sn[i] * s_a[i] * sr * .5
-         n2f[i] <-  sn[i] * (1 - s_a[i]) * sr
-         n2m[i] <-  sn[i] * (1 - s_a[i]) * (1- sr)
+         n1f[i] <-  sn[i] * a_r * sr * .5
+         n1m[i] <-  sn[i] * a_r * sr * .5
+         n2f[i] <-  sn[i] * (1 -  a_r ) * sr
+         n2m[i] <-  sn[i] * (1 -  a_r ) * (1- sr)
 
        N1F[i,1] <- n1f[i]/mu.psi[i]
        N1M[i,1] <- n1m[i]/mu.psi[i]
@@ -1323,29 +1413,29 @@ pt_ipm <- nimbleCode({
     Bpop_N[i,1] <-   N[i,1] * psi[i,1]
   }
     # Informed prior for relative juvenile breeding propensity
-    bp~ dbeta(8,2)
+    bp~ dbeta(60,40)
   for (t in 2:(nyear+1)) {
     # Pre-Harvest Abundance for each wintering group (N * survival from bpop to fall * winter movement probability)
     # First index: 1) Central 2) Pacific; Second index: 1) AK 2) NO 3) PR
-    N2M_Fall[1,t-1] <- NAM[1,t-1] * s.summer_ad_ak_m[t-1]^(1/2) * pi_ak[1] +  NAM[2,t-1] * s.summer_ad_no_m[t-1]^(1/2) * pi_no[1] + NAM[3,t-1] * s.summer_ad_pr_m[t-1]^(1/2) * pi_pr[1]
-    N2M_Fall[2,t-1] <- NAM[1,t-1] * s.summer_ad_ak_m[t-1]^(1/2) * pi_ak[2] +  NAM[2,t-1] * s.summer_ad_no_m[t-1]^(1/2) * pi_no[2] + NAM[3,t-1] * s.summer_ad_pr_m[t-1]^(1/2) * pi_pr[2]
-    N2F_Fall[1,t-1] <- NAF[1,t-1] * s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1] +  NAF[2,t-1] * s.summer_ad_no_f[t-1]^(1/2) * pi_no[1] + NAF[3,t-1] * s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1]
-    N2F_Fall[2,t-1] <- NAF[1,t-1] * s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2] +  NAF[2,t-1] * s.summer_ad_no_f[t-1]^(1/2) * pi_no[2] + NAF[3,t-1] * s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2]
+    N2M_Fall[1,t-1] <- NAM[1,t-1] * s.summer_ad_ak_m[t-1]^(1/2) * pi_ak[1,t-1] +  NAM[2,t-1] * s.summer_ad_no_m[t-1]^(1/2) * pi_no[1,t-1] + NAM[3,t-1] * s.summer_ad_pr_m[t-1]^(1/2) * pi_pr[1,t-1]
+    N2M_Fall[2,t-1] <- NAM[1,t-1] * s.summer_ad_ak_m[t-1]^(1/2) * pi_ak[2,t-1] +  NAM[2,t-1] * s.summer_ad_no_m[t-1]^(1/2) * pi_no[2,t-1] + NAM[3,t-1] * s.summer_ad_pr_m[t-1]^(1/2) * pi_pr[2,t-1]
+    N2F_Fall[1,t-1] <- NAF[1,t-1] * s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1,t-1] +  NAF[2,t-1] * s.summer_ad_no_f[t-1]^(1/2) * pi_no[1,t-1] + NAF[3,t-1] * s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1,t-1]
+    N2F_Fall[2,t-1] <- NAF[1,t-1] * s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2,t-1] +  NAF[2,t-1] * s.summer_ad_no_f[t-1]^(1/2) * pi_no[2,t-1] + NAF[3,t-1] * s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2,t-1]
     
     # Pre-Harvest Abundance for each wintering group (N breeding females * adult survival from bpop to fall * winter movement probability * production rate * primary sex ratio)
-    N1M_Fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1] * ar[1,t-1] * 0.5 + 
-                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[1] * ar[2,t-1] * 0.5 +
-                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1] * ar[3,t-1] * 0.5
-    N1M_Fall[2,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2] * ar[1,t-1] * 0.5 + 
-                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[2] * ar[2,t-1] * 0.5 +
-                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2] * ar[3,t-1] * 0.5
+    N1M_Fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[1,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1,t-1] * ar[3,t-1] * 0.5
+    N1M_Fall[2,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[2,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2,t-1] * ar[3,t-1] * 0.5
     
-    N1F_Fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1] * ar[1,t-1] * 0.5 + 
-                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[1] * ar[2,t-1] * 0.5 +
-                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1] * ar[3,t-1] * 0.5
-    N1F_Fall[2,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2] * ar[1,t-1] * 0.5 + 
-                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[2] * ar[2,t-1] * 0.5 +
-                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2] * ar[3,t-1] * 0.5
+    N1F_Fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[1,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1,t-1] * ar[3,t-1] * 0.5
+    N1F_Fall[2,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[2,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2,t-1] * ar[3,t-1] * 0.5
     
     
    #  Collapse juvenile M & F and adult F for the production model into breeding-region specific estimates
@@ -1405,6 +1495,7 @@ pt_ipm <- nimbleCode({
                N1M[2,t] <- N1M_Pacific[2,t-1] + N1M_Central[2,t-1]
                N2F[2,t] <- N2F_Pacific[2,t-1] + N2F_Central[2,t-1]
                N2M[2,t] <- N2M_Pacific[2,t-1] + N2M_Central[2,t-1]
+               
                N1F[3,t] <- N1F_Pacific[3,t-1] + N1F_Central[3,t-1]
                N1M[3,t] <- N1M_Pacific[3,t-1] + N1M_Central[3,t-1]
                N2F[3,t] <- N2F_Pacific[3,t-1] + N2F_Central[3,t-1]
@@ -1425,18 +1516,18 @@ pt_ipm <- nimbleCode({
   for(i in 1:4){
     sig.lincoln[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
   }
-
-  # Estimated H (Fall Flight x recovery rate)
-  for (t in 1:(nyear-1)) {
-    N2M.harvest[1,t] <-  N2M_Fall[1,t] * (fp_central[2,2,t]/rr[t])
-    N2M.harvest[2,t] <-  N2M_Fall[2,t] * (fp_pacific[2,2,t]/rr[t])
-    N2F.harvest[1,t] <-  N2F_Fall[1,t] * (fp_central[2,1,t]/rr[t])
-    N2F.harvest[2,t] <-  N2F_Fall[2,t] * (fp_pacific[2,1,t]/rr[t])
-    N1M.harvest[1,t] <-  N1M_Fall[1,t] * (fp_central[1,2,t]/rr[t])
-    N1M.harvest[2,t] <-  N1M_Fall[2,t] * (fp_pacific[1,2,t]/rr[t])
-    N1F.harvest[1,t] <-  N1F_Fall[1,t] * (fp_central[1,1,t]/rr[t])
-    N1F.harvest[2,t] <-  N1F_Fall[2,t] * (fp_pacific[1,1,t]/rr[t])   
-
+    hc ~ dnorm(0.73, sd = 0.01)
+    # Estimated H (Fall Flight x X kill rate recovery rate)
+    for (t in 1:(nyear-1)) {
+      N2M.harvest[1,t] <-  N2M_Fall[1,t] * (kappa_central[2,2,t] * rr[t])/hc
+      N2M.harvest[2,t] <-  N2M_Fall[2,t] * (kappa_pacific[2,2,t] * rr[t])/hc
+      N2F.harvest[1,t] <-  N2F_Fall[1,t] * (kappa_central[2,1,t] * rr[t])/hc
+      N2F.harvest[2,t] <-  N2F_Fall[2,t] * (kappa_pacific[2,1,t] * rr[t])/hc
+      N1M.harvest[1,t] <-  N1M_Fall[1,t] * (kappa_central[1,2,t] * rr[t])/hc
+      N1M.harvest[2,t] <-  N1M_Fall[2,t] * (kappa_pacific[1,2,t] * rr[t])/hc
+      N1F.harvest[1,t] <-  N1F_Fall[1,t] * (kappa_central[1,1,t] * rr[t])/hc
+      N1F.harvest[2,t] <-  N1F_Fall[2,t] * (kappa_pacific[1,1,t] * rr[t])/hc 
+      
       # Estimated number harvested in central/miss flyways
       N1F.Lincoln[1,t] <- N1F.harvest[1,t] * us[t]
       N1M.Lincoln[1,t] <- N1M.harvest[1,t] * us[t]
@@ -1473,11 +1564,11 @@ pt_ipm <- nimbleCode({
     # Canada proportional harvest model
      b_t ~ dlogis(0,1)
     b_t2 ~ dlogis(0,1)
-      b0 ~ dlogis(0,1)
+      b00 ~ dlogis(0,1)
   sig.us ~ dunif(0,1)
   for (t in 1:nyear) {
     eps.usa[t] ~ dnorm(0, sd = sig.us)
-      mu.us[t] <- (b0 + b_t * time[t])
+      mu.us[t] <- (b00 + b_t * time[t])
   }
 
   for (t in 1:nyear) {
@@ -1505,27 +1596,47 @@ bpop_se_edit <- bpop_se
 bpop_se_edit[,60] <- bpop_se_edit[,59]
 bpop_se_edit[,61] <- bpop_se_edit[,59]
 
-pond_obs.inits <- pond_obs
-pond_obs.inits[60:61] <- pond_obs.inits[59]
-pond_se_edit <- pond_se
-pond_se_edit[60:61] <- pond_se_edit[59]
 
 nimble.data <- list(marr_af=marr_af, marr_am=marr_am, marr_jf=marr_jf, marr_jm=marr_jm, sn = c( rowMeans(bpop_obs[,1:5],1)),
                     marr_w_af=marr_w_af, marr_w_am=marr_w_am, 
-                    pond_obs=pond_obs, pond_se=pond_se_edit,   bpop_obs=data.matrix(bpop_obs), bpop_se=data.matrix(bpop_se_edit),
+                    rice = rice[-62], rice_cv= rice_cv[-62], bag = bag_sc,pna = winter_data$PNA,
+                    bpop_obs=data.matrix(bpop_obs), bpop_se=data.matrix(bpop_se_edit),
                     nband_af=nband_af, nband_am=nband_am, nband_jf=nband_jf, nband_jm=nband_jm,  
                     nband_jf_af=nband_jf_af,nband_jf_jm_af =nband_jf_jm_af, bands = bands,
                     w_nband_af=w_nband_af, w_nband_am=w_nband_am,
-                    RR.rr = c(MU_R,0.781, 0.781), SD.rr = c(SD_R,0.077, 0.077), 
-                    H1F  = (H_F1 * 0.73)/ 1e6,
-                    H2F  = (H_F2 * 0.73)/ 1e6,
-                    H1M  = (H_M1 * 0.73)/ 1e6,
-                    H2M  = (H_M2 * 0.73)/ 1e6,
+                    RR.rr = c(MU_R,0.903 , 0.903 ), SD.rr = c(SD_R,0.018 , 0.018 ), 
+                    H1F  = data.matrix((H_F1 * 0.73)/ 1e6),
+                    H2F  = data.matrix((H_F2 * 0.73)/ 1e6),
+                    H1M  = data.matrix((H_M1 * 0.73)/ 1e6),
+                    H2M  = data.matrix((H_M2 * 0.73)/ 1e6),
                     H_CAN = (H_CAN_COR)/ 1e6,
                     HC1F = (Canada_HY_F * 0.73)/ 1e6,   
                     HC1M = (Canada_HY_M * 0.73)/ 1e6,  
                     HC2F = (Canada_AHY_F* 0.73)/ 1e6,    
-                    HC2M = (Canada_AHY_M* 0.73)/ 1e6   )
+                    HC2M = (Canada_AHY_M* 0.73)/ 1e6,
+                    rice_gulf_mean = rice_gulf_mean ,
+                    rice_cv_mean   = rice_cv_mean   ,
+                    rice_gulf_sd   = rice_gulf_sd   ,
+                    rice_cv_sd     = rice_cv_sd     ,
+                    alpha_gulf = c(1,1,1),
+                     alpha_pac = c(1,1,1),
+                    year = scale(1:62)[,1],
+                    T_GC = c(scale(WT[,2]),rep(0,15)),
+                    T_PC = c(scale(WT[,1]),rep(0,15)),
+                    P_GC = c(scale(WP[,2]),rep(0,15)),
+                    P_PC = c(scale(WP[,1]),rep(0,15)),
+                    
+                  
+                      def_a = wdef_A, def_b =  wdef_B,
+                     mean.crop = mu_Crops, sd.crop =sd_Crops,
+                      ponds_sd = sd.POND$POND,
+                    ponds_mean = mu.POND$POND,
+                       mu_pond = mu_PD, sd_pond = sd_PD,
+                     Crop_Mean = c(mu.Crops$Crops[1:61], mu.Crops$Crops[61]),
+                      Crop_sd  = c(sd.Crops$Crops[1:61], sd.Crops$Crops[61]),
+                    
+                    I_f = diag(4), I_m = diag(3)
+                    )
 
 H_USA <- H_F1$harvest + H_F2$harvest + H_M1$harvest + H_M2$harvest
 
@@ -1543,58 +1654,82 @@ HC2F.inits[is.na(HC2F.inits )] <- mean(HC2F.inits , na.rm = TRUE)
 HC2M.inits[is.na(HC2M.inits )] <- mean(HC2M.inits , na.rm = TRUE)
 
 nimble.constants <- list(narea=narea, nyear=nyear, nyear_use=nyear_use, ncoho=ncoho, time = scale(c(1:61))[,1], cut = cut, nwint = 3,
-                         log_pond_mean= log_pond_mean, log_pond_se=log_pond_se,  warea = 2, K = 4,
-                         mean_pond = mean(pond_obs, na.rm = TRUE), sd_pond = sd(pond_obs,na.rm = TRUE), n.summer = 3, n.winter = 2,
+                        warea = 2, K = 4, r_opt = rt,
+                         n.summer = 3, n.winter = 2,
                          log_N_mean =c(1.1365896, 0.1946357, 0.9895127), 
                          log_N_se=c(0.1693641, 0.2739492, 0.2992044))
 
 initsFunction <- function()list(
-  chi_cen_ak  = .05, 
-  chi_pac_ak  = 0.50, 
+  
+  Lambda = Lambda1, Delta = Delta1, P = P1, Q = Q1, Sigma = Sigma1, sig = sig1,
+  Lambda_f = Lambda2, Delta_f = Delta2, P_f = P2, Q_f = Q2, Sigma_f = Sigma2, sig_f = sig2,
+  
+  mu_cen_pr = 1.5,
+  mu_pac_pr = 0,
      ch_no_ak = .05, 
      ch_pr_pr = .90,
-  
-  beta.sex.mort = c(0,0), beta.age.mort = c(0), mu_wint = c(.9,.9), mu_summ = c(.9,.9,.9), mu_harv = c(.9,.9), 
-  tau = c(1,1,1,1), A = diag(4) * .5, L = matrix(0,4,4), xi = matrix(0,62,4), zeta = c(1,1), zeta.prod = c(1,1,1),
-  sig = c(1,1), beta.age.rec = 0, beta.sex.rec = c(0,0),
+  beta_temp_rice = c(0,0),beta_prec_rice = c(0,0),beta_year= c(0,0),b0 = c(5,3), phi = c(.5,.5), sig_rice = 1, sig_rice_cv = 1,
+  beta_rice_w = c(0,0), beta_rice_g = c(0,0,0),beta_rice_p = c(0,0,0),
+  beta_temp = matrix(0,2,5),beta_prec = matrix(0,2,5),
+  beta.age.mort = c(0), mu_wint = matrix(.9,2,2), mu_summ = matrix(.9,3,2), mu_harv = matrix(.9,2,2),
+  tau = c(1,1,1,1), A = diag(4) * .5, L = matrix(0,4,4),  
+  zeta =matrix(1,2,2), zeta.prod = c(1,1,1), zeta.wint =matrix(1,2,2),  zeta.summ =matrix(1,2,3),
+  beta.age.rec = 0,
   beta.wint = c(1,1), beta.summ = c(1,1,1), beta.harv = c(1,1), beta.prod =c(1,1,1),
-  theta.summ = rep(0,62), theta.wint = rep(0,62),theta.harv = rep(0,75), theta.prime = rep(0,62),
-  theta.mod = c(0,0,0,1),
+  theta.summ = matrix(0,2,62), theta.wint = matrix(0,2,62),theta.harv = matrix(0,2,75), 
+  
+  epsilon_m = matrix(0,62,3), epsilon_f = matrix(0,62,4), eps_production  = matrix(0,3,62), 
+  
+  theta.mod = c(0,0,0,1), hc = 0.73,
   beta.direct = 0, mu.r = -2, sig.rec = c(1,1), sig.sum = c(1,1,1),u.rec = c(2,2),
   sig.prod =1, beta.prod = c(1,1,1), theta.prod = rnorm(62,0,.15), sig.theta = 1,
-  wpcap_a = .01, logit_pcap_a = -5, logit_pcap_j = -5,
+  wpcap_af = c(.01,.01), wpcap_am = c(.01,.01), 
+  
+  mu_p = c(0.01, 0.01, 0.01), sd_p = c(100,100,100), 
+  pcap_jf = c(.01, .01, .01),pcap_jm = c(.01, .01, .01),pcap_af = c(.01, .01, .01),pcap_am = c(.01, .01, .01),
+
   pi_prime = matrix(c(.95,.025,.025,.025,.95,.025,.025,.025,.95),3,3), psi_other  = c(.5,.5),
   pi_harv2 = matrix(1/3,2,3),
   psi_ak = c(.1,.6,.3), psi_no = c(.3,.4,.3), psi_pr = c(.4,.3,.3),
   psi_mw = c(.3,.3,.4), psi_pc = c(.05,.9,.05),
-  beta_pr_pr_pond = .5,
-  log_ar_region = c(0,0,0),
-  H_CAN = H_CAN.inits,b_t =0,b_t2=0, b0 = 2,sig.us = 1,
+  mu_pr_pr = c(-5,-.25), beta_pr_pond = matrix(0,3,3),
+  log_ar_region = c(0,0,0), a_r =.2,
+  H_CAN = H_CAN.inits,b_t =0,b_t2=0, b00 = 2,sig.us = 1,
   HC1F = HC1F.inits,  HC1M = HC1M.inits,  HC2F = HC2F.inits,  HC2M = HC2M.inits, 
   mean.psi =-.5, sd.psi = .1,
   rho.theta = c(0.25,-.25,.25,1),
   mu_log_ar = 0, sd_log_ar = .2,
   logN = logN.inits, N = exp(logN.inits),eps.usa= rep(0,61),
-  sig.lincoln = c(.5,.5,.5,.5),  rr = c(MU_R,0.781 ,0.781, rep(1,15) ), mu.n = 6, sr = c(.4), sp = apply(bpop_obs[,1:10], 1, mean)/sum(apply(bpop_obs[,1:10], 1, mean)),
-  mu.psi = c(.8,.8,.8), sig.psi = 1, log_psi_ponds = c(0,0,0), eps.psi = matrix(0,3,61), psi = matrix(.5,3,61),
-  pond_obs = pond_obs.inits, bpop_obs = bpop_obs.inits,
-  log_pond_alpha=0, log_pond_ddp=0, log_pond_prec=0, log_pond_temp=0, log_pond_sd=1, 
+  sig.lincoln = c(.5,.5,.5,.5),  rr = c(MU_R,0.781 ,0.781, rep(1,15)), mu.n = 6, sr = c(.4), sp = apply(bpop_obs[,1:10], 1, mean)/sum(apply(bpop_obs[,1:10], 1, mean)),
+  mu.psi = c(.8,.8,.8), sig.psi = c(10,10,10), log_psi_ponds = c(0,0,0), eps.psi = matrix(0,3,61), psi = matrix(.5,3,61),
+  bpop_obs = bpop_obs.inits,
+  beta.pnd_cr = 0,beta.crop_ar = 0,
   sig.eta_p =1, sig.eta_c =1,
-  
-  log_eta_pond_pr = rep(0, 3), beta.pnd_ar = 0, zeta.pnd = c(1,1,1),
+  mu.r = c(0.6,.8), sd.r = c(5,5),
+  pi_mod = rep(.25, 5), mu_pi = rep(-1,  5), sig_pi = rep(1, 5),
+  log_eta_pond_pr = rep(0, 3), beta.pnd_ar = c(0,0,0), 
   local = rbeta(6,95,5),
-  log_ar_mean_mu=0, log_ar_mean_sd_region=1, 
+  log_ar_mean_mu=1, log_ar_mean_sd_region=1, 
   log_ar_sd=1, 
+  mu_ar_region = c(1.5,1.5,1.5),
   log_ar=matrix(0,narea,nyear), 
   log_bpop0_sd=1, log_bpop_sd=1,
   vul = c(2,2,2), tau_band = c(50,50,50), bp = .8, cr = .15
   
 )
 
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
- # Run Model
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
- 
+nimble.inits <- initsFunction() 
+
+
+
+NOPI_model_data <- list(pt_ipm,nimble.inits,nimble.data,nimble.constants,initsFunction)
+save(NOPI_model_data, file = 'NOPI_model_data.rdata')
+
+rm(list=ls()[! ls() %in% c("pt_ipm","nimble.inits",'nimble.data','nimble.constants','initsFunction')])
+
+library(parallel)
+library(coda)
+
 nc      <- 3 # number of chains
 cl_new5 <-makeCluster(nc,timeout=5184000)
 clusterExport(cl_new5, c("pt_ipm", "nimble.inits", "nimble.data", "nimble.constants"))
@@ -1661,27 +1796,34 @@ out <- clusterEvalQ(cl_new5, {
   nimble.model <- nimbleModel( code = pt_ipm, constants = nimble.constants,  dat =  nimble.data, inits = nimble.inits)
   
   nimble.model$initializeInfo()
-  nimble.model$simulate(c('beta_pr_pr_pond', 'pi_harv2', 'pi_gulf', 'pi_pac', 'psi_gulf', 'psi_pac', 'pt_w_af', 'pt_w_am', 'pr_w_af', 'pr_w_am',
-                          'log_pond', 'log_pond_mu', 'pond_std', 'pond'))
+  nimble.model$simulate(c('beta_pr_pr_pond','pi_harv','psi.lam', 'pi_harv2', 'pi_gulf', 'pi_pac', 'psi_gulf', 'psi_pac', 'pt_w_af', 'pt_w_am', 'pr_w_af', 'pr_w_am', 'pond.std'))
+
+  nimble.model$simulate(c( 'theta.harv', 'theta.wint', 'theta.summ', 'theta.prod', 'pond','pond.std','crops','crop.std','ch_pr_pr','mu_pr_pr','chi_pr_pr','chi_pac_pr','chi_pac_ak','chi','pi','pi2','zeta.harv','zeta.wint','zeta.summ','lifted_d1_over_pow_oPpsi_dot_lam_oB1_cB_comma_0_dot_5_cP','beta_temp_w','lifted_d1_over_pow_oPpsi_dot_lam_oB2_cB_comma_0_dot_5_cP','beta_prec_w','lifted_d1_over_pow_oPpsi_dot_lam_oB3_cB_comma_0_dot_5_cP','lifted_d1_over_pow_oPpsi_dot_lam_oB4_cB_comma_0_dot_5_cP','beta_rice_w','lifted_d1_over_pow_oPpsi_dot_lam_oB5_cB_comma_0_dot_5_cP','beta_pna','lifted_d1_over_pow_oPpsi_dot_lam_oB6_cB_comma_0_dot_5_cP','lifted_d1_over_pow_oPpsi_dot_lam_oB7_cB_comma_0_dot_5_cP','beta_bag','lifted_d1_over_pow_oPpsi_dot_lam_oB8_cB_comma_0_dot_5_cP','s.summer_ad_ak_f','s.summer_ad_no_f','s.summer_ad_pr_f','s.summer_ad_ak_m','s.summer_ad_no_m','s.summer_ad_pr_m','kappa_central','kappa_pacific','fp_central','fp_pacific','mu.beta.bag','sig.beta.bag','beta.bag','sw_hy_central_f','sw_hy_pacific_f','sw_ad_central_f','sw_ad_pacific_f','sw_hy_central_m','sw_hy_pacific_m','sw_ad_central_m','sw_ad_pacific_m','sw_ad_ak_f','sw_ad_ak_m','sw_ad_no_f','sw_ad_no_m','sw_ad_pr_f','sw_ad_pr_m','s.winter_hy_ak_f','s.winter_hy_mw_f','s.winter_hy_no_f','s.winter_hy_pc_f','s.winter_hy_pr_f','s.winter_ad_ak_f','s.winter_ad_mw_f','s.winter_ad_no_f','s.winter_ad_pc_f','s.winter_ad_pr_f','s.winter_hy_ak_m','s.winter_hy_mw_m','s.winter_hy_no_m','s.winter_hy_pc_m','s.winter_hy_pr_m','s.winter_ad_ak_m','s.winter_ad_mw_m','s.winter_ad_no_m','s.winter_ad_pc_m','s.winter_ad_pr_m','sur_waf','sur_wam','a_sur_waf','a_sur_wam','pre_harv_af','pre_harv_am','sur_af','sur_am','sur_jf','sur_jm','f_wf','f_wm','f_jf','f_af','f_jm','f_am','rice','nu_rice','rice_cv','nu_rice_cv','rice_std','beta.crop_ar','log_ar_mu_ak','log_ar_mu_nh','log_ar_mu_pr','log_ar','ar','pt_af','pt_am','pr_af','pr_am','pt_jf','pt_jm','pr_jf','pr_jm','pt_w_af','pt_w_am','pr_w_af','pr_w_am','q','N1F','N1M','N2F','N2M','NAF','NAM','N','Bpop_N','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall','n1f_fall','n1m_fall','n2f_fall','N1M_Central','N1F_Central','N2M_Central','N2F_Central','N1M_Pacific','N1F_Pacific','N2M_Pacific','N2F_Pacific','N_Central','N_Pacific','logN','N2M.harvest','N2F.harvest','N1M.harvest','N1F.harvest','N1F.Lincoln','N1M.Lincoln','N2F.Lincoln','N2M.Lincoln'))
+  nimble.model$simulate(c('pi','pi2','s.winter_hy_ak_f','s.winter_hy_mw_f','s.winter_hy_no_f','s.winter_hy_pc_f','s.winter_hy_pr_f','s.winter_ad_ak_f','s.winter_ad_mw_f','s.winter_ad_no_f','s.winter_ad_pc_f','s.winter_ad_pr_f','s.winter_hy_ak_m','s.winter_hy_mw_m','s.winter_hy_no_m','s.winter_hy_pc_m','s.winter_hy_pr_m','s.winter_ad_ak_m','s.winter_ad_mw_m','s.winter_ad_no_m','s.winter_ad_pc_m','s.winter_ad_pr_m','sur_af','sur_am','sur_jf','sur_jm','f_jf','f_af','f_jm','f_am','l_pi_ak','l_pi_mw','l_pi_no','l_pi_pc','l_pi_pr','pi_ak','pi_mw','pi_no','pi_pc','pi_pr','pi_harv','pt_af','pt_am','pr_af','pr_am','pt_jf','pt_jm','pr_jf','pr_jm','pt_w_af','pt_w_am','pr_w_af','pr_w_am','q','N1F','N1M','N2F','N2M','NAF','NAM','N','Bpop_N','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall','n1f_fall','n1m_fall','n2f_fall','N1M_Central','N1F_Central','N2M_Central','N2F_Central','N1M_Pacific','N1F_Pacific','N2M_Pacific','N2F_Pacific','N_Central','N_Pacific','logN','N2M.harvest','N2F.harvest','N1M.harvest','N1F.harvest','N1F.Lincoln','N1M.Lincoln','N2F.Lincoln','N2M.Lincoln'))
+  
   nimble.model$initializeInfo()
   nimble.model$calculate()
   
   Cmodel     <- compileNimble(nimble.model)
   
   mcmc_Conf  <- configureMCMC(nimble.model, useConjugacy = FALSE,  thin = 2, thin2 = 5,
-                              monitors  = c('beta.direct','beta.age.rec','beta.sex.mort', 'sigma','tau',
-                                            'zeta.wint','zeta.prod','zeta.harv','zeta.summ','zeta.pnd','beta.pnd_ar',
-                                            'beta.sex.rec','beta.age.mort', 'local','s_a','bp','mu_pr_pr', 'beta_pr_pr_pond',
-                                            'pcap_a','pcap_j','wpcap_a','rho', 'mu.psi','sr','vul','tau_band',
-                                            'mu_summ','mu_harv','mu_wint','pi_gulf','pi_pac','psi_gulf','psi_pac',
-                                            'chi_cen_ak', 'chi_pac_ak', 'ch_no_ak','ch_pr_pr','b_t',
-                                            'log_ar_region','log_ar_mean_mu','log_ar_mean_sd_region','sig.lincoln',
-                                            'log_pond_alpha','log_pond_ddp'),
+                              monitors  = c('beta.direct','beta.age.rec', 'sig','beta_temp','beta_prec',
+                                            'zeta.wint','zeta.prod','zeta.harv','zeta.summ','beta.pnd_ar','beta.crop_ar',
+                                            'beta.age.mort', 'local','a_r','bp','mu_pr_pr', 'beta_pr_pond',
+                                            'pcap_af','pcap_jf','pcap_am','pcap_jm','mu_p','sd_p',
+                                            'wpcap_af','rho', 'mu.psi','sr','vul','tau_band','wpcap_am',
+                                            'mu_summ','mu_harv','mu_wint','pi_gulf','pi_pac','pi_mod',
+                                             'beta_rice_p','beta_rice_g',  'mu.psi', 'sig.psi',
+                                          
+                                            'beta_rice_w','beta_bag','beta.pnd_cr',
+                                            'b_t','rho_f','sig_f', 'mu_pi','sig_pi',
+                                            'log_ar_region','sig.lincoln'
+                                            ),
                               
                               monitors2 = c( 'pi_ak','pi_mw',  'pi_no', 'pi_pr','pi_pc','pi_harv','pi_harv2',
-                                             'chi','xi', 'pi','pi2','chi_pr_pr',
-                                       
-                                             'pond_std','log_pond',
+                                             'chi', 'pi','pi2','chi_pr_pr',
+                                             'chi_cen_ak', 'chi_pac_ak',
+                                             'pond.std',
                                              
                                              'theta.harv','theta.wint','theta.summ', 'theta.prod', 
                                             
@@ -1697,39 +1839,38 @@ out <- clusterEvalQ(cl_new5, {
                                              's.winter_ad_ak_f', 's.winter_ad_mw_f',  's.winter_ad_no_f',  's.winter_ad_pc_f', 's.winter_ad_pr_f',
                                              's.winter_hy_ak_m', 's.winter_hy_mw_m',  's.winter_hy_no_m',  's.winter_hy_pc_m', 's.winter_hy_pr_m',
                                              's.winter_ad_ak_m', 's.winter_ad_mw_m',  's.winter_ad_no_m',  's.winter_ad_pc_m', 's.winter_ad_pr_m',
-                                             
-                                             'h_nw_hy_central_f','h_nw_hy_pacific_f','h_nw_ad_central_f','h_nw_ad_pacific_f',
-                                             'h_nw_hy_central_m','h_nw_hy_pacific_m','h_nw_ad_central_m','h_nw_ad_pacific_m',
-                                             
-                                             'hk_central','hk_pacific',
-                                             'h_ns_ad_ak_f','h_ns_ad_no_f','h_ns_ad_pr_f','h_ns_ad_ak_m','h_ns_ad_no_m','h_ns_ad_pr_m',
-                                             
+                       
                                              'kappa_central','kappa_pacific', 'cr',
                                              
                                              'N1M_Fall','N2M_Fall','N1F_Fall','N2F_Fall',
                                              'N1M_Pacific','N2M_Pacific','N1F_Pacific','N2F_Pacific','N_Pacific',
                                              'N1M_Central','N2M_Central','N1F_Central','N2F_Central','N_Central',
-                                             'NAF','NAM','N1F','N1M','N2F','N2M','N','logN', 'Bpop_N',
+                                             'NAF','NAM','N1F','N1M','N2F','N2M','N','logN', 'Bpop_N','rice_std',
                                              
                                              'ar','us', 'rr','psi'
                                             # 'N1F.Lincoln','N2F.Lincoln','N1M.Lincoln','N2M.Lincoln'
                                
                       ))
-  
-  mcmc_Conf$removeSamplers(c('mu_pr_pr','beta_pr_pr_pond'))
-  mcmc_Conf$addSampler(target = c('mu_pr_pr', 'beta_pr_pr_pond'),      type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=5000, sliceAdaptFactorInterval=500, sliceAdaptWidthMaxIter=500, sliceMaxSteps=100, maxContractions=100))
 
-  mcmc_Conf$removeSamplers(c('beta.age.rec','beta.age.mort'))
-  mcmc_Conf$addSampler(target = c('beta.age.rec', 'beta.age.mort'),      type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=5000, sliceAdaptFactorInterval=500, sliceAdaptWidthMaxIter=500, sliceMaxSteps=100, maxContractions=100))
-
-  mcmc_Conf$removeSamplers(c('mu_summ','mu_wint','mu_harv'))
-  mcmc_Conf$addSampler(target = c('mu_summ','mu_wint','mu_harv'),      type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=5000, sliceAdaptFactorInterval=500, sliceAdaptWidthMaxIter=500, sliceMaxSteps=100, maxContractions=100))
   
+  mcmc_Conf$removeSamplers(c('mu_wint','mu_harv'))
+  mcmc_Conf$addSampler(target = c('mu_wint[1,1]','mu_harv[1,1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_wint[2,1]','mu_harv[2,1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+
+  mcmc_Conf$addSampler(target = c('mu_wint[1,2]','mu_harv[1,2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_wint[2,2]','mu_harv[2,2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  
+  mcmc_Conf$removeSamplers(c('mu_summ','log_ar_region'))
+  mcmc_Conf$addSampler(target = c('mu_summ[1,1]','mu_summ[1,2]','log_ar_region[1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_summ[2,1]','mu_summ[2,2]','log_ar_region[2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_summ[3,1]','mu_summ[3,2]','log_ar_region[3]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+
   
   modelMCMC  <- buildMCMC(mcmc_Conf)
   CmodelMCMC <- compileNimble(modelMCMC,project = nimble.model)
-  
-  CmodelMCMC$run(25000, thin = 2, thin2 = 5, reset = FALSE)
+
+  CmodelMCMC$run(5000, thin = 2, thin2 = 10, reset = FALSE)
   
   return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
                as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
@@ -1738,39 +1879,16 @@ out <- clusterEvalQ(cl_new5, {
 end_time <- Sys.time()
 end_time - start_time
 
-samples2 <- list(chain1 = out[[1]][[1]][-c(1:2001),], 
-                 chain2 = out[[2]][[1]][-c(1:2001),], 
-                 chain3 = out[[3]][[1]][-c(1:2001),])
+samples2 <- list(chain1 = out[[1]][[1]][-c(1:501),], 
+                 chain2 = out[[2]][[1]][-c(1:501),], 
+                 chain3 = out[[3]][[1]][-c(1:501),])
 
-samples1    <- list(chain1 =   out[[1]][[2]][-c(1:801),], 
-                    chain2 =   out[[2]][[2]][-c(1:801),], 
-                    chain3 =   out[[3]][[2]][-c(1:801),])
-
-mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
-mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
-
-file_list <- list(mcmcList1, mcmcList2)
-save(file_list, file = 'two_season_ipm.rdata')
-
-out2 <- clusterEvalQ(cl_new5, {
-  CmodelMCMC$run(20000, thin = 2, thin2 = 5, reset = FALSE)
-  return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
-               as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
-})
-
-
-samples2 <- list(chain1 =   out2[[1]][[1]][-c(1:500),], 
-                 chain2 =   out2[[2]][[1]][-c(1:500),], 
-                 chain3 =   out2[[3]][[1]][-c(1:500),])
-
-samples1    <- list(chain1 =   out2[[1]][[2]][-c(1:200),], 
-                    chain2 =   out2[[2]][[2]][-c(1:200),], 
-                    chain3 =   out2[[3]][[2]][-c(1:200),])
+samples1    <- list(chain1 =   out[[1]][[2]][-c(1:251),], 
+                    chain2 =   out[[2]][[2]][-c(1:251),], 
+                    chain3 =   out[[3]][[2]][-c(1:251),])
 
 mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
 mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
 
 
-mcmcList1 <- file_list[[1]]
-mcmcList2 <-  file_list[[2]]
 
