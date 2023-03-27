@@ -1,0 +1,236 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# Step 4: Calculate temporal means and standard error of each parameter.          
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# Means
+mu_pi1    <- apply(pi_all[,1,,],c(3,1), mean) # Movements to Alaska [from each region, including AK]
+mu_pi2    <- apply(pi_all[,2,,],c(3,1), mean) # Movements to Boreal [from each region, including BO]
+mu_pi3    <- apply(pi_all[,3,,],c(3,1), mean) # Movements to Prairie[from each region, including PR]
+
+# Female vital rates
+mu_F1     <- apply(F1 ,c(2,3), mean)
+mu_F2     <- apply(F2 ,c(2,3), mean)
+mu_Sfj_w1 <- apply(Sfj_w1,2, mean)
+mu_Sfj_w2 <- apply(Sfj_w2,2, mean)
+mu_Sfj_h1 <- apply(Sfj_h1,2, mean)
+mu_Sfj_h2 <- apply(Sfj_h2,2, mean)
+mu_Sfa_w1 <- apply(Sfa_w1,2, mean)
+mu_Sfa_w2 <- apply(Sfa_w2,2, mean)
+mu_Sfa_h1 <- apply(Sfa_h1,2, mean)
+mu_Sfa_h2 <- apply(Sfa_h2,2, mean)
+mu_Sfj_s  <- apply(Sfj_s,c(2,3), mean)
+mu_Sfa_s  <- apply(Sfa_s,c(2,3), mean)
+mu_nf1    <- apply(nf1,c(2,3), mean)
+mu_nf2    <- apply(nf2,c(2,3), mean)
+# Male vital rates
+mu_Smj_w1 <- apply(Smj_w1,2, mean)
+mu_Smj_w2 <- apply(Smj_w2,2, mean)
+mu_Smj_h1 <- apply(Smj_h1,2, mean)
+mu_Smj_h2 <- apply(Smj_h2,2, mean)
+mu_Sma_w1 <- apply(Sma_w1,2, mean)
+mu_Sma_w2 <- apply(Sma_w2,2, mean)
+mu_Sma_h1 <- apply(Sma_h1,2, mean)
+mu_Sma_h2 <- apply(Sma_h2,2, mean)
+mu_Smj_s  <- apply(Smj_s,c(2,3), mean)
+mu_Sma_s  <- apply(Sma_s,c(2,3), mean)
+mu_nm1    <- apply(nm1,c(2,3), mean)
+mu_nm2    <- apply(nm2,c(2,3), mean)
+# Movement rates
+mu_pi_ak    <- apply(pi_all[,1,,],c(3,1), mean)
+mu_pi_no    <- apply(pi_all[,2,,],c(3,1), mean)
+mu_pi_pr    <- apply(pi_all[,3,,],c(3,1), mean)
+# Lambda
+mu_lamt   <- apply(lam_tot, c(2,3), mean)
+
+# Standard Deviation
+sd_F1     <- apply(F1 ,c(2,3), sd)
+sd_F2     <- apply(F2 ,c(2,3), sd)
+sd_Sfj_w1 <- apply(Sfj_w1,2, sd)
+sd_Sfj_w2 <- apply(Sfj_w2,2, sd)
+sd_Sfj_h1 <- apply(Sfj_h1,2, sd)
+sd_Sfj_h2 <- apply(Sfj_h2,2, sd)
+sd_Sfa_w1 <- apply(Sfa_w1,2, sd)
+sd_Sfa_w2 <- apply(Sfa_w2,2, sd)
+sd_Sfa_h1 <- apply(Sfa_h1,2, sd)
+sd_Sfa_h2 <- apply(Sfa_h2,2, sd)
+sd_Sfj_s  <- apply(Sfj_s,c(2,3), sd)
+sd_Sfa_s  <- apply(Sfa_s,c(2,3), sd)
+sd_nf1    <- apply(nf1,c(2,3), sd)
+sd_nf2    <- apply(nf2,c(2,3), sd)
+sd_lamt   <- apply(lam_tot,c(2,3), sd)
+
+sd_Smj_w1 <- apply(Smj_w1,2, sd)
+sd_Smj_w2 <- apply(Smj_w2,2, sd)
+sd_Smj_h1 <- apply(Smj_h1,2, sd)
+sd_Smj_h2 <- apply(Smj_h2,2, sd)
+sd_Sma_w1 <- apply(Sma_w1,2, sd)
+sd_Sma_w2 <- apply(Sma_w2,2, sd)
+sd_Sma_h1 <- apply(Sma_h1,2, sd)
+sd_Sma_h2 <- apply(Sma_h2,2, sd)
+sd_Smj_s  <- apply(Smj_s,c(2,3), sd)
+sd_Sma_s  <- apply(Sma_s,c(2,3), sd)
+sd_nm1    <- apply(nm1,c(2,3), sd)
+sd_nm2    <- apply(nm2,c(2,3), sd)
+
+# Generate summary statistics of the demographic rates
+#Coefficient of variation
+cv_F1    <- sd_F1    /mu_F1     
+cv_F2    <- sd_F2    /mu_F2     
+cv_Sfj_w1<- sd_Sfj_w1/mu_Sfj_w1 
+cv_Sfj_w2<- sd_Sfj_w2/mu_Sfj_w2 
+cv_Sfj_h1<- sd_Sfj_h1/mu_Sfj_h1 
+cv_Sfj_h2<- sd_Sfj_h2/mu_Sfj_h2 
+cv_Sfa_w1<- sd_Sfa_w1/mu_Sfa_w1 
+cv_Sfa_w2<- sd_Sfa_w2/mu_Sfa_w2 
+cv_Sfa_h1<- sd_Sfa_h1/mu_Sfa_h1 
+cv_Sfa_h2<- sd_Sfa_h2/mu_Sfa_h2 
+cv_Sfj_s <- sd_Sfj_s /mu_Sfj_s  
+cv_Sfa_s <- sd_Sfa_s /mu_Sfa_s  
+cv_nf1   <- sd_nf1   /mu_nf1    
+cv_nf2   <- sd_nf2   /mu_nf2    
+
+cv_Smj_w1<- sd_Smj_w1/mu_Smj_w1 
+cv_Smj_w2<- sd_Smj_w2/mu_Smj_w2 
+cv_Smj_h1<- sd_Smj_h1/mu_Smj_h1 
+cv_Smj_h2<- sd_Smj_h2/mu_Smj_h2 
+cv_Sma_w1<- sd_Sma_w1/mu_Sma_w1 
+cv_Sma_w2<- sd_Sma_w2/mu_Sma_w2 
+cv_Sma_h1<- sd_Sma_h1/mu_Sma_h1 
+cv_Sma_h2<- sd_Sma_h2/mu_Sma_h2 
+cv_Smj_s <- sd_Smj_s /mu_Smj_s  
+cv_Sma_s <- sd_Sma_s /mu_Sma_s  
+cv_nm1   <- sd_nm1   /mu_nm1    
+cv_nm2   <- sd_nm2   /mu_nm2 
+
+cv_lamt  <- sd_lamt  /mu_lamt   
+ 
+# Calculate statistics and wrap in a more portable fashion [not my most concise coding effort]
+cv_F1_mn     <- t(rbind.data.frame(mean = (apply(  cv_F1 ,2,mean)), low_95 =  (apply(  cv_F1 ,2  ,quantile, probs = 0.025)), upp_95 =  (apply(  cv_F1 ,2  ,quantile, probs = 0.975))))
+cv_F2_mn     <- t(rbind.data.frame(mean = (apply(   cv_F2 ,2,mean)), low_95 =  (apply(   cv_F2 ,2,quantile, probs = 0.025)), upp_95 =  (apply(   cv_F2 ,2,quantile, probs = 0.975))))
+cv_Sfj_w1_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_w1), low_95 = quantile(cv_Sfj_w1,probs = 0.025), upp_95 = quantile(cv_Sfj_w1 ,1,probs = 0.975)))
+cv_Sfj_w2_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_w2), low_95 = quantile(cv_Sfj_w2,probs = 0.025), upp_95 = quantile(cv_Sfj_w2 ,1,probs = 0.975)))
+cv_Sfj_h1_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_h1), low_95 = quantile(cv_Sfj_h1,probs = 0.025), upp_95 = quantile(cv_Sfj_h1 ,1,probs = 0.975)))
+cv_Sfj_h2_mn <- t(rbind.data.frame(mean = mean(cv_Sfj_h2), low_95 = quantile(cv_Sfj_h2,probs = 0.025), upp_95 = quantile(cv_Sfj_h2 ,1,probs = 0.975)))
+cv_Sfa_w1_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_w1), low_95 = quantile(cv_Sfa_w1,probs = 0.025), upp_95 = quantile(cv_Sfa_w1 ,1,probs = 0.975)))
+cv_Sfa_w2_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_w2), low_95 = quantile(cv_Sfa_w2,probs = 0.025), upp_95 = quantile(cv_Sfa_w2 ,1,probs = 0.975)))
+cv_Sfa_h1_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_h1), low_95 = quantile(cv_Sfa_h1,probs = 0.025), upp_95 = quantile(cv_Sfa_h1 ,1,probs = 0.975)))
+cv_Sfa_h2_mn <- t(rbind.data.frame(mean = mean(cv_Sfa_h2), low_95 = quantile(cv_Sfa_h2,probs = 0.025), upp_95 = quantile(cv_Sfa_h2 ,1,probs = 0.975)))
+cv_Sfj_s_mn  <- t(rbind.data.frame(mean = (apply( cv_Sfj_s ,2,mean)), low_95 =  (apply( cv_Sfj_s ,2,quantile, probs = 0.025)),upp_95 = (apply( cv_Sfj_s ,2,quantile, probs = 0.975))))
+cv_Sfa_s_mn  <- t(rbind.data.frame(mean = (apply( cv_Sfa_s ,2,mean)), low_95 =  (apply( cv_Sfa_s ,2,quantile, probs = 0.025)),upp_95 = (apply( cv_Sfa_s ,2,quantile, probs = 0.975))))
+cv_nf1_mn    <- t(rbind.data.frame(mean = (apply(   cv_nf1 ,2,mean)), low_95 =  (apply(   cv_nf1 ,2,quantile, probs = 0.025)),upp_95 = (apply(   cv_nf1 ,2,quantile, probs = 0.975))))
+cv_nf2_mn    <- t(rbind.data.frame(mean = (apply(   cv_nf2 ,2,mean)), low_95 =  (apply(   cv_nf2 ,2,quantile, probs = 0.025)),upp_95 = (apply(   cv_nf2 ,2,quantile, probs = 0.975))))
+cv_lamt_mn   <- t(rbind.data.frame(mean = (apply(  cv_lamt ,2,mean)), low_95 =  (apply(  cv_lamt ,2,quantile, probs = 0.025)),upp_95 = (apply(  cv_lamt ,2,quantile, probs = 0.975))))
+
+cv_Smj_w1_mn <- t(rbind.data.frame(mean = mean(cv_Smj_w1), low_95 = quantile(cv_Smj_w1,probs = 0.025), upp_95 = quantile(cv_Smj_w1 ,1,probs = 0.975)))
+cv_Smj_w2_mn <- t(rbind.data.frame(mean = mean(cv_Smj_w2), low_95 = quantile(cv_Smj_w2,probs = 0.025), upp_95 = quantile(cv_Smj_w2 ,1,probs = 0.975)))
+cv_Smj_h1_mn <- t(rbind.data.frame(mean = mean(cv_Smj_h1), low_95 = quantile(cv_Smj_h1,probs = 0.025), upp_95 = quantile(cv_Smj_h1 ,1,probs = 0.975)))
+cv_Smj_h2_mn <- t(rbind.data.frame(mean = mean(cv_Smj_h2), low_95 = quantile(cv_Smj_h2,probs = 0.025), upp_95 = quantile(cv_Smj_h2 ,1,probs = 0.975)))
+cv_Sma_w1_mn <- t(rbind.data.frame(mean = mean(cv_Sma_w1), low_95 = quantile(cv_Sma_w1,probs = 0.025), upp_95 = quantile(cv_Sma_w1 ,1,probs = 0.975)))
+cv_Sma_w2_mn <- t(rbind.data.frame(mean = mean(cv_Sma_w2), low_95 = quantile(cv_Sma_w2,probs = 0.025), upp_95 = quantile(cv_Sma_w2 ,1,probs = 0.975)))
+cv_Sma_h1_mn <- t(rbind.data.frame(mean = mean(cv_Sma_h1), low_95 = quantile(cv_Sma_h1,probs = 0.025), upp_95 = quantile(cv_Sma_h1 ,1,probs = 0.975)))
+cv_Sma_h2_mn <- t(rbind.data.frame(mean = mean(cv_Sma_h2), low_95 = quantile(cv_Sma_h2,probs = 0.025), upp_95 = quantile(cv_Sma_h2 ,1,probs = 0.975)))
+cv_Smj_s_mn  <- t(rbind.data.frame(mean = (apply( cv_Smj_s ,2,mean)), low_95 =  (apply( cv_Smj_s ,2,quantile, probs = 0.025)),upp_95 = (apply( cv_Smj_s ,2,quantile, probs = 0.975))))
+cv_Sma_s_mn  <- t(rbind.data.frame(mean = (apply( cv_Sma_s ,2,mean)), low_95 =  (apply( cv_Sma_s ,2,quantile, probs = 0.025)),upp_95 = (apply( cv_Sma_s ,2,quantile, probs = 0.975))))
+cv_nm1_mn    <- t(rbind.data.frame(mean = (apply( cv_nm1 ,2,mean)), low_95 =  (apply(   cv_nm1 ,2,quantile, probs = 0.025)),upp_95 = (apply(   cv_nm1 ,2,quantile, probs = 0.975))))
+cv_nm2_mn    <- t(rbind.data.frame(mean = (apply( cv_nm2 ,2,mean)), low_95 =  (apply(   cv_nm2 ,2,quantile, probs = 0.025)),upp_95 = (apply(   cv_nm2 ,2,quantile, probs = 0.975))))
+
+rownames(    cv_F1_mn) <- NULL; colnames(    cv_F1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(    cv_F2_mn) <- NULL; colnames(    cv_F2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_w1_mn) <- NULL; colnames(cv_Sfj_w1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_w2_mn) <- NULL; colnames(cv_Sfj_w2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_h1_mn) <- NULL; colnames(cv_Sfj_h1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfj_h2_mn) <- NULL; colnames(cv_Sfj_h2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_w1_mn) <- NULL; colnames(cv_Sfa_w1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_w2_mn) <- NULL; colnames(cv_Sfa_w2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_h1_mn)  <- NULL; colnames(cv_Sfa_h1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sfa_h2_mn ) <- NULL; colnames(cv_Sfa_h2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_Sfj_s_mn ) <- NULL; colnames( cv_Sfj_s_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_Sfa_s_mn ) <- NULL; colnames( cv_Sfa_s_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(   cv_nf1_mn ) <- NULL;colnames(   cv_nf1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(   cv_nf2_mn ) <- NULL;colnames(   cv_nf2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(  cv_lamt_mn ) <- NULL;colnames(  cv_lamt_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+
+rownames(cv_Smj_w1_mn) <- NULL;  colnames(cv_Smj_w1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Smj_w2_mn) <- NULL;  colnames(cv_Smj_w2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Smj_h1_mn) <- NULL;  colnames(cv_Smj_h1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Smj_h2_mn) <- NULL;  colnames(cv_Smj_h2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sma_w1_mn) <- NULL;  colnames(cv_Sma_w1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sma_w2_mn) <- NULL;  colnames(cv_Sma_w2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sma_h1_mn)  <- NULL; colnames(cv_Sma_h1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames(cv_Sma_h2_mn ) <- NULL; colnames(cv_Sma_h2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_mfj_s_mn ) <- NULL; colnames(cv_Smj_s_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_mfa_s_mn ) <- NULL; colnames(cv_Sma_s_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_mf1_mn )   <- NULL;colnames( cv_nm1_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+rownames( cv_mf2_mn )   <- NULL;colnames( cv_nm2_mn ) <- c('CV', 'CV_Lower_95', 'CV_Upper_95')
+
+LTRE_cv <- rbind.data.frame(
+                 cv_F1_mn,cv_F2_mn,cv_Sfj_w1_mn,cv_Sfj_w2_mn,cv_Sfj_h1_mn,cv_Sfj_h2_mn,cv_Sfa_w1_mn,cv_Sfa_w2_mn,cv_Sfa_h1_mn,cv_Sfa_h2_mn,cv_Sfj_s_mn,cv_Sfa_s_mn,cv_nf1_mn,cv_nf2_mn,cv_lamt_mn,
+                                   cv_Smj_w1_mn,cv_Smj_w2_mn,cv_Smj_h1_mn,cv_Smj_h2_mn,cv_Sma_w1_mn,cv_Sma_w2_mn,cv_Sma_h1_mn,cv_Sma_h2_mn,cv_mfj_s_mn,cv_mfa_s_mn,cv_mf1_mn,cv_mf2_mn)
+
+
+mu_F1_mn     <- t(rbind.data.frame(mean = (apply(  mu_F1 ,2,mean)), low_95 =  (apply(  mu_F1 ,2  ,quantile, probs = 0.025)), upp_95 =  (apply(  mu_F1 ,2  ,quantile, probs = 0.975))))
+mu_F2_mn     <- t(rbind.data.frame(mean = (apply(   mu_F2 ,2,mean)), low_95 =  (apply(   mu_F2 ,2,quantile, probs = 0.025)), upp_95 =  (apply(   mu_F2 ,2,quantile, probs = 0.975))))
+mu_Sfj_w1_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_w1), low_95 = quantile(mu_Sfj_w1,probs = 0.025), upp_95 = quantile(mu_Sfj_w1 ,1,probs = 0.975)))
+mu_Sfj_w2_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_w2), low_95 = quantile(mu_Sfj_w2,probs = 0.025), upp_95 = quantile(mu_Sfj_w2 ,1,probs = 0.975)))
+mu_Sfj_h1_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_h1), low_95 = quantile(mu_Sfj_h1,probs = 0.025), upp_95 = quantile(mu_Sfj_h1 ,1,probs = 0.975)))
+mu_Sfj_h2_mn <- t(rbind.data.frame(mean = mean(mu_Sfj_h2), low_95 = quantile(mu_Sfj_h2,probs = 0.025), upp_95 = quantile(mu_Sfj_h2 ,1,probs = 0.975)))
+mu_Sfa_w1_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_w1), low_95 = quantile(mu_Sfa_w1,probs = 0.025), upp_95 = quantile(mu_Sfa_w1 ,1,probs = 0.975)))
+mu_Sfa_w2_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_w2), low_95 = quantile(mu_Sfa_w2,probs = 0.025), upp_95 = quantile(mu_Sfa_w2 ,1,probs = 0.975)))
+mu_Sfa_h1_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_h1), low_95 = quantile(mu_Sfa_h1,probs = 0.025), upp_95 = quantile(mu_Sfa_h1 ,1,probs = 0.975)))
+mu_Sfa_h2_mn <- t(rbind.data.frame(mean = mean(mu_Sfa_h2), low_95 = quantile(mu_Sfa_h2,probs = 0.025), upp_95 = quantile(mu_Sfa_h2 ,1,probs = 0.975)))
+mu_Sfj_s_mn  <- t(rbind.data.frame(mean = (apply( mu_Sfj_s ,2,mean)), low_95 =  (apply( mu_Sfj_s ,2,quantile, probs = 0.025)),upp_95 = (apply( mu_Sfj_s ,2,quantile, probs = 0.975))))
+mu_Sfa_s_mn  <- t(rbind.data.frame(mean = (apply( mu_Sfa_s ,2,mean)), low_95 =  (apply( mu_Sfa_s ,2,quantile, probs = 0.025)),upp_95 = (apply( mu_Sfa_s ,2,quantile, probs = 0.975))))
+mu_nf1_mn    <- t(rbind.data.frame(mean = (apply(   mu_nf1 ,2,mean)), low_95 =  (apply(   mu_nf1 ,2,quantile, probs = 0.025)),upp_95 = (apply(   mu_nf1 ,2,quantile, probs = 0.975))))
+mu_nf2_mn    <- t(rbind.data.frame(mean = (apply(   mu_nf2 ,2,mean)), low_95 =  (apply(   mu_nf2 ,2,quantile, probs = 0.025)),upp_95 = (apply(   mu_nf2 ,2,quantile, probs = 0.975))))
+mu_lamt_mn   <- t(rbind.data.frame(mean = (apply(  mu_lamt ,2,mean)), low_95 =  (apply(  mu_lamt ,2,quantile, probs = 0.025)),upp_95 = (apply(  mu_lamt ,2,quantile, probs = 0.975))))
+
+mu_Smj_w1_mn <- t(rbind.data.frame(mean = mean(mu_Smj_w1), low_95 = quantile(mu_Smj_w1,probs = 0.025), upp_95 = quantile(mu_Smj_w1 ,1,probs = 0.975)))
+mu_Smj_w2_mn <- t(rbind.data.frame(mean = mean(mu_Smj_w2), low_95 = quantile(mu_Smj_w2,probs = 0.025), upp_95 = quantile(mu_Smj_w2 ,1,probs = 0.975)))
+mu_Smj_h1_mn <- t(rbind.data.frame(mean = mean(mu_Smj_h1), low_95 = quantile(mu_Smj_h1,probs = 0.025), upp_95 = quantile(mu_Smj_h1 ,1,probs = 0.975)))
+mu_Smj_h2_mn <- t(rbind.data.frame(mean = mean(mu_Smj_h2), low_95 = quantile(mu_Smj_h2,probs = 0.025), upp_95 = quantile(mu_Smj_h2 ,1,probs = 0.975)))
+mu_Sma_w1_mn <- t(rbind.data.frame(mean = mean(mu_Sma_w1), low_95 = quantile(mu_Sma_w1,probs = 0.025), upp_95 = quantile(mu_Sma_w1 ,1,probs = 0.975)))
+mu_Sma_w2_mn <- t(rbind.data.frame(mean = mean(mu_Sma_w2), low_95 = quantile(mu_Sma_w2,probs = 0.025), upp_95 = quantile(mu_Sma_w2 ,1,probs = 0.975)))
+mu_Sma_h1_mn <- t(rbind.data.frame(mean = mean(mu_Sma_h1), low_95 = quantile(mu_Sma_h1,probs = 0.025), upp_95 = quantile(mu_Sma_h1 ,1,probs = 0.975)))
+mu_Sma_h2_mn <- t(rbind.data.frame(mean = mean(mu_Sma_h2), low_95 = quantile(mu_Sma_h2,probs = 0.025), upp_95 = quantile(mu_Sma_h2 ,1,probs = 0.975)))
+mu_Smj_s_mn  <- t(rbind.data.frame(mean = (apply( mu_Smj_s ,2,mean)), low_95 =  (apply( mu_Smj_s ,2,quantile, probs = 0.025)),upp_95 = (apply( mu_Smj_s ,2,quantile, probs = 0.975))))
+mu_Sma_s_mn  <- t(rbind.data.frame(mean = (apply( mu_Sma_s ,2,mean)), low_95 =  (apply( mu_Sma_s ,2,quantile, probs = 0.025)),upp_95 = (apply( mu_Sma_s ,2,quantile, probs = 0.975))))
+mu_nm1_mn  <- t(rbind.data.frame(mean = (apply(   mu_nm1 ,2,mean)), low_95 =  (apply(   mu_nm1 ,2,quantile, probs = 0.025)),upp_95 = (apply(   mu_nm1 ,2,quantile, probs = 0.975))))
+mu_nm2_mn  <- t(rbind.data.frame(mean = (apply(   mu_nm2 ,2,mean)), low_95 =  (apply(   mu_nm2 ,2,quantile, probs = 0.025)),upp_95 = (apply(   mu_nm2 ,2,quantile, probs = 0.975))))
+
+rownames(    mu_F1_mn) <- NULL; colnames(    mu_F1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(    mu_F2_mn) <- NULL; colnames(    mu_F2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_w1_mn) <- NULL; colnames(mu_Sfj_w1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_w2_mn) <- NULL; colnames(mu_Sfj_w2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_h1_mn) <- NULL; colnames(mu_Sfj_h1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfj_h2_mn) <- NULL; colnames(mu_Sfj_h2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_w1_mn) <- NULL; colnames(mu_Sfa_w1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_w2_mn) <- NULL; colnames(mu_Sfa_w2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_h1_mn)  <- NULL; colnames(mu_Sfa_h1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sfa_h2_mn ) <- NULL; colnames(mu_Sfa_h2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames( mu_Sfj_s_mn ) <- NULL; colnames( mu_Sfj_s_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames( mu_Sfa_s_mn ) <- NULL; colnames( mu_Sfa_s_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(   mu_nf1_mn ) <- NULL;colnames(   mu_nf1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(   mu_nf2_mn ) <- NULL;colnames(   mu_nf2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(  mu_lamt_mn ) <- NULL;colnames(  mu_lamt_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+
+rownames(mu_Smj_w1_mn) <- NULL; colnames(mu_Smj_w1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Smj_w2_mn) <- NULL; colnames(mu_Smj_w2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Smj_h1_mn) <- NULL; colnames(mu_Smj_h1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Smj_h2_mn) <- NULL; colnames(mu_Smj_h2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sma_w1_mn) <- NULL; colnames(mu_Sma_w1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sma_w2_mn) <- NULL; colnames(mu_Sma_w2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sma_h1_mn)  <- NULL;colnames(mu_Sma_h1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sma_h2_mn ) <- NULL;colnames(mu_Sma_h2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Smj_s_mn ) <- NULL;colnames( mu_Smj_s_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_Sma_s_mn ) <- NULL;colnames( mu_Sma_s_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_nm1_mn ) <- NULL;colnames(   mu_nm1_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+rownames(mu_nm2_mn ) <- NULL;colnames(   mu_nm2_mn ) <- c('mu', 'mu_Lower_95', 'mu_Upper_95')
+
+LTRE_mu <- rbind.data.frame(
+  mu_F1_mn,mu_F2_mn,mu_Sfj_w1_mn,mu_Sfj_w2_mn,mu_Sfj_h1_mn,mu_Sfj_h2_mn,mu_Sfa_w1_mn,mu_Sfa_w2_mn,mu_Sfa_h1_mn,mu_Sfa_h2_mn,mu_Sfj_s_mn,mu_Sfa_s_mn,mu_nf1_mn,mu_nf2_mn,mu_lamt_mn,
+  mu_Smj_w1_mn,mu_Smj_w2_mn,mu_Smj_h1_mn,mu_Smj_h2_mn,mu_Sma_w1_mn,mu_Sma_w2_mn,mu_Sma_h1_mn,mu_Sma_h2_mn,mu_mfj_s_mn,mu_mfa_s_mn,mu_mf1_mn,mu_mf2_mn)
+
+# need to add a row identifier
+LTRE_mu_cv <- left_join(LTRE_mu, LTRE_cv)
+write.csv(LTRE_mu_cv, file = 'mean_cv.csv')
+
