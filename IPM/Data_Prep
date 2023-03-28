@@ -1,0 +1,1269 @@
+rm(list=ls())
+library(nimble)
+library(dplyr)
+library(nimble)
+library(dplyr)
+library(boot)
+library(jagsUI)
+setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
+#------------------------------------------------------------------------------
+# Data manipulation of banding data 
+#------------------------------------------------------------------------------
+
+raw.band<-read.csv("NOPI_Releases_2022.csv")  #reading in CSV
+
+start <- 1961
+end  <- 2021
+########################################################################
+#cleaning data
+########################################################################
+
+#only use status 3 birds
+clean.re_ca <-subset(raw.band,Status==3)                #69,363 note:records refer to "count of birds" not n banded
+clean.re_ca$Count_of_Birds    <- as.numeric(clean.re_ca$Count_of_Birds   )
+
+#only use B.Year from 1961 onwards
+clean.re_ca<-subset(clean.re_ca,B_Year>= start)          #65,199 bandings 1951-present
+
+#remove unknown sex
+clean.re_ca<-subset(clean.re_ca,Sex!=0)                #64,649 records (418 excluded)
+
+#remove sex determined subsequent
+clean.re_ca<-subset(clean.re_ca,Sex!=6)                #64,644 records   #!remove (5) males from subs encounter
+clean.re_ca<-subset(clean.re_ca,Sex!=7)                #64,639 records   #!remove (5) females from subs encounter
+
+ak_yu <- c('Alaska','Yukon Territory')
+pac <- c('Oregon',  'Washington',   'California', 'Nevada', 'British Columbia')
+ppr <- c('North Dakota','Minnesota', 'Montana','South Dakota', 'Saskatchewan','Manitoba', 'Alberta')
+nor <- c('Ontario', 'Northwest Territories','Nunavut',  'Saskatchewan', 'Manitoba','Alberta','Quebec')
+eas <- c('Ontario', 'Quebec', 'Indiana', 'Wisconsin','Iowa', 'Ohio', 'New York', 'Maine', 'New Brunswick', 
+         'Newfoundland and Labrador and St. Pierre et Miquelon','Nova Scotia','Prince Edward Island',
+         'Pennsylvania', 'Connecticut', 'Illinois', 'Massachusetts', 'Rhode Island', 
+         'Vermont','Maryland','Delaware','New Jersey','Virginia', 'North Carolina','South Carolina')
+iwm <- c('Idaho','Colorado','Utah','Wyoming','Nebraska')
+cen  <- c('Texas', 'Mississippi', 'Kansas', 'Oklahoma', 'New Mexico', 'Louisiana')
+cen2 <- c('Texas', 'Mississippi', 'Kansas', 'Oklahoma', 'New Mexico', 'Louisiana','Michigan','Wisconsin', 'Nebraska',
+          'Colorado','Alabama','Missouri','Ohio','Iowa','Indiana','Illinois', 'Arkansas','Kentucky','Tennessee')
+pac2 <- c('Oregon',  'Washington',   'California', 'Nevada', 'British Columbia')
+
+
+library(see)
+library(ggplot2)
+
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+
+
+# ggplot() +
+#   geom_sf(data = states,) +
+#   coord_sf(xlim = c(-160, -70), ylim = c(25, 75), expand = FALSE)+
+#   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+#   #geom_point(data = subset(clean.re_ca, Breed_Group != 'nb'),aes( x = GISBLong, y = GISBLat, color = Breed_Group)) +
+#   theme_modern() + scale_fill_metro_d()
+# 
+
+
+#remove unknown Banding Flyway
+clean.re_ca<-subset(clean.re_ca,B_Flyway!=0)           # No one removed
+
+# Add Info include ==
+#0-Fed band, 4-control band, 14-oral swab, 16-trach swab, 18-blood sample, 70-spotlight capture
+clean.re_ca<-subset(clean.re_ca, Add_Info==0 | Add_Info==4 | Add_Info==6 |Add_Info==7 |
+                      Add_Info==8 | Add_Info==14 |Add_Info==15 | Add_Info==16 | 
+                      Add_Info==18 | Add_Info==19 | Add_Info==25 |
+                      Add_Info==39 | Add_Info==51 |
+                      Add_Info==70| Add_Info==71| Add_Info==89)
+
+# restrict B_Month 1 Jun-30 Sept
+clean.re_ca$Regime <- ifelse(clean.re_ca$B_Month==6|clean.re_ca$B_Month==7| clean.re_ca$B_Month==8| clean.re_ca$B_Month==9,"B",
+                             ifelse(clean.re_ca$B_Month==10| clean.re_ca$B_Month==11| clean.re_ca$B_Month==12,"F",
+                                    ifelse(clean.re_ca$B_Month==1| clean.re_ca$B_Month==2| clean.re_ca$B_Month==3,"W",'E'))) 
+
+clean.re_ca$Band_Group <- ifelse(clean.re_ca$B_Region_Verbal %in% ak_yu & clean.re_ca$Regime == 'B', 'ak',
+                                 ifelse(clean.re_ca$B_Region_Verbal%in%pac == TRUE & clean.re_ca$Regime == 'B' & clean.re_ca$B_Month == 9, 'pac',
+                                        ifelse(clean.re_ca$B_Region_Verbal%in%ppr == TRUE & clean.re_ca$Regime == 'B' & clean.re_ca$GISBLat < 53.75, 'ppr', 
+                                               ifelse(clean.re_ca$B_Region_Verbal%in%nor == TRUE & clean.re_ca$Regime == 'B' & clean.re_ca$GISBLat >= 53.75, 'nor',
+                                                      ifelse(clean.re_ca$B_Region_Verbal%in%iwm == TRUE & clean.re_ca$Regime == 'B' & clean.re_ca$B_Month == 9,'imw',
+                                                             ifelse(clean.re_ca$Regime == 'B', 'other-breeding',
+                                                                    ifelse(clean.re_ca$B_Region_Verbal%in%pac == TRUE & clean.re_ca$Regime == 'W',  'pc',
+                                                                           ifelse(clean.re_ca$B_Region_Verbal%in%cen == TRUE & clean.re_ca$Regime == 'W', 'ce','non-breeding' ))))))))
+#remove unknown age
+clean.re_ca<-subset(clean.re_ca,Age!=0)           #60,261 records #!remove 51 unknown age
+
+#Age class variable
+table(clean.re_ca$Age_Verbal)
+
+# create new variable, banding age: 0 = local, 1=juv, 2=adult (0 TY and ATY) 
+clean.re_ca$b_age   <- ifelse(clean.re_ca$Age_Verbal=="After Hatch Year", 2,
+                              ifelse(clean.re_ca$Age_Verbal=="After Second Year", 2,
+                                     ifelse(clean.re_ca$Age_Verbal=="After Third Year", 2,
+                                            ifelse(clean.re_ca$Age_Verbal=="Third Year", 2,
+                                                   ifelse(clean.re_ca$Age_Verbal=="Hatch Year", 1,
+                                                          ifelse(clean.re_ca$Age_Verbal=="Juvenile (obsolete)",1,
+                                                                 ifelse(clean.re_ca$Age_Verbal=="Local",1,
+                                                                        ifelse(clean.re_ca$Age_Verbal=="Second Year" & clean.re_ca$Regime == 'W',1, 2))))))))
+
+clean.re_ca <- subset(clean.re_ca, B_Flyway < 7)
+
+#------------------------------------------------------------------------------
+# Data manipulation of recovery data 
+#------------------------------------------------------------------------------
+raw.recovs<-read.csv("NOPI_Encounters_2022.csv")  #reading in CSV
+
+########################################################################
+#cleaning data
+########################################################################
+re_cai.recov <-subset(raw.recovs,Status==3 & B_Year>= start)              # 86,428
+
+# only use HSS != 0
+re_cai.recov <-subset(re_cai.recov, HSS >= 1)            
+# Exclude unlikely 99's
+
+re_cai.recov <- subset(re_cai.recov, HSS!= 99 | HSS== 99 & (R_Year - B_Year) < 20) 
+re_cai.recov <- subset(re_cai.recov, Band_Type != 98)
+
+#only use B.Year from 1951 onwards
+re_cai.recov<-subset(re_cai.recov,B_Year>=start)          # 82,107 
+nrow(re_cai.recov)
+#remove unknown sex
+re_cai.recov<-subset(re_cai.recov,Sex!=0)                # 81,350
+nrow(re_cai.recov)
+#remove sex determined subsequent
+re_cai.recov<-subset(re_cai.recov,Sex!=6)           # 81,345 records   #!remove (1) males from subs encounter
+re_cai.recov<-subset(re_cai.recov,Sex!=7)           # 81,339 records   #!remove (0) females from subs encounter
+re_cai.recov$Sex<-factor(re_cai.recov$Sex)
+
+#remove unknown Banding Flyway 0 and Central America 7
+re_cai.recov <- subset( re_cai.recov,  B_Flyway < 7)
+
+#remove Unknown Recov Flyway 0, Central America 7, South America 8, Caribbean 9
+re_cai.recov <- subset( re_cai.recov, R_Flyway < 7)
+re_cai.recov <-subset(re_cai.recov,!grepl('X',R_Flyway))
+re_cai.recov$R.Flyway<-factor(re_cai.recov$R_Flyway)
+table (re_cai.recov$R_Flyway_Verbal)
+nrow(re_cai.recov)
+
+re_cai.encounters          <- subset(re_cai.recov, How_Obt == 66 |How_Obt == 1)
+re_cai.encounters$Enc_Type <- ifelse(re_cai.encounters$How_Obt == 1, 'Shot', 'Recapture')
+
+# create new variable, banding age: 1=juv, 2=adult (0 TY and ATY) 
+re_cai.encounters$b_age[(re_cai.encounters$Age_Verbal=="After Hatch Year")] <- 2
+re_cai.encounters$b_age[(re_cai.encounters$Age_Verbal=="After Second Year")] <- 2
+re_cai.encounters$b_age[(re_cai.encounters$Age_Verbal=="Second Year")] <- 1
+re_cai.encounters$b_age[(re_cai.encounters$Age_Verbal=="Hatch Year")] <- 1
+re_cai.encounters$b_age[(re_cai.encounters$Age_Verbal=="Local")] <- 1
+
+# Add Info include ==
+#0-Fed band, 4-control band, 6- State/Prov Band, 7 - double marked, 8 - temp mark, 14-oral swab, 16-trach swab, 18-blood sample, 70-spotlight capture     
+re_cai.encounters<-subset(re_cai.encounters,Add_Info==0 | Add_Info==4 | Add_Info==6 |Add_Info==7 |
+                            Add_Info==8 | Add_Info==14 |Add_Info==15 | Add_Info==16 | 
+                            Add_Info==18 | Add_Info==19 | Add_Info==25 |
+                            Add_Info==39 | Add_Info==51 |
+                            Add_Info==70| Add_Info==71| Add_Info==89)   # 47317
+
+#create new variable 'n_recov' or 'n_recov'
+re_cai.encounters$Enc_Factor <- as.numeric(as.factor(re_cai.encounters$Enc_Type))
+
+# Verify Seasonality of banding-regime (Breeding, Winter, E (Early Season), F (Late Season)): currently not using E and F releases
+#restrict B.month 1 Jun-31 Aug
+re_cai.encounters$Regime <- ifelse(re_cai.encounters$B_Month==6| re_cai.encounters$B_Month==7| re_cai.encounters$B_Month==8| re_cai.encounters$B_Month==9,"B",
+                                   ifelse(re_cai.encounters$B_Month==10| re_cai.encounters$B_Month==11| re_cai.encounters$B_Month==12,"F",
+                                          ifelse(re_cai.encounters$B_Month==1| re_cai.encounters$B_Month==2| re_cai.encounters$B_Month==3,"W",'E'))) 
+
+re_cai.encounters$Band_Group <- ifelse(re_cai.encounters$B_Region_Verbal %in% ak_yu & re_cai.encounters$Regime == 'B', 'ak',
+                                 ifelse(re_cai.encounters$B_Region_Verbal%in%pac == TRUE & re_cai.encounters$Regime == 'B' & re_cai.encounters$B_Month == 9, 'pac',
+                                        ifelse(re_cai.encounters$B_Region_Verbal%in%ppr == TRUE & re_cai.encounters$Regime == 'B' & re_cai.encounters$GISBLat < 53.75, 'ppr', 
+                                               ifelse(re_cai.encounters$B_Region_Verbal%in%nor == TRUE & re_cai.encounters$Regime == 'B' & re_cai.encounters$GISBLat >= 53.75, 'nor',
+                                                      ifelse(re_cai.encounters$B_Region_Verbal%in%iwm == TRUE & re_cai.encounters$Regime == 'B' & re_cai.encounters$B_Month == 9,'imw',
+                                                             ifelse(re_cai.encounters$Regime == 'B', 'other-breeding',
+                                                                    ifelse(re_cai.encounters$B_Region_Verbal%in%pac == TRUE & re_cai.encounters$Regime == 'W',  'pc',
+                                                                           ifelse(re_cai.encounters$B_Region_Verbal%in%cen == TRUE & re_cai.encounters$Regime == 'W', 'ce','non-breeding' ))))))))
+
+re_cai.encounters$Rec.Regime <- ifelse(re_cai.encounters$R_Month==6| re_cai.encounters$R_Month==7| re_cai.encounters$R_Month==8| re_cai.encounters$R_Month==9,"B",
+                                       ifelse(re_cai.encounters$R_Month==10| re_cai.encounters$R_Month==11| re_cai.encounters$R_Month==12,"F",
+                                              ifelse(re_cai.encounters$R_Month==1| re_cai.encounters$R_Month==2| re_cai.encounters$R_Month==3,"W",'E'))) 
+
+re_cai.encounters$Encounter_Group <- ifelse(re_cai.encounters$R_Region_Verbal %in% ak_yu & re_cai.encounters$Rec.Regime == 'B', 'ak',
+                                          ifelse(re_cai.encounters$R_Region_Verbal%in%pac == TRUE & re_cai.encounters$Rec.Regime == 'B' & re_cai.encounters$B_Month == 9, 'pac',
+                                                 ifelse(re_cai.encounters$R_Region_Verbal%in%ppr == TRUE & re_cai.encounters$Rec.Regime == 'B' & re_cai.encounters$GISBLat < 53.75, 'ppr', 
+                                                        ifelse(re_cai.encounters$R_Region_Verbal%in%nor == TRUE & re_cai.encounters$Rec.Regime == 'B' & re_cai.encounters$GISBLat >= 53.75, 'nor',
+                                                               ifelse(re_cai.encounters$R_Region_Verbal%in%iwm == TRUE & re_cai.encounters$Rec.Regime == 'B' & re_cai.encounters$B_Month == 9,'imw',
+                                                                      ifelse(re_cai.encounters$Rec.Regime == 'B', 'other-breeding',
+                                                                             ifelse(re_cai.encounters$R_Region_Verbal%in%pac2 == TRUE & re_cai.encounters$Rec.Regime == 'W',  'pc',
+                                                                                    ifelse(re_cai.encounters$R_Region_Verbal%in%cen2 == TRUE & re_cai.encounters$Rec.Regime == 'W', 'ce','non-breeding' ))))))))
+
+re_cai.encounters$b_age   <- ifelse(re_cai.encounters$Age_Verbal=="After Hatch Year", 2,
+                                    ifelse(re_cai.encounters$Age_Verbal=="After Second Year", 2,
+                                           ifelse(re_cai.encounters$Age_Verbal=="After Third Year", 2,
+                                                  ifelse(re_cai.encounters$Age_Verbal=="Third Year", 2,
+                                                         ifelse(re_cai.encounters$Age_Verbal=="Hatch Year", 1,
+                                                                ifelse(re_cai.encounters$Age_Verbal=="Juvenile (obsolete)",1,
+                                                                       ifelse(re_cai.encounters$Age_Verbal=="Local",1,
+                                                                              ifelse(re_cai.encounters$Age_Verbal=="Second Year" & re_cai.encounters$Regime == 'W',1, 2))))))))
+
+re_cai.encounters$keep <- ifelse(re_cai.encounters$R_Month == 82 | re_cai.encounters$R_Month == 83,0,
+                                 ifelse(re_cai.encounters$Enc_Type == 'Recapture' & re_cai.encounters$R_Month > 5 & re_cai.encounters$R_Month <=9, 1, 
+                                        ifelse(re_cai.encounters$Enc_Type == 'Recapture' &  re_cai.encounters$R_Month <=3 & re_cai.encounters$Encounter_Group == 'pc', 1, 
+                                               ifelse(re_cai.encounters$Enc_Type == 'Recapture' &  re_cai.encounters$R_Month <=3 & re_cai.encounters$Encounter_Group == 'ce', 1, 
+                                                      ifelse(re_cai.encounters$Enc_Type == 'Shot' & re_cai.encounters$R_Month >= 9 | re_cai.encounters$Enc_Type == 'Shot' & re_cai.encounters$R_Month ==1,1,0)))))
+
+
+
+#restrict R.month 1 Sep -31 Jan,  Fall 93, Winter 92, Hunting Season 94   #14,172
+re_cai.encounters <-subset(re_cai.encounters,keep == 1) 
+
+#remove unknown age
+re_cai.encounters<-subset(re_cai.encounters,Age!=0 & re_cai.encounters != 99)        
+
+re_cai.encounters$Rec_Year <- ifelse(re_cai.encounters$Regime != 'W' & re_cai.encounters$R_Month < 4, re_cai.encounters$R_Year - 1, 
+                                    ifelse(re_cai.encounters$Regime != 'W' &  re_cai.encounters$R_Month == 83,  re_cai.encounters$R_Year - 1, 
+                                           ifelse(re_cai.encounters$Regime == 'W' & re_cai.encounters$B_Year - re_cai.encounters$R_Year > 0 & re_cai.encounters$R_Month < 4, re_cai.encounters$R_Year - 1, re_cai.encounters$R_Year)))
+                                     
+clean.re_ca_sub       <- clean.re_ca
+re_cai.encounters_sub <- subset(re_cai.encounters, Rec_Year - B_Year >= 0)
+
+clean.re_ca_sub$sex    <- recode(clean.re_ca_sub$Sex_Verbal, "Female" = 1, 'Male' = 2)
+clean.re_ca_sub$age    <- clean.re_ca_sub$b_age
+
+clean_releases_b <- clean.re_ca_sub %>%
+  subset(Regime == "B" & Band_Group != 'other-breeding') %>%
+  subset(B_Year >= start & B_Year <= end) %>%
+  group_by(sex,age,Band_Group) %>% #TYPE
+  group_split()
+
+clean_releases_w <-  clean.re_ca_sub %>%
+  subset(Regime == "W" & Band_Group != 'non-breeding') %>%
+  subset(B_Year >= start+1& B_Year <= end) %>%
+  group_by(sex,Band_Group) %>% #,age) %>% #TYPE, #WFLY
+  group_split()
+
+n.years <- end - start
+
+re_cai.encounters_sub <- subset(re_cai.encounters_sub, Rec_Year < (end+1))
+re_cai.encounters_sub <- subset(re_cai.encounters_sub, Rec_Year != (B_Year - 1))
+
+library(geosphere)
+re_cai.encounters_sub$sex    <- recode(re_cai.encounters_sub$Sex_Verbal, "Female" = 1, 'Male' = 2)
+re_cai.encounters_sub$age    <- re_cai.encounters_sub$b_age
+re_cai.encounters_sub$Bearing <- ifelse(re_cai.encounters_sub$Rec_Year - re_cai.encounters_sub$B_Year == 0,  (bearing(re_cai.encounters_sub[,c('GISBLong','GISBLat')], re_cai.encounters_sub[,c('GISRLong','GISRLat')], f = 0)+360) %%360, 'indirect')
+
+mw_mig <- c('Arizona','Utah','Idaho','Wyoming','Montana','Alberta')
+pr_mig <- c('Manitoba','Saskatchewan','North Dakota','South Dakota','Minnesota')
+re_cai.encounters_sub$Encounter_Group2 <- ifelse(re_cai.encounters_sub$Enc_Type == 'Recapture' & re_cai.encounters_sub$Encounter_Group == 'ak', 'ak',
+                                               ifelse(re_cai.encounters_sub$Enc_Type == 'Recapture' & re_cai.encounters_sub$Encounter_Group == 'nor', 'nor',
+                                                      ifelse(re_cai.encounters_sub$Enc_Type == 'Recapture' & re_cai.encounters_sub$Encounter_Group == 'ppr', 'ppr',
+                                                             ifelse(re_cai.encounters_sub$Enc_Type == 'Recapture' & re_cai.encounters_sub$Encounter_Group == 'pc', 'pc',
+                                                                    ifelse(re_cai.encounters_sub$Enc_Type == 'Recapture' & re_cai.encounters_sub$Encounter_Group == 'ce', 'ce',
+                                                                        ifelse(re_cai.encounters_sub$Enc_Type == 'Recapture', 'Other_Recapture',
+                                                                            ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' & re_cai.encounters_sub$R_Region_Verbal%in%pac2 == TRUE,  'Pacific',
+                                                                                    ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' & re_cai.encounters_sub$R_Region_Verbal%in%cen2 == TRUE, 'Central',
+                                                                                           ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' &  re_cai.encounters_sub$R_Region_Verbal%in%mw_mig == TRUE & re_cai.encounters_sub$Bearing > 180 & re_cai.encounters_sub$Bearing <= 270, 'Pacific',
+                                                                                                  ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' &  re_cai.encounters_sub$R_Region_Verbal%in%mw_mig == TRUE & re_cai.encounters_sub$Bearing <= 180 & re_cai.encounters_sub$Bearing >= 90, 'Central',
+                                                                                                         ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' &  re_cai.encounters_sub$R_Region_Verbal%in%pr_mig == TRUE & re_cai.encounters_sub$Bearing > 180  & re_cai.encounters_sub$Bearing <= 270, 'Pacific',
+                                                                                                                ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' &  re_cai.encounters_sub$R_Region_Verbal%in%pr_mig == TRUE & re_cai.encounters_sub$Bearing <= 180 & re_cai.encounters_sub$Bearing >= 90, 'Central',
+                                                                                                                       ifelse(re_cai.encounters_sub$Enc_Type == 'Shot' & re_cai.encounters_sub$Bearing == 'indirect', 'Other Shot','Other Shot' )))))))))))))
+
+
+
+re_cai.encounters_plot <- subset(re_cai.encounters_sub, Enc_Type  == 'Shot' & Band_Group == 'ppr' | Enc_Type  == 'Shot' & Band_Group == 'nor'| Enc_Type  == 'Shot' & Band_Group == 'ak')
+
+
+#re_cai.encounters_plot <- subset(re_cai.encounters_plot, Non_Breeding_Region != 'During Migration')
+re_cai.encounters_plot <- re_cai.encounters_plot[complete.cases(re_cai.encounters_plot$GISRLat),]
+
+re_cai.encounters_plot$Connection <- paste(re_cai.encounters_plot$Non_Breeding_Region, 'from', re_cai.encounters_plot$Breeding_Region, sep = ' ')
+# library("rnaturalearth")
+# library("rnaturalearthdata")
+# 
+# states <- ne_states(returnclass = "sf")
+# states <- subset(states, admin == 'Canada'| admin == 'United States of America')
+# 
+# ggplot() +
+#   geom_sf(data = states) +
+#   coord_sf(xlim = c(-160, -60), ylim = c(25, 75), expand = FALSE)+
+#   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+#   # geom_segment(data =   re_cai.encounters_plot, aes( y= GISBLat, x=GISBLong,yend =GISRLat, xend= GISRLong, color = Connection  ), alpha = .5,
+#   #              arrow = arrow(length = unit(0.25, "cm"))) +
+#   geom_point(data =  re_cai.encounters_plot, aes( y= GISRLat, x=GISRLong, fill = Encounter_Group2), shape = 21)+
+#   labs(x = 'Longitude', y = 'Latitude', fill = 'Breeding Region', color = 'Migratory Pathway') + guides(fill = "none") +
+#   theme_modern(legend.position = 'top') + scale_fill_metro_d()
+# 
+
+# library(see)
+# library(ggplot2)
+# 
+# library("rnaturalearth")
+# library("rnaturalearthdata")
+# 
+# states <- ne_states(returnclass = "sf")
+# states <- subset(states, admin == 'Canada'| admin == 'United States of America')
+# 
+# band_recoveries_plot <- subset(re_cai.encounters_sub, Enc_Type == 'Shot')
+# band_recoveries_plot_1 <- subset(band_recoveries_plot, Band_Group == 'ak' | Band_Group =='nor'|Band_Group == 'ppr')
+# band_recoveries_plot_2 <- subset(band_recoveries_plot, Band_Group == 'imw' |Band_Group == 'pac')
+# band_recoveries_plot_3 <- subset(band_recoveries_plot, Band_Group == 'ce' |Band_Group == 'pc')
+# 
+# pin_plot <- ggplot() +
+#             geom_sf(data = states,) + labs(y ='', x = '') +
+#             geom_point(data =  band_recoveries_plot_1, aes( y= GISBLat, x=GISBLong, color = Band_Group)) + 
+#             stat_density_2d(data =  band_recoveries_plot_1, aes( y= GISRLat, x=GISRLong,fill = ..level..), geom = "polygon", colour="black") +
+#             facet_wrap(~Band_Group, ncol = 3) +  theme_modern(legend.position = 'none', base_size = 22) + scale_fill_metro_c() + scale_color_metro_d() + 
+#             coord_sf(xlim = c(-160, -60), ylim = c(25, 70), expand = FALSE) 
+# pin_plot
+# 
+# 
+# 
+# pin_plot2 <- ggplot() +
+#   geom_sf(data = states) + labs(y ='', x = '') +
+#   geom_point(data =  band_recoveries_plot_2, aes( y= GISBLat, x=GISBLong, color = Band_Group)) + 
+#   geom_segment(data =    band_recoveries_plot_2, aes( y= GISBLat, x=GISBLong,yend =GISRLat, xend= GISRLong, color = Band_Group  ),  alpha = .5,
+#                arrow = arrow(length = unit(0.25, "cm"))) +
+#   facet_wrap(~Band_Group, ncol = 3) +  theme_modern(legend.position = 'none', base_size = 22) + scale_fill_metro_c() + scale_color_metro_d() + 
+#   coord_sf(xlim = c(-160, -60), ylim = c(25, 70), expand = FALSE) 
+# pin_plot2
+# 
+# 
+# pin_plot3 <- ggplot() +
+#   geom_sf(data = states) + labs(y ='', x = '') +
+#   geom_point(data =  band_recoveries_plot_3, aes( y= GISBLat, x=GISBLong, color = Band_Group)) + 
+#   geom_segment(data =   band_recoveries_plot_3, aes( y= GISBLat, x=GISBLong,yend =GISRLat, xend= GISRLong, color = Band_Group  ), alpha = .5,
+#                arrow = arrow(length = unit(0.25, "cm"))) +
+#   facet_wrap(~Band_Group, ncol = 3) +  theme_modern(legend.position = 'none', base_size = 22) + scale_fill_metro_c() + scale_color_metro_d() + 
+#   coord_sf(xlim = c(-160, -60), ylim = c(25, 70), expand = FALSE) 
+# pin_plot3
+# 
+# 
+# ggsave(pin_plot2, file = 'pin_plot2.jpg', height = 12, width = 12, dpi = 320)
+# ggsave(pin_plot3, file = 'pin_plot3.jpg', height = 12, width = 12, dpi = 320)
+# 
+# 
+# thetas <- cbind.data.frame(harvest = thetas$theta.harv[1:61], production = thetas$theta.prod[1:61],summer =  thetas$theta.summ[1:61], winter = thetas$theta.wint[1:61])
+# 
+#   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+#   # geom_segment(data =   band_recoveries_plot_1, aes( y= GISBLat, x=GISBLong,yend =GISRLat, xend= GISRLong, color = Band_Group  ), alpha = .5,
+#   #              arrow = arrow(length = unit(0.25, "cm"))) +
+#  # geom_point(data =  band_recoveries_plot_1, aes( y= GISBLat, x=GISBLong, fill = Band_Group), size = 3,shape = 21)+
+#   # geom_point(data =  band_recoveries_plot_1, aes( y= GISRLat, x=GISRLong, fill = Band_Group), size = 3,shape = 21)+
+# 
+#   labs(x = 'Longitude', y = 'Latitude', fill = 'Breeding Region', color = 'Migratory Pathway') + guides(fill = "none") +
+#   theme_modern(legend.position = 'top') + scale_fill_metro_c()
+# pin_plot
+# 
+# ggsave(red_plot, file = 'red_plot.jpg', dpi = 640, height = 9, width = 9)
+
+
+releases <- clean.re_ca_sub %>%
+      subset(Regime == "B" & Band_Group != 'other-breeding') %>%
+      subset(B_Year >= start & B_Year <= end) %>%
+      group_by(sex,age,Band_Group,B_Year) %>% #TYPE
+      summarize_at('Count_of_Birds', sum)
+
+band_released <- re_cai.encounters_sub[,c('Band','B_Year','Band_Group','Regime', 'sex', 'age')]
+
+band_breed <- subset(band_released, Band_Group != 'non-breeding' & Band_Group != 'other-breeding' & Band_Group != 'pc' & Band_Group != 'ce')
+band_breed <- band_breed %>% distinct()
+
+band_breed$State <- ifelse(band_breed$Band_Group == 'ak', 1, 
+                           ifelse(band_breed$Band_Group == 'nor', 2, 
+                                  ifelse(band_breed$Band_Group == 'ppr', 3,
+                                         ifelse(band_breed$Band_Group == 'pac', 8,7))))
+
+band_encounters <- subset(re_cai.encounters_sub, Band %in% band_breed$Band)
+band_recoveries <- subset(band_encounters, Enc_Type == 'Shot')
+
+band_recoveries <- band_recoveries[,c('Band','Rec_Year','Encounter_Group2','age','sex')]
+band_recoveries$State <- ifelse(band_recoveries$Encounter_Group2 == 'Pacific', 5, 
+                                ifelse(band_recoveries$Encounter_Group2 == 'Central', 4, 6)) 
+
+band_recaps <- subset(band_encounters, Enc_Type != 'Shot' & Rec_Year - B_Year >= 0)
+band_recaps <- band_recaps[,c('Band','Rec_Year','Encounter_Group2','age','sex')]
+band_recaps$State <- ifelse(band_recaps$Encounter_Group2 == 'ak', 1, 
+                            ifelse(band_recaps$Encounter_Group2 == 'nor', 2,
+                                   ifelse(band_recaps$Encounter_Group2 == 'ppr', 3,9))) 
+
+band_1  <- subset(band_breed, State == 1)
+band_2  <- subset(band_breed, State == 2)
+band_3  <- subset(band_breed, State == 3)
+band_4  <- subset(band_breed, State == 7)
+band_5  <- subset(band_breed, State == 8)
+
+recov_1 <- subset(band_recoveries, Band %in%band_1$Band)
+recov_2 <- subset(band_recoveries, Band %in%band_2$Band)
+recov_3 <- subset(band_recoveries, Band %in%band_3$Band)
+recov_4 <- subset(band_recoveries, Band %in%band_4$Band)
+recov_5 <- subset(band_recoveries, Band %in%band_5$Band)
+
+recap_1 <- subset(band_recaps, Band %in%band_1$Band & State != 9)
+recap_2 <- subset(band_recaps, Band %in%band_2$Band & State != 9)
+recap_3 <- subset(band_recaps, Band %in%band_3$Band & State != 9)
+
+ch_df_1 <- rbind.data.frame(cbind.data.frame(Band = band_1$Band, Year = band_1$B_Year, Sex= band_1$sex, Age = band_1$age, State = band_1$State),
+                            cbind.data.frame(Band = recov_1$Band, Year = recov_1$Rec_Year +1, Sex= recov_1$sex, Age = recov_1$age, State = recov_1$State),
+                            cbind.data.frame(Band = recap_1$Band, Year = recap_1$Rec_Year +1, Sex= recap_1$sex, Age = recap_1$age, State = recap_1$State))
+ch_df_2 <- rbind.data.frame(cbind.data.frame(Band = band_2$Band, Year = band_2$B_Year, Sex= band_2$sex, Age = band_2$age, State = band_2$State),
+                            cbind.data.frame(Band = recov_2$Band, Year = recov_2$Rec_Year +1, Sex= recov_2$sex, Age = recov_2$age, State = recov_2$State),
+                            cbind.data.frame(Band = recap_2$Band, Year = recap_2$Rec_Year +1, Sex= recap_2$sex, Age = recap_2$age, State = recap_2$State))
+ch_df_3 <- rbind.data.frame(cbind.data.frame(Band = band_3$Band, Year = band_3$B_Year, Sex= band_3$sex, Age = band_3$age, State = band_3$State),
+                            cbind.data.frame(Band = recov_3$Band, Year = recov_3$Rec_Year +1, Sex= recov_3$sex, Age = recov_3$age, State = recov_3$State),
+                            cbind.data.frame(Band = recap_3$Band, Year = recap_3$Rec_Year +1, Sex= recap_3$sex, Age = recap_3$age, State = recap_3$State))
+ch_df_4 <- rbind.data.frame(cbind.data.frame(Band = band_4$Band, Year = band_4$B_Year, Sex= band_4$sex, Age = band_4$age, State = band_4$State),
+                            cbind.data.frame(Band = recov_4$Band, Year = recov_4$Rec_Year +1, Sex= recov_4$sex, Age = recov_4$age, State = recov_4$State))
+ch_df_5 <- rbind.data.frame(cbind.data.frame(Band = band_5$Band, Year = band_5$B_Year, Sex= band_5$sex, Age = band_5$age, State = band_5$State),
+                            cbind.data.frame(Band = recov_5$Band, Year = recov_5$Rec_Year +1, Sex= recov_5$sex, Age = recov_5$age, State = recov_5$State))
+
+
+t_ak <- subset(releases, Band_Group == 'ak')
+t_ak <- cbind.data.frame(Sex = t_ak$sex, Age = t_ak$age, Year = t_ak$B_Year, Total = t_ak$Count_of_Birds)
+f_ak <- ch_df_1 %>% group_by(Band,Sex,Age) %>%summarise_at('Year',min) %>% group_by(Sex,Age,Year) %>% summarise( n= n_distinct(Band))
+tf_ak <- left_join(t_ak, f_ak)
+tf_ak$n[is.na(tf_ak$n)] <- 0
+tf_ak$not_seen <- tf_ak$Total - tf_ak$n
+
+t_nor <- subset(releases, Band_Group == 'nor')
+t_nor <- cbind.data.frame(Sex = t_nor$sex, Age = t_nor$age, Year = t_nor$B_Year, Total = t_nor$Count_of_Birds)
+f_nor <- ch_df_2 %>% group_by(Band,Sex,Age) %>%summarise_at('Year',min) %>% group_by(Sex,Age,Year)%>% summarise( n= n_distinct(Band))
+tf_nor <- left_join(t_nor, f_nor)
+tf_nor$n[is.na(tf_nor$n)] <- 0
+tf_nor$not_seen <- tf_nor$Total - tf_nor$n
+
+t_pr <- subset(releases, Band_Group == 'ppr')
+t_pr <- cbind.data.frame(Sex = t_pr$sex, Age = t_pr$age, Year = t_pr$B_Year, Total = t_pr$Count_of_Birds)
+f_pr <- ch_df_3 %>% group_by(Band,Sex,Age) %>%summarise_at('Year',min) %>% group_by(Sex,Age,Year) %>% summarise( n= n_distinct(Band))
+tf_pr <- left_join(t_pr, f_pr)
+tf_pr$n[is.na(tf_pr$n)] <- 0
+tf_pr$not_seen <- tf_pr$Total - tf_pr$n
+
+t_imw <- subset(releases, Band_Group == 'imw')
+t_imw <- cbind.data.frame(Sex = t_imw$sex, Age = t_imw$age, Year = t_imw$B_Year, Total = t_imw$Count_of_Birds)
+f_imw <- ch_df_4 %>% group_by(Band,Sex,Age) %>%summarise_at('Year',min) %>% group_by(Sex,Age,Year) %>% summarise( n= n_distinct(Band))
+tf_imw <- left_join(t_imw, f_imw)
+tf_imw$n[is.na(tf_imw$n)] <- 0
+tf_imw$not_seen <- tf_imw$Total - tf_imw$n
+
+t_pac <- subset(releases, Band_Group == 'pac')
+t_pac <- cbind.data.frame(Sex = t_pac$sex, Age = t_pac$age, Year = t_pac$B_Year, Total = t_pac$Count_of_Birds)
+f_pac <- ch_df_5 %>% group_by(Band,Sex,Age) %>%summarise_at('Year',min) %>% group_by(Sex,Age,Year) %>% summarise( n= n_distinct(Band))
+tf_pac <- left_join(t_pac, f_pac)
+tf_pac$n[is.na(tf_pac$n)] <- 0
+tf_pac$not_seen <- tf_pac$Total - tf_pac$n
+
+
+Band_ID_1 <- paste(rep(paste(tf_ak$Sex,tf_ak$Age,tf_ak$Year,sep =''),tf_ak$not_seen), 1:sum(tf_ak$not_seen),0,0,0,sep = '')
+ch_df_1_no <- cbind.data.frame(Band = as.numeric(Band_ID_1), Year = as.numeric(substring(Band_ID_1, 3, 6)), Sex = as.numeric(substring(Band_ID_1, 1, 1)), 
+                               Age = as.numeric(substring(Band_ID_1, 2, 2)), State = 1)
+ch_df_1_total <- rbind.data.frame(ch_df_1,ch_df_1_no )
+
+Band_ID_2 <- paste(rep(paste(tf_nor$Sex,tf_nor$Age,tf_nor$Year,sep =''),tf_nor$not_seen), 1:sum(tf_nor$not_seen),0,0,0,sep = '')
+ch_df_2_no <- cbind.data.frame(Band = as.numeric(Band_ID_2), Year = as.numeric(substring(Band_ID_2, 3, 6)), Sex = as.numeric(substring(Band_ID_2, 1, 1)),
+                               Age = as.numeric(substring(Band_ID_2, 2, 2)), State = 2)
+ch_df_2_total <- rbind.data.frame(ch_df_2,ch_df_2_no )
+
+Band_ID_3 <- paste(rep(paste(tf_pr$Sex,tf_pr$Age,tf_pr$Year,sep =''),tf_pr$not_seen), 1:sum(tf_pr$not_seen),0,0,0,sep = '')
+ch_df_3_no <- cbind.data.frame(Band = as.numeric(Band_ID_3), Year = as.numeric(substring(Band_ID_3, 3, 6)), Sex = as.numeric(substring(Band_ID_3, 1, 1)),
+                               Age = as.numeric(substring(Band_ID_3, 2, 2)), State = 3)
+ch_df_3_total <- rbind.data.frame(ch_df_3,ch_df_3_no )
+
+Band_ID_4 <- paste(rep(paste(tf_imw$Sex,tf_imw$Age,tf_imw$Year,sep =''),tf_imw$not_seen), 1:sum(tf_imw$not_seen),0,0,0,sep = '')
+ch_df_4_no <- cbind.data.frame(Band = as.numeric(Band_ID_4), Year = as.numeric(substring(Band_ID_4, 3, 6)), Sex = as.numeric(substring(Band_ID_4, 1, 1)),
+                               Age = as.numeric(substring(Band_ID_4, 2, 2)), State = 4)
+ch_df_4$State[ch_df_4$State == 7] <- 1
+ch_df_4_total <- rbind.data.frame(ch_df_4,ch_df_4_no )
+
+ch_df_4_total <- rbind.data.frame(ch_df_4_total, cbind.data.frame(Band = c(1,2,3,4), Year = c(2004,2004,2004,2004), Sex = c(1,1,2,2), Age = c(1,2,1,2), State = c(0,0,0,0)))
+
+Band_ID_5 <- paste(rep(paste(tf_pac$Sex,tf_pac$Age,tf_pac$Year,sep =''),tf_pac$not_seen), 1:sum(tf_pac$not_seen),0,0,0,sep = '')
+ch_df_5_no <- cbind.data.frame(Band = as.numeric(Band_ID_5), Year = as.numeric(substring(Band_ID_5, 3, 6)), Sex = as.numeric(substring(Band_ID_5, 1, 1)), 
+                               Age = as.numeric(substring(Band_ID_5, 2, 2)), State = 5)
+ch_df_5$State[ch_df_5$State == 8] <- 1
+ch_df_5_total <- rbind.data.frame(ch_df_5,ch_df_5_no )
+
+
+library(tidyr)
+capt.hist_1 <- ch_df_1_total  %>%distinct() %>% group_by( Band, Year, Sex, Age) %>%  filter(State == max(State)) %>% spread(Year, State, fill = 0) %>% group_by(Band)
+capt.hist_2 <- ch_df_2_total  %>%distinct() %>% group_by( Band, Year, Sex, Age) %>%  filter(State == max(State)) %>% spread(Year, State, fill = 0) %>% group_by(Band)
+capt.hist_3 <- ch_df_3_total  %>%distinct() %>% group_by( Band, Year, Sex, Age) %>%  filter(State == max(State)) %>% spread(Year, State, fill = 0) %>% group_by(Band)
+capt.hist_4 <- ch_df_4_total  %>%distinct() %>% group_by( Band, Year, Sex, Age) %>%  filter(State == max(State)) %>% spread(Year, State, fill = 0) %>% group_by(Band)
+capt.hist_5 <- ch_df_5_total  %>%distinct() %>% group_by( Band, Year, Sex, Age) %>%  filter(State == max(State)) %>% spread(Year, State, fill = 0) %>% group_by(Band)
+
+library(IPMbook)
+
+capt.hist_ak_hy_f <- data.matrix(subset(capt.hist_1, Age == 1 & Sex == 1))
+capt.hist_ak_hy_m <- data.matrix(subset(capt.hist_1, Age == 1 & Sex == 2))
+capt.hist_ak_ad_f <- data.matrix(subset(capt.hist_1, Age == 2 & Sex == 1))
+capt.hist_ak_ad_m <- data.matrix(subset(capt.hist_1, Age == 2 & Sex == 2))
+
+ch_ak_hy_f <- marray(capt.hist_ak_hy_f[,-c(1:3)], unobs = 1)
+ch_ak_hy_m <- marray(capt.hist_ak_hy_m[,-c(1:3)], unobs = 1)
+ch_ak_ad_f <- marray(capt.hist_ak_ad_f[,-c(1:3)], unobs = 1)
+ch_ak_ad_m <- marray(capt.hist_ak_ad_m[,-c(1:3)], unobs = 1)
+
+library(abind)
+marr_ak <- abind(ch_ak_hy_f,ch_ak_hy_m,ch_ak_ad_f,ch_ak_ad_m, along = 3)
+
+capt.hist_nor_hy_f <- data.matrix(subset(capt.hist_2, Age == 1 & Sex == 1))
+capt.hist_nor_hy_m <- data.matrix(subset(capt.hist_2, Age == 1 & Sex == 2))
+capt.hist_nor_ad_f <- data.matrix(subset(capt.hist_2, Age == 2 & Sex == 1))
+capt.hist_nor_ad_m <- data.matrix(subset(capt.hist_2, Age == 2 & Sex == 2))
+
+ch_nor_hy_f <- marray(capt.hist_nor_hy_f[,-c(1:3)], unobs = 2)
+ch_nor_hy_m <- marray(capt.hist_nor_hy_m[,-c(1:3)], unobs = 1)
+ch_nor_ad_f <- marray(capt.hist_nor_ad_f[,-c(1:3)], unobs = 1)
+ch_nor_ad_m <- marray(capt.hist_nor_ad_m[,-c(1:3)], unobs = 1)
+
+marr_nor <- abind(ch_nor_hy_f,ch_nor_hy_m,ch_nor_ad_f,ch_nor_ad_m, along = 3)
+
+capt.hist_pr_hy_f <- data.matrix(subset(capt.hist_3, Age == 1 & Sex == 1))
+capt.hist_pr_hy_m <- data.matrix(subset(capt.hist_3, Age == 1 & Sex == 2))
+capt.hist_pr_ad_f <- data.matrix(subset(capt.hist_3, Age == 2 & Sex == 1))
+capt.hist_pr_ad_m <- data.matrix(subset(capt.hist_3, Age == 2 & Sex == 2))
+
+ch_pr_hy_f <- marray(capt.hist_pr_hy_f[,-c(1:3)], unobs = 1)
+ch_pr_hy_m <- marray(capt.hist_pr_hy_m[,-c(1:3)], unobs = 1)
+ch_pr_ad_f <- marray(capt.hist_pr_ad_f[,-c(1:3)], unobs = 1)
+ch_pr_ad_m <- marray(capt.hist_pr_ad_m[,-c(1:3)], unobs = 1)
+
+marr_pr <- abind(ch_pr_hy_f,ch_pr_hy_m,ch_pr_ad_f,ch_pr_ad_m, along = 3)
+
+capt.hist_imw_hy_f <- data.matrix(subset(capt.hist_4, Age == 1 & Sex == 1))
+capt.hist_imw_hy_m <- data.matrix(subset(capt.hist_4, Age == 1 & Sex == 2))
+capt.hist_imw_ad_f <- data.matrix(subset(capt.hist_4, Age == 2 & Sex == 1))
+capt.hist_imw_ad_m <- data.matrix(subset(capt.hist_4, Age == 2 & Sex == 2))
+
+ch_imw_hy_f <- marray(capt.hist_imw_hy_f[,-c(1:3)], unobs = 2)
+ch_imw_hy_m <- marray(capt.hist_imw_hy_m[,-c(1:3)], unobs = 2)
+ch_imw_ad_f <- marray(capt.hist_imw_ad_f[,-c(1:3)], unobs = 2)
+ch_imw_ad_m <- marray(capt.hist_imw_ad_m[,-c(1:3)], unobs = 2)
+
+marr_imw <- abind(ch_imw_hy_f,ch_imw_hy_m,ch_imw_ad_f,ch_imw_ad_m, along = 3)
+
+capt.hist_pac_hy_f <- data.matrix(subset(capt.hist_5, Age == 1 & Sex == 1))
+capt.hist_pac_hy_m <- data.matrix(subset(capt.hist_5, Age == 1 & Sex == 2))
+capt.hist_pac_ad_f <- data.matrix(subset(capt.hist_5, Age == 2 & Sex == 1))
+capt.hist_pac_ad_m <- data.matrix(subset(capt.hist_5, Age == 2 & Sex == 2))
+
+ch_pac_hy_f <- marray(capt.hist_pac_hy_f[,-c(1:3)], unobs = 2)
+ch_pac_hy_m <- marray(capt.hist_pac_hy_m[,-c(1:3)], unobs = 2)
+ch_pac_ad_f <- marray(capt.hist_pac_ad_f[,-c(1:3)], unobs = 2)
+ch_pac_ad_m <- marray(capt.hist_pac_ad_m[,-c(1:3)], unobs = 2)
+
+marr_pac <- abind(ch_pac_hy_f,ch_pac_hy_m,ch_pac_ad_f,ch_pac_ad_m, along = 3)
+
+marr_total <- abind(marr_ak, marr_nor, marr_pr, marr_imw, marr_pac, along = 0)
+
+marr_con <- array(NA, dim = c(5,61,367,4))
+
+conc <- seq(from = 6, to = 366, by =6)
+
+for(i in 1:dim(marr_con)[1]){
+  for(j in 1:dim(marr_con)[2]){
+    for(k in 1:dim(marr_con)[3]){
+      for(l in 1:dim(marr_con)[4]){
+        marr_con[i,j,k,l] <- sum(marr_total[i,(conc[j]-5):conc[j],k,l])
+      }
+    }
+  }
+}
+
+years_all <- start:end
+nyear_all <- length(years_all)
+areas  <- c('AK', 'NH', 'PR')
+winter <- c('CE','PC','EW')
+narea <- length(areas)
+nwinter <- length(winter)
+cohos <- c('af', 'am', 'jf', 'jm')
+ncoho <- length(cohos)
+cut <- 15
+nyear <- 61 # 20 for test, 59 for all
+years <- years_all[(nyear_all-nyear+1):nyear_all]
+nyear_use <- cut # number of years used in M-array
+
+dimnames(marr_con)[[1]] <- c('AK','NH','PR','IMW','PAC')
+dimnames(marr_con)[[2]] <- start:end
+dimnames(marr_con)[[3]] <- c(paste(rep(years,each =6), c(areas,winter), sep='_'),'never')
+dimnames(marr_con)[[4]] <- c('jf','jm','af','am')
+
+marr_all <- marr_con
+marr_af_all <- marr_all[,,,'af']
+marr_am_all <- marr_all[,,,'am']
+marr_jf_all <- marr_all[,,,'jf']
+marr_jm_all <- marr_all[,,,'jm']
+
+marr_af_use <- marr_af_all[1:5,(nyear_all-nyear+1):nyear_all,((nyear_all-nyear)*6+1):(nyear_all*6+1)]
+marr_am_use <- marr_am_all[1:5,(nyear_all-nyear+1):nyear_all,((nyear_all-nyear)*6+1):(nyear_all*6+1)]
+marr_jf_use <- marr_jf_all[1:5,(nyear_all-nyear+1):nyear_all,((nyear_all-nyear)*6+1):(nyear_all*6+1)]
+marr_jm_use <- marr_jm_all[1:5,(nyear_all-nyear+1):nyear_all,((nyear_all-nyear)*6+1):(nyear_all*6+1)]
+
+marr_af <- marr_am <- marr_jf <- marr_jm <- array(0, dim=c(nyear, (nyear_use-1)*(narea+nwinter)+5, narea+2))
+
+for (i in 1:5) {
+  for (t in 1:(nyear-nyear_use+1)) {
+    marr_af[t,1,i] <- sum(marr_af_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_af[t,2,i] <- marr_af_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_af[t,3,i] <- marr_af_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_af[t,4,i] <- marr_af_use[i,t,paste(years[t], winter[3], sep='_')]
+    marr_am[t,1,i] <- sum(marr_am_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_am[t,2,i] <- marr_am_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_am[t,3,i] <- marr_am_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_am[t,4,i] <- marr_am_use[i,t,paste(years[t], winter[3], sep='_')]
+    marr_jf[t,1,i] <- sum(marr_jf_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_jf[t,2,i] <- marr_jf_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_jf[t,3,i] <- marr_jf_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_jf[t,4,i] <- marr_jf_use[i,t,paste(years[t], winter[3], sep='_')]
+    marr_jm[t,1,i] <- sum(marr_jm_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_jm[t,2,i] <- marr_jm_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_jm[t,3,i] <- marr_jm_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_jm[t,4,i] <- marr_jm_use[i,t,paste(years[t], winter[3], sep='_')]
+    
+    
+    for (s in 2:nyear_use) {
+      marr_af[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_af_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+      marr_am[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_am_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+      marr_jf[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_jf_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+      marr_jm[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_jm_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+    } # s
+    
+    marr_af[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_af_use[i,t,]) - sum(marr_af[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+    marr_am[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_am_use[i,t,]) - sum(marr_am[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+    marr_jf[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_jf_use[i,t,]) - sum(marr_jf[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+    marr_jm[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_jm_use[i,t,]) - sum(marr_jm[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+  } # t
+  
+  for (t in (nyear-nyear_use+2):(nyear-1)) {
+    marr_af[t,1,i] <- sum(marr_af_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_af[t,2,i] <- marr_af_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_af[t,3,i] <- marr_af_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_af[t,4,i] <- marr_af_use[i,t,paste(years[t], winter[3], sep='_')]
+    marr_am[t,1,i] <- sum(marr_am_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_am[t,2,i] <- marr_am_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_am[t,3,i] <- marr_am_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_am[t,4,i] <- marr_am_use[i,t,paste(years[t], winter[3], sep='_')]
+    marr_jf[t,1,i] <- sum(marr_jf_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_jf[t,2,i] <- marr_jf_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_jf[t,3,i] <- marr_jf_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_jf[t,4,i] <- marr_jf_use[i,t,paste(years[t], winter[3], sep='_')]
+    marr_jm[t,1,i] <- sum(marr_jm_use[i,t,paste(years[t], c(areas), sep='_')])
+    marr_jm[t,2,i] <- marr_jm_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_jm[t,3,i] <- marr_jm_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_jm[t,4,i] <- marr_jm_use[i,t,paste(years[t], winter[3], sep='_')]
+    
+    for (s in 2:(nyear-t+1)) {
+      marr_af[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_af_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+      marr_am[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_am_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+      marr_jf[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_jf_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+      marr_jm[t,(narea+nwinter)*(s-2)+1:(narea+nwinter)+4,i] <- marr_jm_use[i,t,paste(years[t+s-1], c(areas,winter), sep='_')]
+    } # s
+    marr_af[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_af_use[i,t,]) - sum(marr_af[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+    marr_am[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_am_use[i,t,]) - sum(marr_am[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+    marr_jf[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_jf_use[i,t,]) - sum(marr_jf[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+    marr_jm[t,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_jm_use[i,t,]) - sum(marr_jm[t,1:((nyear_use-1)*(narea+nwinter)+4),i])
+  } # t
+  
+  marr_af[nyear,1,i] <- sum(marr_af_use[i,nyear,paste(years[nyear], c(areas), sep='_')])
+  marr_af[nyear,2,i] <- marr_af_use[i,nyear,paste(years[nyear], winter[1], sep='_')]
+  marr_af[nyear,3,i] <- marr_af_use[i,nyear,paste(years[nyear], winter[2], sep='_')]
+  marr_af[nyear,4,i] <- marr_af_use[i,nyear,paste(years[nyear], winter[3], sep='_')]
+  marr_af[nyear,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_af_use[i,nyear,]) - sum(marr_af[nyear,1:((nyear_use-1)*narea+nwinter+4),i])
+  
+  marr_am[nyear,1,i] <- sum(marr_am_use[i,nyear,paste(years[nyear], c(areas), sep='_')])
+  marr_am[nyear,2,i] <- marr_am_use[i,nyear,paste(years[nyear], winter[1], sep='_')]
+  marr_am[nyear,3,i] <- marr_am_use[i,nyear,paste(years[nyear], winter[2], sep='_')]
+  marr_am[nyear,4,i] <- marr_am_use[i,nyear,paste(years[nyear], winter[3], sep='_')]
+  marr_am[nyear,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_am_use[i,nyear,]) - sum(marr_am[nyear,1:((nyear_use-1)*narea+nwinter+4),i])
+  
+  
+  marr_jf[nyear,1,i] <- sum(marr_jf_use[i,nyear,paste(years[nyear], c(areas), sep='_')])
+  marr_jf[nyear,2,i] <- marr_jf_use[i,nyear,paste(years[nyear], winter[1], sep='_')]
+  marr_jf[nyear,3,i] <- marr_jf_use[i,nyear,paste(years[nyear], winter[2], sep='_')]
+  marr_jf[nyear,4,i] <- marr_jf_use[i,nyear,paste(years[nyear], winter[3], sep='_')]
+  marr_jf[nyear,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_jf_use[i,nyear,]) - sum(marr_jf[nyear,1:((nyear_use-1)*narea+nwinter+4),i])
+  
+  marr_jm[nyear,1,i] <- sum(marr_jm_use[i,nyear,paste(years[nyear], c(areas), sep='_')])
+  marr_jm[nyear,2,i] <- marr_jm_use[i,nyear,paste(years[nyear], winter[1], sep='_')]
+  marr_jm[nyear,3,i] <- marr_jm_use[i,nyear,paste(years[nyear], winter[2], sep='_')]
+  marr_jm[nyear,4,i] <- marr_jm_use[i,nyear,paste(years[nyear], winter[3], sep='_')]
+  marr_jm[nyear,(nyear_use-1)*(narea+nwinter)+5,i] <- sum(marr_jm_use[i,nyear,]) - sum(marr_jm[nyear,1:((nyear_use-1)*narea+nwinter+4),i])
+  
+} # i
+
+nband_af <- apply(marr_af_use, c(1,2), sum)
+nband_am <- apply(marr_am_use, c(1,2), sum)
+nband_jf <- apply(marr_jf_use, c(1,2), sum)
+nband_jm <- apply(marr_jm_use, c(1,2), sum)
+nband_jf_af <- nband_jf + nband_af
+nband_jf_jm_af <- nband_jf + nband_jm+ nband_af
+
+bands <- abind(nband_jf,nband_jm,nband_af,along = 3)
+
+
+clean.re_ca_sub %>%
+  subset(Regime == "W" & Band_Group != 'non-breeding') %>%
+  subset(B_Year >= start & B_Year <= end) %>%
+  group_by(Band_Group) %>% #TYPE
+  summarize_at('Count_of_Birds', sum)
+
+
+######################
+w_releases <- clean.re_ca_sub %>%
+  subset(Regime == "W" & Band_Group != 'non-breeding') %>%
+  subset(B_Year >= start & B_Year <= end) %>%
+  group_by(sex,Band_Group,B_Year) %>% #TYPE
+  summarize_at('Count_of_Birds', sum)
+
+band_released <- re_cai.encounters_sub[,c('Band','B_Year','Band_Group','Regime', 'sex')]
+
+band_wint <- subset(band_released, Band_Group == 'pc' |  Band_Group == 'ce')
+band_wint <- band_wint %>% distinct()
+
+band_wint$State <- ifelse(band_wint$Band_Group == 'ce', 1, 
+                           ifelse(band_wint$Band_Group == 'pc', 2, 9))
+
+band_encounters <- subset(re_cai.encounters_sub, Band %in% band_wint$Band)
+band_recoveries <- subset(band_encounters, Enc_Type == 'Shot')
+
+ggplot() +
+  geom_sf(data = states) +
+  coord_sf(xlim = c(-160, -60), ylim = c(25, 75), expand = FALSE)+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+  geom_point(data = band_recoveries, aes(x = GISRLong, y = GISRLat, fill = Encounter_Group2), shape = 21) +
+  labs(x = 'Longitude', y = 'Latitude', fill = 'Breeding Region', color = 'Migratory Pathway') + guides(fill = "none") +
+  theme_modern(legend.position = 'top') + scale_fill_metro_d()
+  
+  
+band_recoveries <- band_recoveries[,c('Band','Rec_Year','Encounter_Group2','sex')]
+band_recoveries$State <- ifelse(band_recoveries$Encounter_Group2 == 'Pacific', 4, 
+                                ifelse(band_recoveries$Encounter_Group2 == 'Central', 3,5)) 
+
+band_recaps <- subset(band_encounters, Enc_Type != 'Shot' & Rec_Year - B_Year >= 0)
+band_recaps <- band_recaps[,c('Band','Rec_Year','Encounter_Group2','age','sex')]
+band_recaps$State <- ifelse(band_recaps$Encounter_Group2 == 'pc', 2, 
+                                ifelse(band_recaps$Encounter_Group2 == 'ce', 1,9)) 
+
+band_1  <- subset(band_wint, State == 1)
+band_2  <- subset(band_wint, State == 2)
+
+recov_1 <- subset(band_recoveries, Band %in%band_1$Band)
+recov_2 <- subset(band_recoveries, Band %in%band_2$Band)
+
+recap_1 <- subset(band_recaps, Band %in%band_1$Band & State != 9)
+recap_2 <- subset(band_recaps, Band %in%band_2$Band & State != 9)
+
+
+ch_df_1 <- rbind.data.frame(cbind.data.frame(Band = band_1$Band, Year = band_1$B_Year, Sex= band_1$sex,  State = band_1$State),
+                            cbind.data.frame(Band = recov_1$Band, Year = recov_1$Rec_Year +1, Sex= recov_1$sex, State = recov_1$State),
+                            cbind.data.frame(Band = recap_1$Band, Year = recap_1$Rec_Year +1, Sex= recap_1$sex,  State = recap_1$State))
+ch_df_2 <- rbind.data.frame(cbind.data.frame(Band = band_2$Band, Year = band_2$B_Year, Sex= band_2$sex,  State = band_2$State),
+                            cbind.data.frame(Band = recov_2$Band, Year = recov_2$Rec_Year +1, Sex= recov_2$sex,  State = recov_2$State),
+                            cbind.data.frame(Band = recap_2$Band, Year = recap_2$Rec_Year +1, Sex= recap_2$sex,  State = recap_2$State))
+
+t_ce <- subset(w_releases, Band_Group == 'ce')
+t_ce <- cbind.data.frame(Sex = t_ce$sex,  Year = t_ce$B_Year, Total = t_ce$Count_of_Birds)
+f_ce <- ch_df_1 %>% group_by(Band,Sex) %>%summarise_at('Year',min) %>% group_by(Sex,Year) %>% summarise( n= n_distinct(Band))
+tf_ce <- left_join(t_ce, f_ce)
+tf_ce$n[is.na(tf_ce$n)] <- 0
+tf_ce$not_seen <- tf_ce$Total - tf_ce$n
+
+t_pc <- subset(w_releases, Band_Group == 'pc')
+t_pc <- cbind.data.frame(Sex = t_pc$sex,  Year = t_pc$B_Year, Total = t_pc$Count_of_Birds)
+f_pc <- ch_df_2 %>% group_by(Band,Sex) %>%summarise_at('Year',min) %>% group_by(Sex,Year)%>% summarise( n= n_distinct(Band))
+tf_pc <- left_join(t_pc, f_pc)
+tf_pc$n[is.na(tf_pc$n)] <- 0
+tf_pc$not_seen <- tf_pc$Total - tf_pc$n
+
+Band_ID_1 <- paste(rep(paste(tf_ce$Sex,tf_ce$Year,sep =''),tf_ce$not_seen), 1:sum(tf_ce$not_seen),0,0,0,sep = '')
+ch_df_1_no <- cbind.data.frame(Band = as.numeric(Band_ID_1), Year = as.numeric(substring(Band_ID_1, 2, 5)), Sex = as.numeric(substring(Band_ID_1, 1, 1)),  State = 1)
+ch_df_1_total <- rbind.data.frame(ch_df_1,ch_df_1_no )
+
+Band_ID_2 <- paste(rep(paste(tf_pc$Sex,tf_pc$Year,sep =''),tf_pc$not_seen), 1:sum(tf_pc$not_seen),0,0,0,sep = '')
+ch_df_2_no <- cbind.data.frame(Band = as.numeric(Band_ID_2), Year = as.numeric(substring(Band_ID_2, 2, 5)), Sex = as.numeric(substring(Band_ID_2, 1, 1)), State = 2)
+ch_df_2_total <- rbind.data.frame(ch_df_2,ch_df_2_no )
+
+library(tidyr)
+capt.hist_1 <- ch_df_1_total  %>%distinct() %>% group_by( Band, Year, Sex) %>%  filter(State == max(State))  %>% spread(Year, State, fill = 0) %>% group_by(Band)
+capt.hist_2 <- ch_df_2_total  %>%distinct() %>% group_by( Band, Year, Sex) %>%  filter(State == max(State)) %>% spread(Year, State, fill = 0) %>% group_by(Band)
+
+library(IPMbook)
+
+capt.hist_ce_ad_f <- data.matrix(subset(capt.hist_1, Sex == 1))
+capt.hist_ce_ad_m <- data.matrix(subset(capt.hist_1, Sex == 2))
+
+ch_ce_ad_f <- marray(capt.hist_ce_ad_f[,-c(1:2)], unobs = 1)
+ch_ce_ad_m <- marray(capt.hist_ce_ad_m[,-c(1:2)])
+
+library(abind)
+marr_ce <- abind(ch_ce_ad_f,ch_ce_ad_m, along = 3)
+
+capt.hist_pc_ad_f <- data.matrix(subset(capt.hist_2, Sex == 1))
+capt.hist_pc_ad_m <- data.matrix(subset(capt.hist_2, Sex == 2))
+
+ch_pc_ad_f <- marray(capt.hist_pc_ad_f[,-c(1:2)])
+ch_pc_ad_m <- marray(capt.hist_pc_ad_m[,-c(1:2)])
+
+marr_pc <- abind(ch_pc_ad_f,ch_pc_ad_m, along = 3)
+
+marr_wint <- abind(marr_ce, marr_pc, along = 0)
+
+marr_w_con <- array(NA, dim = c(2,61,306,2))
+
+conc <- seq(from = 5, to = 305, by = 5)
+
+for(i in 1:dim(marr_w_con)[1]){
+  for(j in 1:dim(marr_w_con)[2]){
+    for(k in 1:dim(marr_w_con)[3]){
+      for(l in 1:dim(marr_w_con)[4]){
+        marr_w_con[i,j,k,l] <- sum(marr_wint[i,(conc[j]-4):conc[j],k,l])
+      }
+    }
+  }
+}
+
+years_all <- start:end
+nyear_all <- length(years_all)
+wareas    <- c('CE', 'PC')
+winter    <- c('R_Gulf','R_Pac','R_EW')
+warea     <- length(wareas)
+nwinter   <- length(winter)
+cohos     <- c('af', 'am')
+ncoho     <- length(cohos)
+cut <- 15
+nyear <- 61 # 20 for test, 59 for all
+years <- years_all[(nyear_all-nyear+1):nyear_all]
+nyear_use_w <- cut # number of years used in M-array
+
+
+dimnames(marr_w_con)[[1]] <- c('CE','PC')
+dimnames(marr_w_con)[[2]] <- start:end
+dimnames(marr_w_con)[[3]] <- c(paste(rep(years,each =5), c(wareas,winter), sep='_'),'never')
+dimnames(marr_w_con)[[4]] <- c('af','am')
+
+marr_w_all <- marr_w_con
+marr_w_af_all <- marr_w_all[,,,'af']
+marr_w_am_all <- marr_w_all[,,,'am']
+
+nstates<- length( c(wareas,winter))
+marr_w_af_use <- marr_w_af_all[1:warea,(nyear_all-nyear+1):nyear_all,((nyear_all-nyear)*nstates+1):(nyear_all*nstates+1)]
+marr_w_am_use <- marr_w_am_all[1:warea,(nyear_all-nyear+1):nyear_all,((nyear_all-nyear)*nstates+1):(nyear_all*nstates+1)]
+
+marr_w_af <- marr_w_am  <- array(0, dim=c(nyear, (nyear_use-1)*(nstates)+nwinter+2, warea) )
+
+for (i in 1:warea) {
+  for (t in 1:(nyear-nyear_use+1)) {
+    marr_w_af[t,1,i] <- sum(marr_w_af_use[i,t,paste(years[t], c(wareas), sep='_')])
+    marr_w_af[t,2,i] <- marr_w_af_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_w_af[t,3,i] <- marr_w_af_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_w_af[t,4,i] <- marr_w_af_use[i,t,paste(years[t], winter[3], sep='_')]
+   
+    
+    marr_w_am[t,1,i] <- sum(marr_w_am_use[i,t,paste(years[t], c(wareas), sep='_')])
+    marr_w_am[t,2,i] <- marr_w_am_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_w_am[t,3,i] <- marr_w_am_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_w_am[t,4,i] <- marr_w_am_use[i,t,paste(years[t], winter[3], sep='_')]
+  
+    
+    for (s in 2:nyear_use) {
+      marr_w_af[t,(nstates)*(s-2)+1:(nstates)+(nwinter+1),i] <- marr_w_af_use[i,t,paste(years[t+s-1], c(wareas,winter), sep='_')]
+      marr_w_am[t,(nstates)*(s-2)+1:(nstates)+(nwinter+1),i] <- marr_w_am_use[i,t,paste(years[t+s-1], c(wareas,winter), sep='_')]
+      
+    } # s
+    
+    marr_w_af[t,(nyear_use-1)*(nstates)+nwinter+2,i] <- sum(marr_w_af_use[i,t,]) - sum(marr_w_af[t,1:((nyear_use-1)*(nstates)+(nwinter+1)),i])
+    marr_w_am[t,(nyear_use-1)*(nstates)+nwinter+2,i] <- sum(marr_w_am_use[i,t,]) - sum(marr_w_am[t,1:((nyear_use-1)*(nstates)+(nwinter+1)),i])
+    
+  } # t
+  
+  for (t in (nyear-nyear_use+2):(nyear-1)) {
+    marr_w_af[t,1,i] <- sum(marr_w_af_use[i,t,paste(years[t], c(wareas), sep='_')])
+    marr_w_af[t,2,i] <- marr_w_af_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_w_af[t,3,i] <- marr_w_af_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_w_af[t,4,i] <- marr_w_af_use[i,t,paste(years[t], winter[3], sep='_')]
+   
+    
+    marr_w_am[t,1,i] <- sum(marr_w_am_use[i,t,paste(years[t], c(wareas), sep='_')])
+    marr_w_am[t,2,i] <- marr_w_am_use[i,t,paste(years[t], winter[1], sep='_')]
+    marr_w_am[t,3,i] <- marr_w_am_use[i,t,paste(years[t], winter[2], sep='_')]
+    marr_w_am[t,4,i] <- marr_w_am_use[i,t,paste(years[t], winter[3], sep='_')]
+    
+    for (s in 2:(nyear-t+1)) {
+      
+      marr_w_af[t,(nstates)*(s-2)+1:(nstates)+(nwinter+1),i] <- marr_w_af_use[i,t,paste(years[t+s-1], c(wareas,winter), sep='_')]
+      marr_w_am[t,(nstates)*(s-2)+1:(nstates)+(nwinter+1),i] <- marr_w_am_use[i,t,paste(years[t+s-1], c(wareas,winter), sep='_')]
+      
+    } # s
+    marr_w_af[t,(nyear_use-1)*(nstates)+(nwinter+2),i] <- sum(marr_w_af_use[i,t,]) - sum(marr_w_af[t,1:((nyear_use-1)*(nstates)+(nwinter+1)),i])
+    marr_w_am[t,(nyear_use-1)*(nstates)+(nwinter+2),i] <- sum(marr_w_am_use[i,t,]) - sum(marr_w_am[t,1:((nyear_use-1)*(nstates)+(nwinter+1)),i])
+    
+  } # t
+  
+  marr_w_af[nyear,1,i] <- sum(marr_w_af_use[i,nyear,paste(years[nyear], c(wareas), sep='_')])
+  marr_w_af[nyear,2,i] <- marr_w_af_use[i,nyear,paste(years[nyear], winter[1], sep='_')]
+  marr_w_af[nyear,3,i] <- marr_w_af_use[i,nyear,paste(years[nyear], winter[2], sep='_')]
+  marr_w_af[nyear,4,i] <- marr_w_af_use[i,nyear,paste(years[nyear], winter[3], sep='_')]
+
+  
+  
+  marr_w_am[nyear,1,i] <- sum(marr_w_am_use[i,nyear,paste(years[nyear], c(wareas), sep='_')])
+  marr_w_am[nyear,2,i] <- marr_w_am_use[i,nyear,paste(years[nyear], winter[1], sep='_')]
+  marr_w_am[nyear,3,i] <- marr_w_am_use[i,nyear,paste(years[nyear], winter[2], sep='_')]
+  marr_w_am[nyear,4,i] <- marr_w_am_use[i,nyear,paste(years[nyear], winter[3], sep='_')]
+ 
+  
+  marr_w_af[nyear,(nyear_use-1)*(nstates)+(nwinter+2),i] <- sum(marr_w_af_use[i,nyear,]) - sum(marr_w_af[nyear,1:((nyear_use-1)*nstates+(nwinter+1)),i])
+  marr_w_am[nyear,(nyear_use-1)*(nstates)+(nwinter+2),i] <- sum(marr_w_am_use[i,nyear,]) - sum(marr_w_am[nyear,1:((nyear_use-1)*nstates+(nwinter+1)),i])
+  
+} # i
+
+w_nband_af <- apply(marr_w_af_use, c(1,2), sum)
+w_nband_am <- apply(marr_w_am_use, c(1,2), sum)
+
+library(boot)
+library(jagsUI)
+setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
+
+
+# continental <- read.csv("continental.csv") # this file includes Canadian recoveries (but needs Cdn harvest added)
+# this file excludes Canadian recoveries and harvest, but uses Canadian bandings
+# continental <- read.csv("US_harvest_recoveries_2022.csv") 
+# summary(continental)
+
+us_regional_harvest <- read.csv('pintail_us_harvest_by_flyway.csv')
+
+reporting <- read.csv("Estimated reporting rates, MALL & NOPI, 1948 to 2010.csv",header=TRUE)
+reporting <- subset(reporting, year >= start )
+MU_R1 <- reporting$NOPI.rho
+SD_R1 <- reporting$NOPI.rho.SD
+
+MU_R <- c(MU_R1, rep(MU_R1[50], n.years - length(MU_R1)))
+SD_R <- c(SD_R1, rep(SD_R1[50], n.years - length(MU_R1)))
+
+H_F1_1 <- subset(us_regional_harvest, Age != 'Adult' & Sex != 'Male' & Region == 'Central') 
+H_F2_1 <- subset(us_regional_harvest, Age == 'Adult' & Sex != 'Male' & Region == 'Central') 
+H_M1_1 <- subset(us_regional_harvest, Age != 'Adult' & Sex == 'Male' & Region == 'Central') 
+H_M2_1 <- subset(us_regional_harvest, Age == 'Adult' & Sex == 'Male' & Region == 'Central') 
+H_F1_2 <- subset(us_regional_harvest, Age != 'Adult' & Sex != 'Male' & Region != 'Central') 
+H_F2_2 <- subset(us_regional_harvest, Age == 'Adult' & Sex != 'Male' & Region != 'Central') 
+H_M1_2 <- subset(us_regional_harvest, Age != 'Adult' & Sex == 'Male' & Region != 'Central') 
+H_M2_2 <- subset(us_regional_harvest, Age == 'Adult' & Sex == 'Male' & Region != 'Central') 
+
+H_F1 <- rbind.data.frame(H_F1_1$H, H_F1_2$H)
+H_F2 <- rbind.data.frame(H_F2_1$H, H_F2_2$H)
+H_M1 <- rbind.data.frame(H_M1_1$H, H_M1_2$H)
+H_M2 <- rbind.data.frame(H_M2_1$H, H_M2_2$H)
+
+colnames(H_F1) <- 1961:2021
+colnames(H_F2) <- 1961:2021
+colnames(H_M1) <- 1961:2021
+colnames(H_M2) <- 1961:2021
+
+# Total Canadian Pintail Harvest 1961-2019 (all ages and sexes)
+H_PRIM <- c(NA,NA,NA,NA,NA,NA,NA,NA,135639,207335,169760,193557,216284,215757,214047)
+
+# ,195748,185401,131281,141840,125213,106616,100776,
+# 97464,99042,85613,56102,62521,64788,59104,64707,32582,31964,33769,40444,39927,48842,59228,57418,
+# 51621,54372,38505,54562,45291,58772,42402,44930,54694,49421,39528,40094,48170,41344,53092,65738,38530,35391,52706,35420,NA)
+
+HP_Can <- read.csv('Canada_waterfowl_harvest_1976_2021.csv')
+
+Canada_HY_F    <-  c(rep(NA,15),HP_Can$HY_F)[1:n.years]
+Canada_AHY_F   <- c(rep(NA,15),HP_Can$AHY_F)[1:n.years]
+Canada_HY_M    <-  c(rep(NA,15),HP_Can$HY_M)[1:n.years]
+Canada_AHY_M   <- c(rep(NA,15),HP_Can$AHY_M)[1:n.years]
+
+H_CAN <- Canada_HY_F + Canada_AHY_F+ Canada_HY_M + Canada_AHY_M
+H_CAN[1:15] <- H_PRIM
+H_CAN_COR <- H_CAN*0.72
+
+setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
+
+#==============
+# Read in data
+#==============
+# 1. Breeding population size
+load('bpop.RData')
+bpop_obs_all <- as.matrix(bpop$bpop_obs[,-1]) / 1e6
+bpop_se_all <- as.matrix(bpop$bpop_se[,-1]) / 1e6
+
+bpop_obs_all[2,1] <- mean(bpop_obs_all[2,2:6]) # fix the weird value in Northern Habitat, year 1961
+bpop_se_all[2,1] <- mean(bpop_se_all[2,2:6])   # fix the weird value in Northern Habitat, year 1961
+
+bpop_obs <- cbind.data.frame(bpop_obs_all, year2020 = NA, year2021 = NA)
+bpop_se  <- cbind.data.frame(bpop_se_all,year2020 = NA, year2021 = NA)
+
+log_bpop_mean <- apply(log(bpop_obs[,1:59]), 1, mean, na.rm=T)
+log_bpop_se <- apply(log(bpop_obs[,1:59]), 1, sd, na.rm=T)
+log_bpop0 <- log(bpop_obs[,1])
+
+# 3. Environmental covariates
+load('pond.RData')
+pond_obs <- pond$pond_obs / 1e6
+pond_se <- pond$pond_se / 1e6
+pond_obs <- pond_obs[(nyear_all-nyear+1):nyear_all]
+pond_se <- pond_se[(nyear_all-nyear+1):nyear_all]
+log_pond_mean <- mean(log(pond_obs[1:59]))
+log_pond_se <- sd(log(pond_obs[1:59]))
+
+
+load('clim.RData')
+
+WT <- t(data.matrix(clim$temp_win[,-1]))
+WP <- t(data.matrix(clim$prec_win[,-1]))
+
+#pintail baglimit 1961 - 2021
+
+ rt <- c(rep(1,35),rep(2,55))
+bag <- c(5,5,6,6,3,7,6,6,6,7,7,7,7,6,7,7,7,7,7,7,7,7,7,5,5,4,4,1,1,1,1,1,1,1,2,2,3,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,2,1,1,1)
+bag_sc <- scale(bag)
+bag_sc <- c(bag_sc, rep(0, 15))
+
+winter_data <- read.csv('winter_covars.csv')
+
+rice    <-  log(winter_data$AG_GC/1000)
+rice_cv <-  log(winter_data$AG_CV/1000)
+
+setwd('\\\\r2d2.cnre.vt.edu\\R2D2\\Dan_G\\Duck_Results\\Data')
+cov_load <- read.csv('load_covs_10_18_2022.csv')
+
+mu.Crops <- cbind.data.frame(Crops = cov_load$Crops   )
+sd.Crops <- cbind.data.frame(Crops = cov_load$Crop_SD )
+
+PNA  <- cov_load$PNA
+
+mu.POND <- cbind.data.frame(POND = cov_load$Pond_Est)
+sd.POND <- cbind.data.frame(POND = cov_load$Pond_SD )
+mu_PD   <- mean(mu.POND$POND)
+sd_PD   <- sd(mu.POND$POND)
+
+mu_PNA <- mean(PNA,na.rm = TRUE)
+sd_PNA <- sd(PNA,na.rm = TRUE)
+
+mu_Crops <- mean(mu.Crops$Crops,na.rm = TRUE)
+sd_Crops <- sd(mu.Crops$Crops,na.rm = TRUE)
+setwd('//r2d2.cnre.vt.edu/R2D2/Dan_G/Pintail/Data')
+rice_cov <- read.csv('rice_est.csv')
+
+rice_gulf_mean <- rice_cov$X1
+rice_cv_mean   <- rice_cov$X2
+
+rice_gulf_sd   <- rice_cov$X1.1
+rice_cv_sd     <- rice_cov$X2.1
+
+library(LaplacesDemon)
+sig2 = c(1,1,1,1)
+Lambda2 = diag(sig2)
+I2 = diag(4)
+nu2 = 4 + 1
+Q2 = rinvwishart(nu2, I2)    # note output is an array
+Delta2 = matrix(0, 4, 4)
+
+for (j in 1:4){
+  Delta2[j,j] = Q2[j,j]^(-0.5)
+}
+
+P2 = Delta2 %*% Q2 %*% Delta2
+Sigma2 = Lambda2 %*% P2 %*% Lambda2
+
+
+sig1 = c(1,1,1)
+Lambda1 = diag(sig1)
+I1 = diag(3)
+nu1 = 3 + 1
+Q1 = rinvwishart(nu1, I1)    # note output is an array
+Delta1 = matrix(0, 3, 3)
+
+for (j in 1:3){
+  Delta1[j,j] = Q1[j,j]^(-0.5)
+}
+
+P1 = Delta1 %*% Q1 %*% Delta1
+Sigma1 = Lambda1 %*% P1 %*% Lambda1
+
+NOPI_climate <- read.csv('NOPI_climate.csv')
+
+
+ak_d <- ((bands[1,,1] + bands[1,,2])/bands[1,,3])
+no_d <- ((bands[2,,1] + bands[2,,2])/bands[2,,3])
+
+
+PDSI_A <- c(NOPI_climate$PDSI_AK[-1])
+PDSI_B <- c(NOPI_climate$PDSI_BOREAL[-1])
+
+wdef_A <- scale(c(NOPI_climate$WDEF_AK[-1]))[,1]
+wdef_B <- scale(c(NOPI_climate$WDEF_BOREAL[-1]))[,1]
+
+load_fall_n <- matrix(c(2.973314,	5.191191,2.415377,	5.468888,2.337711,	5.97201,2.474516,	5.651281,2.725515,	7.052063,3.443196,	
+                   8.483551,4.316519,	10.338878,3.932088,	8.632449,3.549869,	12.451054,4.58493,	12.014021,3.882439,	11.515351,
+                   4.390783,	10.652518,4.809599,	9.071845,3.85873,	10.169747,4.320774,	10.888263,4.268519,	10.159896,4.785388,
+                   7.992042,4.518472,	9.787166,3.459583,	10.745301,4.862524,	8.050401,4.078623,	7.481491,3.839285,	6.953553
+                   ,4.101713,	6.58349,4.579408,	5.52733,3.611721,	5.463144,2.87806,	5.720141,3.318743,	5.448731,2.582274,	
+                   4.707854,2.956447,	3.797803,2.713296,	3.48891,2.542287,	3.248615,2.65576,	2.895051,2.156079,	3.252023,2.165975,	
+                   3.615367,2.928499,	3.343899,3.042659,	3.560561,2.431334,	3.834286,3.40091,	2.695808,2.949256,	2.827409,2.978805,
+                   2.741969,2.654258,	2.603847,2.378865,	2.472876,2.105207,	2.381345,1.821158,	2.780847,2.108041,	2.713529,
+                   2.022173,	3.075919,2.514344,	2.938367,3.083599,	2.380389,2.647182,	2.633193,2.30426,	3.407836,1.909119,
+                   4.300101,3.129991,	3.088121,2.802373,	2.844494,2.6567,	2.943408,3.097123,	2.477029,3.290443,	2.123881,2.78383,	
+                   2.09634,2.254218,	2.153499,2.087551,	2.066846,2.159971,	2.043812,2.481507,	1.592511
+), ncol =2,byrow = TRUE)
+
+load_fall_sd <- matrix(c(
+0.3048013	,0.4155663,0.2929253	,0.4267671,0.2758636	,0.4395013,0.2528734	,0.4154649,0.274494	,0.5129656,0.3150313	,0.5667636,0.373033	,0.665658,0.3782521	,0.6148696,0.3812899	,0.8061043,0.4797615	,0.7848386,0.4845402	,0.8046775,0.4319252	,0.71835,0.4680317	,0.6750899,0.3766471	,0.6762118,0.4726905	,0.7262659,0.3971922	,0.667235,0.5157074	,0.6081303,0.4623022	,0.6774447,0.4505581	,0.7205626,0.4994764	,0.5864002,0.4932292	,0.6168001,0.5826905	,0.6147396,0.5750607	,0.55739,0.5798458	,0.5325315,0.458954	,0.5324047,0.4699632	,0.5630806,0.4701495	,0.5421721,0.3417072	,0.4827011,0.4000662	,0.4345494,0.3313924	,0.3791311,0.2982136	,0.357,0.2969801	,0.3155403,0.2369636	,0.3211677,0.2176487	,0.3358203,0.2776025	,0.3164712,0.2959413	,0.3428829,0.2258115	,0.3195684,0.2865915	,0.2351006,0.2818322	,0.2544212,0.2909078	,0.2598209,0.2500944	,0.2333063,0.2238694	,0.2276494,0.1971343	,0.2148358,0.1812416	,0.2519857,0.1962224	,0.2271927,0.1837145	,0.250098,0.2269927	,0.242152,0.2534337	,0.2041251,0.2218667	,0.2198762,0.1993359	,0.2570953,0.1718883	,0.2993584,0.2651214	,0.2480549,0.2306581	,0.2240504,0.2348994	,0.241943,0.2705966	,0.2155431,0.2931743	,0.2127529,0.2663765	,0.2136492,0.2328446	,0.2246547,0.2445589	,0.2364871,0.2997073	,0.2769229,0.338069	,0.2429236
+), ncol =2,byrow = TRUE)
+
+load_spring_mean <- matrix(c(0.5391247,1.0544135,1.016283,0.80966,0.678693,0.7683266,1.0128841,0.4925992,0.6902639,1.0656312,0.4962834,0.8974104,1.0544171,0.4738658,0.8881458,1.3295212,0.6492283,1.2342597,1.4263996,0.9911206,1.4521738,1.7412111,1.3598251,1.6965707,1.204031,1.5389025,1.2212081,2.6682281,1.1149177,1.3692026,2.0949676,0.9627156,2.1479657,1.6291528,1.4840611,1.7815218,1.8084844,1.5361423,1.5048053,1.4499724,1.2876447,1.4217047,2.0554072,0.8993903,1.540913,1.4504945,1.3559106,1.9367322,1.6050475,1.7247895,1.4066387,1.3879997,1.4794282,1.3328133,2.0903904,0.9794921,1.5212247,1.8894206,0.9735058,1.7781874,1.3481333,1.2723611,1.4109991,1.4821606,0.9182061,1.1478658,1.401172,0.5313473,1.17075,1.0948581,0.7058486,1.3762708,1.0039,0.8026835,1.1981353,0.9914344,0.7339926,1.0915877,1.1402294,0.7202514,1.0715745,0.8949301,0.7336603,0.9421867,0.8323809,0.5936182,0.6731827,0.7130328,0.468544,0.7162626,0.6424038,0.4046104,0.7156832,0.6137978,0.3922003,0.6731653,0.5213355,0.3436885,0.6220088,0.617482,0.3292703,0.6354044,0.6796436,0.3125318,0.6922832,0.5586202,0.5037578,0.8889505,0.5568493,0.5594813,0.7592601,0.6017161,0.6544862,0.7666928,0.3882656,0.7576141,0.6424558,0.5513157,0.5887474,0.6727611,0.4300515,0.5622539,0.6901211,0.4848496,0.4290997,0.5470786,0.4083885,0.4136126,0.5783169,0.5106828,0.3244833,0.5500046,0.4392914,0.3194422,0.5347309,0.5153162,0.3820639,0.5562348,0.5300216,0.3663505,0.6176144,0.4957702,0.4454071,0.6744623,0.3325303,0.5353323,0.5990182,0.4687359,0.428914,0.5831507,0.52343,0.433144,0.7067033,0.7017463,0.5179885,0.713484,0.3710561,0.7181327,0.6535041,0.4945159,0.559625,0.5836287,0.4513019,0.5222957,0.7396812,0.36991,0.6542577,0.6574443,0.3095132,0.561627,0.5254317,0.3445022,0.4053301,0.5163974,0.3130484,0.3616498,0.4909864,0.3155228,0.3478423,0.4113318,0.3227423,0.3542586,0.4500379
+), ncol = 3, byrow = TRUE)
+load_spring_sd <- matrix(c(0.06842897,0.14408034,0.100558,0.10052013,0.10292677,0.10651915,0.11475658,0.07742872,0.09003048,0.11018344,0.06552711,0.09018277,0.10691704,0.05980893,0.08728667,0.13021096,0.07868514,0.11147698,0.13709988,0.10875109,0.12439528,0.16679912,0.14939812,0.15158947,0.17833448,0.19696792,0.14036124,0.29287296,0.19487856,0.17034803,0.2275215,0.14378725,0.21010603,0.18516325,0.18038048,0.16488408,0.193179,0.17866268,0.14954511,0.15137697,0.13694825,0.1286861,0.21027705,0.12889242,0.16038812,0.1843683,0.17381091,0.18900505,0.17884979,0.19252416,0.14755724,0.16290742,0.17223369,0.14483884,0.21171491,0.12501479,0.14649997,0.18947177,0.11750087,0.16187638,0.14915177,0.14280149,0.14652013,0.17438265,0.12921038,0.14077418,0.15327165,0.07709839,0.13599669,0.12968083,0.10065713,0.15354411,0.11476336,0.09625555,0.13551967,0.11551175,0.09037065,0.12713302,0.13331793,0.0911585,0.12930686,0.11012894,0.09990394,0.12298283,0.10945423,0.0907263,0.09855796,0.10189721,0.07100625,0.10000782,0.09184214,0.06060215,0.09576247,0.0886472,0.05799617,0.08939456,0.07685534,0.05133627,0.08028744,0.08366014,0.0458647,0.07575729,0.08372907,0.04422978,0.07818022,0.07163808,0.06692144,0.09541022,0.06729867,0.06682696,0.08229824,0.0689576,0.07395849,0.07679587,0.05007774,0.0835203,0.06693131,0.06566471,0.07216588,0.07300588,0.05100294,0.06701338,0.07496608,0.05477037,0.05733939,0.06536334,0.05041847,0.051305,0.06158965,0.05932574,0.04451818,0.06226053,0.05311886,0.04329646,0.05698635,0.0545463,0.04283037,0.05509996,0.0552081,0.04182819,0.06034581,0.05218851,0.04797334,0.06456728,0.03993499,0.05866958,0.05737846,0.05283917,0.0520549,0.05747708,0.05280214,0.05010978,0.06371629,0.07149179,0.06006421,0.06770368,0.04967174,0.08310101,0.06584525,0.05789934,0.07096384,0.06299761,0.05008128,0.05830507,0.07106517,0.04348161,0.07514105,0.0692168,0.04130489,0.06793512,0.05955437,0.04352014,0.05093044,0.05878902,0.04073093,0.04614481,0.05770598,0.04511746,0.04830016,0.05306529,0.05646589,0.06759438,0.07515312
+), ncol = 3, byrow = TRUE)
+
+mu_fall_n    <- apply(load_fall_n,2, mean)
+std_fall_n   <- apply(load_fall_n,2, sd)
+mu_spring_n  <- apply(load_spring_mean,2, mean)
+std_spring_n <- apply(load_spring_mean,2, sd)
+
+
+logN.inits <- matrix(1, ncol = 61, nrow = 3)
+#================
+# setup for Nimble
+#================
+library(abind)
+bpop_obs.inits <- bpop_obs
+bpop_obs.inits[,60] <- bpop_obs.inits[,59]
+bpop_obs.inits[,61] <- bpop_obs.inits[,59]
+
+bpop_se_edit <- bpop_se
+bpop_se_edit[,60] <- bpop_se_edit[,59]
+bpop_se_edit[,61] <- bpop_se_edit[,59]
+
+
+nimble.data <- list(marr_af=marr_af, marr_am=marr_am, marr_jf=marr_jf, marr_jm=marr_jm, sn = c( rowMeans(bpop_obs[,1:5],1)),
+                    marr_w_af=marr_w_af, marr_w_am=marr_w_am, 
+                    rice = rice[-62], rice_cv= rice_cv[-62], bag = bag_sc,pna = winter_data$PNA,
+                    bpop_obs=data.matrix(bpop_obs), bpop_se=data.matrix(bpop_se_edit),
+                    nband_af=nband_af, nband_am=nband_am, nband_jf=nband_jf, nband_jm=nband_jm,  
+                    nband_jf_af=nband_jf_af,nband_jf_jm_af =nband_jf_jm_af, bands = bands,
+                    w_nband_af=w_nband_af, w_nband_am=w_nband_am,
+                    RR.rr = c(MU_R,0.903 , 0.903 ), SD.rr = c(SD_R,0.018 , 0.018 ), 
+                    H1F  = data.matrix((H_F1 * 0.73)/ 1e6),
+                    H2F  = data.matrix((H_F2 * 0.73)/ 1e6),
+                    H1M  = data.matrix((H_M1 * 0.73)/ 1e6),
+                    H2M  = data.matrix((H_M2 * 0.73)/ 1e6),
+                    H_CAN = (H_CAN_COR)/ 1e6,
+                    HC1F = (Canada_HY_F * 0.73)/ 1e6,   
+                    HC1M = (Canada_HY_M * 0.73)/ 1e6,  
+                    HC2F = (Canada_AHY_F* 0.73)/ 1e6,    
+                    HC2M = (Canada_AHY_M* 0.73)/ 1e6,
+                    rice_gulf_mean = rice_gulf_mean ,
+                    rice_cv_mean   = rice_cv_mean   ,
+                    rice_gulf_sd   = rice_gulf_sd   ,
+                    rice_cv_sd     = rice_cv_sd     ,
+                    alpha_gulf = c(1,1,1),
+                     alpha_pac = c(1,1,1),
+                    year = scale(1:62)[,1],
+                    T_GC = c(scale(WT[,2]),rep(0,15)),
+                    T_PC = c(scale(WT[,1]),rep(0,15)),
+                    P_GC = c(scale(WP[,2]),rep(0,15)),
+                    P_PC = c(scale(WP[,1]),rep(0,15)),
+                    
+                  
+                      def_a = wdef_A, def_b =  wdef_B,
+                     mean.crop = mu_Crops, sd.crop =sd_Crops,
+                      ponds_sd = sd.POND$POND,
+                    ponds_mean = mu.POND$POND,
+                       mu_pond = mu_PD, sd_pond = sd_PD,
+                     Crop_Mean = c(mu.Crops$Crops[1:61], mu.Crops$Crops[61]),
+                      Crop_sd  = c(sd.Crops$Crops[1:61], sd.Crops$Crops[61]),
+                    
+                    I_f = diag(4), I_m = diag(3)
+                    )
+
+H_USA <- H_F1$harvest + H_F2$harvest + H_M1$harvest + H_M2$harvest
+
+H_CAN.inits <- H_CAN_COR/ 1e6
+H_CAN.inits[is.na(H_CAN.inits)] <- mean(H_CAN.inits, na.rm = TRUE)
+
+HC1F.inits <- (Canada_HY_F * 0.73)/ 1e6
+HC1M.inits <- (Canada_HY_M * 0.73)/ 1e6
+HC2F.inits <- (Canada_AHY_F* 0.73)/ 1e6
+HC2M.inits <- (Canada_AHY_M* 0.73)/ 1e6
+
+HC1F.inits[is.na(HC1F.inits )] <- mean(HC1F.inits , na.rm = TRUE)
+HC1M.inits[is.na(HC1M.inits )] <- mean(HC1M.inits , na.rm = TRUE)
+HC2F.inits[is.na(HC2F.inits )] <- mean(HC2F.inits , na.rm = TRUE)
+HC2M.inits[is.na(HC2M.inits )] <- mean(HC2M.inits , na.rm = TRUE)
+
+nimble.constants <- list(narea=narea, nyear=nyear, nyear_use=nyear_use, ncoho=ncoho, time = scale(c(1:61))[,1], cut = cut, nwint = 3,
+                        warea = 2, K = 4, r_opt = rt,
+                        load_fall_n = load_fall_n, load_fall_sd = load_fall_sd, mu_fall_n = mu_fall_n    ,  std_fall_n   =std_fall_n   ,
+                        load_spring_n = load_spring_mean,load_spring_sd=load_spring_sd,mu_spring_n  =mu_spring_n  ,std_spring_n =std_spring_n ,
+                         n.summer = 3, n.winter = 2,
+                         log_N_mean =c(1.1365896, 0.1946357, 0.9895127), 
+                         log_N_se=c(0.1693641, 0.2739492, 0.2992044))
+
+initsFunction <- function()list(
+  
+  Lambda = Lambda1, Delta = Delta1, P = P1, Q = Q1, Sigma = Sigma1, sig = sig1,
+  Lambda_f = Lambda2, Delta_f = Delta2, P_f = P2, Q_f = Q2, Sigma_f = Sigma2, sig_f = sig2,
+  
+  mu_cen_pr = 1.5,
+  mu_pac_pr = 0,
+     ch_no_ak = .05, 
+     ch_pr_pr = .90,
+  beta_temp_rice = c(0,0),beta_prec_rice = c(0,0),beta_year= c(0,0),b0 = c(5,3), phi = c(.5,.5), sig_rice = 1, sig_rice_cv = 1,
+  beta_rice_w = c(0,0), beta_rice_g = c(0,0,0),beta_rice_p = c(0,0,0),
+  beta_temp = matrix(0,2,5),beta_prec = matrix(0,2,5), beta_den = matrix(0,2,2), beta.den_ar= rep(0,3),
+  beta.age.mort = rep(0,62), mu_wint = matrix(.9,2,2), mu_summ = matrix(.9,3,2), mu_harv = matrix(.9,2,2),
+  tau = c(1,1,1,1), A = diag(4) * .5, L = matrix(0,4,4),  
+  zeta =matrix(1,2,2), zeta.prod = c(1,1,1), zeta.wint =matrix(1,2,2),  zeta.summ =matrix(1,2,3),
+  beta.age.rec = rep(0,62), mu_age=c(0,0), sig_age = c(.1,.1),
+  beta.wint = c(1,1), beta.summ = c(1,1,1), beta.harv = c(1,1), beta.prod =c(1,1,1),
+  theta.summ = matrix(0,2,62), theta.wint = matrix(0,2,62),theta.harv = matrix(0,2,75), 
+  
+  epsilon_m = matrix(0,62,3), epsilon_f = matrix(0,62,4), eps_production  = matrix(0,3,62), 
+  
+  theta.mod = c(0,0,0,1), hc = 0.73,
+  beta.direct = 0, mu.r = -2, sig.rec = c(1,1), sig.sum = c(1,1,1),u.rec = c(2,2),
+  sig.prod =1, beta.prod = c(1,1,1), theta.prod = rnorm(62,0,.15), sig.theta = 1,
+  wpcap_af = c(.01,.01), wpcap_am = c(.01,.01), 
+  
+  mu_p = c(0.01, 0.01, 0.01), sd_p = c(100,100,100), 
+  pcap_jf = c(.01, .01, .01),pcap_jm = c(.01, .01, .01),pcap_af = c(.01, .01, .01),pcap_am = c(.01, .01, .01),
+
+  pi_prime = matrix(c(.95,.025,.025,.025,.95,.025,.025,.025,.95),3,3), psi_other  = c(.5,.5),
+  pi_harv2 = matrix(1/3,2,3),
+  psi_ak = c(.1,.6,.3), psi_no = c(.3,.4,.3), psi_pr = c(.4,.3,.3),
+  psi_mw = c(.3,.3,.4), psi_pc = c(.05,.9,.05),
+  mu_pr_pr = c(-5,-.25), beta_pr_pond = matrix(0,3,3),
+  log_ar_region = c(0,0,0), a_r =.2,
+  H_CAN = H_CAN.inits,b_t =0,b_t2=0, b00 = 2,sig.us = 1,
+  HC1F = HC1F.inits,  HC1M = HC1M.inits,  HC2F = HC2F.inits,  HC2M = HC2M.inits, 
+  mean.psi =-.5, sd.psi = .1,
+  rho.theta = c(0.25,-.25,.25,1),
+  mu_log_ar = 0, sd_log_ar = .2,
+  logN = logN.inits, N = exp(logN.inits),eps.usa= rep(0,61),
+  sig.lincoln = c(.5,.5,.5,.5),  rr = c(MU_R,0.781 ,0.781, rep(1,15)), mu.n = 6, sr = c(.4), sp = apply(bpop_obs[,1:10], 1, mean)/sum(apply(bpop_obs[,1:10], 1, mean)),
+  mu.psi = c(.8,.8,.8), sig.psi = c(10,10,10), log_psi_ponds = c(0,0,0), eps.psi = matrix(0,3,61), psi = matrix(.5,3,61),
+  bpop_obs = bpop_obs.inits,
+  beta.pnd_cr = 0,beta.crop_ar = 0,
+  sig.eta_p =1, sig.eta_c =1,
+  mu.r = c(0.6,.8), sd.r = c(5,5),
+  pi_mod = rep(.25, 5), mu_pi = rep(-1,  5), sig_pi = rep(1, 5),
+  log_eta_pond_pr = rep(0, 3), beta.pnd_ar = c(0,0,0), 
+  local = rbeta(6,95,5),
+  log_ar_mean_mu=1, log_ar_mean_sd_region=1, 
+  log_ar_sd=1, 
+  mu_ar_region = c(1.5,1.5,1.5),
+  log_ar=matrix(0,narea,nyear), 
+  log_bpop0_sd=1, log_bpop_sd=1,
+  vul = c(2,2,2), tau_band = c(50,50,50), bp = .8, cr = .15
+  
+)
+
+nimble.inits <- initsFunction() 
+
+
+
+NOPI_model_data <- list(pt_ipm,nimble.inits,nimble.data,nimble.constants,initsFunction)
+save(NOPI_model_data, file = 'NOPI_model_data.rdata')
+
+rm(list=ls()[! ls() %in% c("pt_ipm","nimble.inits",'nimble.data','nimble.constants','initsFunction')])
+
