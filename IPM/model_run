@@ -1,0 +1,182 @@
+library(parallel)
+library(coda)
+
+nc      <- 3 # number of chains
+cl_new5 <-makeCluster(nc,timeout=5184000)
+clusterExport(cl_new5, c("pt_ipm", "nimble.inits", "nimble.data", "nimble.constants"))
+
+for (j in seq_along(cl_new5)) {
+  #set.seed(j)
+  nimble.inits <- initsFunction() 
+  clusterExport(cl_new5[j], "nimble.inits")
+}
+
+out <- clusterEvalQ(cl_new5, {
+  library(nimble)
+  library(coda)
+  library(nimbleNoBounds)
+  ddirchmulti <- nimbleFunction(
+    run = function(x = double(1), alpha = double(1), size = double(0), 
+                   log = integer(0, default = 0)) {
+      returnType(double(0))
+      logProb <- lgamma(size+1) - sum(lgamma(x+1)) + lgamma(sum(alpha)) -
+        sum(lgamma(alpha)) + sum(lgamma(alpha + x)) -
+        lgamma(sum(alpha) + size)
+      if(log) return(logProb)
+      else return(exp(logProb))
+    })
+  
+  rdirchmulti <- nimbleFunction(
+    run = function(n = integer(0), alpha = double(1), size = double(0)) {
+      returnType(double(1))
+      if(n != 1) print("rdirchmulti only allows n = 1; using n = 1.")
+      p <- rdirch(1, alpha)
+      return(rmulti(1, size = size, prob = p))
+    })
+  
+  dInvGamma <- nimbleFunction (
+    run = function(x     = double(0),
+                   Shape = double(0, default=1), 
+                   Scale = double(0, default=1), 
+                   log   = integer(0, default = 0)) {
+      returnType(double(0))
+      logDensX = dgamma(x, shape=Shape, scale=Scale, log=TRUE) 
+      if (log) return(logDensX) else return(exp(logDensX)) 
+    }
+  )
+  
+  rInvGamma <- nimbleFunction (
+    run = function(n = integer(0, default=1),
+                   Shape = double(0, default=1), 
+                   Scale = double(0, default=1)) {
+      returnType(double(0))
+      if (n!=1)
+        stop("Only implimented for n=1")
+      x = rgamma(n=1, shape=Shape, scale=Scale)    
+      return(x)
+    }
+  )
+  
+  registerDistributions(list(dInvGamma = list(
+    BUGSdist = "dInvGamma(Shape,Scale)",
+    discrete = FALSE,
+    range    = c(0, Inf), 
+    pqAvail  = FALSE)))
+  
+  
+  nimble.model <- nimbleModel( code = pt_ipm, constants = nimble.constants,  dat =  nimble.data, inits = nimble.inits)
+  
+  nimble.model$initializeInfo()
+  
+  nimble.model$simulate(c('fall_n','fall_n_std','spring_n','spring_n_std','pond','pond.std','crops','crop.std','rice_std','chi_pr_pr','chi_pac_pr','chi_pac_ak','chi','pi','pi2','zeta.harv','beta_bag','kappa_central','kappa_pacific','fp_central','fp_pacific','sw_hy_central_f','sw_hy_pacific_f','sw_ad_central_f','sw_ad_pacific_f','sw_hy_central_m','sw_hy_pacific_m','sw_ad_central_m','sw_ad_pacific_m','s.winter_hy_ak_f','s.winter_hy_mw_f','s.winter_hy_no_f','s.winter_hy_pc_f','s.winter_hy_pr_f','s.winter_ad_ak_f','s.winter_ad_mw_f','s.winter_ad_no_f','s.winter_ad_pc_f','s.winter_ad_pr_f','s.winter_hy_ak_m','s.winter_hy_mw_m','s.winter_hy_no_m','s.winter_hy_pc_m','s.winter_hy_pr_m','s.winter_ad_ak_m','s.winter_ad_mw_m','s.winter_ad_no_m','s.winter_ad_pc_m','s.winter_ad_pr_m','sur_waf','sur_wam','a_sur_waf','a_sur_wam','sur_af','sur_am','sur_jf','sur_jm','f_wf','f_wm','f_jf','f_jm','f_af','f_am','l_pi_ak','l_pi_no','l_pi_pr','l_pi_mw','l_pi_pc','pi_ak','pi_mw','pi_no','pi_pc','pi_pr','pi_harv','log_ar','log_ar_mu_ak','log_ar_mu_nh','log_ar_mu_pr','ar','pt_af','pt_am','pr_af','pr_am','pt_jf','pt_jm','pr_jf','pr_jm','pt_w_af','pt_w_am','pr_w_af','pr_w_am','q','N1F','N1M','N2F','N2M','NAF','NAM','N','Bpop_N','N2M_Fall','N2F_Fall','N1M_Fall','N1F_Fall','n1f_fall','n1m_fall','n2f_fall','N1M_Central','N1F_Central','N2M_Central','N2F_Central','N1M_Pacific','N1F_Pacific','N2M_Pacific','N2F_Pacific','N_Central','N_Pacific','logN','N2M.harvest','N2F.harvest','N1M.harvest','N1F.harvest','N1F.Lincoln','N1M.Lincoln','N2F.Lincoln','N2M.Lincoln'))
+  
+  nimble.model$initializeInfo()
+  nimble.model$calculate()
+  
+  mcmc_Conf  <- configureMCMC(nimble.model, useConjugacy = FALSE,  print = FALSE,
+                              monitors  = c('beta.direct','beta.age.rec', 'sig','beta_temp','beta_prec','mu_age','sig_age',
+                                            'zeta.wint','zeta.prod','zeta.harv','zeta.summ','beta.pnd_ar','beta.crop_ar',
+                                            'beta.age.mort', 'local','bp','mu_pr_pr', 'beta_pr_pond',
+                                            'pcap_af','pcap_jf','pcap_am','pcap_jm','mu_p','sd_p',
+                                            'wpcap_af','rho', 'mu.psi','sr','vul','tau_band','wpcap_am',
+                                            'mu_summ','mu_harv','mu_wint','pi_gulf','pi_pac','pi_mod',
+                                             'beta_rice_p','beta_rice_g',  'mu.psi', 'sig.psi',
+                                          
+                                            'beta_rice_w','beta_bag','beta.pnd_cr','beta_den','beta.den_ar','beta.den',
+                                            'b_t','rho_f','sig_f', 'mu_pi','sig_pi',
+                                            'log_ar_region','sig.lincoln'
+                                            ),
+                              
+                              monitors2 = c( 'pi_ak','pi_mw',  'pi_no', 'pi_pr','pi_pc','pi_harv','pi_harv2',
+                                             'chi', 'pi','pi2','chi_pr_pr',
+                                             'chi_cen_ak', 'chi_pac_ak',
+                                             'pond.std',
+                                             
+                                             'theta.harv','theta.wint','theta.summ', 'theta.prod', 
+                                            
+                                             's.summer_ad_ak_f','s.summer_ad_no_f','s.summer_ad_pr_f',
+                                             's.summer_ad_ak_m','s.summer_ad_no_m','s.summer_ad_pr_m',
+                            
+                                             'sw_hy_central_f','sw_hy_pacific_f',  'sw_ad_central_f', 'sw_ad_pacific_f',
+                                             'sw_hy_central_m','sw_hy_pacific_m',  'sw_ad_central_m', 'sw_ad_pacific_m',
+                                             
+                                             'sur_af', 'sur_am', 'sur_jf', 'sur_jm', 
+                                             
+                                             's.winter_hy_ak_f', 's.winter_hy_mw_f',  's.winter_hy_no_f',  's.winter_hy_pc_f', 's.winter_hy_pr_f',
+                                             's.winter_ad_ak_f', 's.winter_ad_mw_f',  's.winter_ad_no_f',  's.winter_ad_pc_f', 's.winter_ad_pr_f',
+                                             's.winter_hy_ak_m', 's.winter_hy_mw_m',  's.winter_hy_no_m',  's.winter_hy_pc_m', 's.winter_hy_pr_m',
+                                             's.winter_ad_ak_m', 's.winter_ad_mw_m',  's.winter_ad_no_m',  's.winter_ad_pc_m', 's.winter_ad_pr_m',
+                       
+                                             'kappa_central','kappa_pacific', 'cr',
+                                             
+                                             'N1M_Fall','N2M_Fall','N1F_Fall','N2F_Fall',
+                                             'N1M_Pacific','N2M_Pacific','N1F_Pacific','N2F_Pacific','N_Pacific',
+                                             'N1M_Central','N2M_Central','N1F_Central','N2F_Central','N_Central',
+                                             'NAF','NAM','N1F','N1M','N2F','N2M','N','logN', 'Bpop_N','rice_std',
+                                             
+                                             'ar','us', 'rr','psi'
+                                                         
+                      ))
+
+  
+  mcmc_Conf$removeSamplers(c('mu_harv','beta_bag','beta_den'))
+  mcmc_Conf$addSampler(target = c('beta_den[1,1]','beta_bag[1,1]','mu_harv[1,1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('beta_den[2,1]','beta_bag[2,1]','mu_harv[2,1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('beta_den[1,2]','beta_bag[1,2]','mu_harv[1,2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('beta_den[2,2]','beta_bag[2,2]','mu_harv[2,2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  mcmc_Conf$removeSamplers(c('mu_wint','beta.age.mort','beta.den'))
+  mcmc_Conf$addSampler(target = c('mu_wint[1,1]','beta.age.mort[1,1]','beta.den[1,1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_wint[2,1]','beta.age.mort[2,1]','beta.den[2,1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_wint[1,2]','beta.age.mort[1,2]','beta.den[1,2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_wint[2,2]','beta.age.mort[2,2]','beta.den[2,2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  mcmc_Conf$removeSamplers(c('mu_summ','log_ar_region'))
+  mcmc_Conf$addSampler(target = c('mu_summ[1,1]','log_ar_region[1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_summ[2,1]','log_ar_region[2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('mu_summ[3,1]','log_ar_region[3]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  mcmc_Conf$addSampler(target = c('mu_summ[1,2]'), type = 'RW')
+  mcmc_Conf$addSampler(target = c('mu_summ[2,2]'), type = 'RW')
+  mcmc_Conf$addSampler(target = c('mu_summ[3,2]'), type = 'RW')
+  
+  mcmc_Conf$removeSamplers(c('sig_f','sig','zeta.harv','zeta.summ','zeta.wint','zeta.prod'))
+  mcmc_Conf$addSampler(target = c('zeta.harv[1,2]','sig_f[1]'),   type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('zeta.harv[2,2]','sig[1]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  mcmc_Conf$addSampler(target = c('zeta.wint[1,2]','sig_f[2]'),   type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('zeta.wint[2,2]','sig[2]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  mcmc_Conf$addSampler(target = c('zeta.summ[1,1]','zeta.summ[1,2]','sig_f[3]'),   type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('zeta.summ[2,1]','zeta.summ[2,2]','sig[3]'), type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  mcmc_Conf$addSampler(target = c('zeta.prod[1]','zeta.prod[2]','sig_f[4]'),   type = 'AF_slice', control=list(sliceAdaptFactorMaxIter=50000, sliceAdaptFactorInterval=1000, sliceAdaptWidthMaxIter=500, sliceMaxSteps=200, maxContractions=100))
+  
+  Cmodel     <- compileNimble(nimble.model)
+  modelMCMC  <- buildMCMC(mcmc_Conf)
+  CmodelMCMC <- compileNimble(modelMCMC,project = nimble.model)
+
+  start_time <- Sys.time()
+  CmodelMCMC$run(5000, thin = 2, thin2 = 10, reset = FALSE)
+  end_time <- Sys.time()
+  end_time - start_time
+  
+  return(list( as.mcmc(as.matrix(CmodelMCMC$mvSamples)),
+               as.mcmc(as.matrix(CmodelMCMC$mvSamples2))))
+  
+})
+end_time <- Sys.time()
+end_time - start_time
+
+samples2 <- list(chain1 = out[[1]][[1]][-c(1:501),], 
+                 chain2 = out[[2]][[1]][-c(1:501),], 
+                 chain3 = out[[3]][[1]][-c(1:501),])
+
+samples1    <- list(chain1 =   out[[1]][[2]][-c(1:101),], 
+                    chain2 =   out[[2]][[2]][-c(1:101),], 
+                    chain3 =   out[[3]][[2]][-c(1:101),])
+
+mcmcList1 <- as.mcmc.list(lapply(samples1, mcmc))
+mcmcList2 <- as.mcmc.list(lapply(samples2, mcmc))
+
+
+
