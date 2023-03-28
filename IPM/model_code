@@ -1,0 +1,1564 @@
+#======================
+# define model in Nimble
+#======================
+pt_ipm <- nimbleCode({
+  
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Standardize covariates with uncertainty
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  for(t in 1:61){
+      for(a in 1:2){  
+        fall_n[a,t] ~ dnorm(load_fall_n[t,a],sd = load_fall_sd[t,a])
+    fall_n_std[a,t] <- (fall_n[a,t] - mu_fall_n[a])/std_fall_n[a]
+      }
+    for(a in 1:3){  
+        spring_n[a,t] ~ dnorm(load_spring_n[t,a], sd = load_spring_sd[t,a])
+    spring_n_std[a,t] <- (spring_n[a,t] - mu_spring_n[a])/std_spring_n[a]
+   }
+  }
+  
+  for(t in 1:62){
+        pond[t] ~ dnorm(ponds_mean[t], sd = ponds_sd[t])
+    pond.std[t] <- (pond[t] - mu_pond)/sd_pond
+
+       crops[t] ~ dnorm(Crop_Mean[t], sd = Crop_sd[t])
+    crop.std[t] <- (crops[t]-mean.crop)/sd.crop
+
+  }
+  for(t in 1:60){
+    rice_std[t,1] ~ dnorm(rice_gulf_mean[t], sd = rice_gulf_sd[t])
+    rice_std[t,2] ~ dnorm(rice_cv_mean[t], sd = rice_cv_sd[t])
+  }
+  rice_std[61,1] <- rice_std[60,1]
+  rice_std[61,2] <- rice_std[60,2]
+  rice_std[62,1] <- rice_std[60,1]
+  rice_std[62,2] <- rice_std[60,2]
+  
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Breeding Settlement Model From Wintering Grounds
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+       mu_cen_pr  ~ dlogis(0,1)        # Central -> Alaska
+       mu_pac_pr  ~ dlogis(0,1)        # Pacific -> Alaska
+         
+       mu_pr_pr[1] ~ dlogis(0,1)       
+       mu_pr_pr[2] ~ dlogis(0,1)    
+  for(l in 1:3){   
+    for(i in 1:3){
+      beta_pr_pond[i,l] ~ dnorm(0, sd = .5)    # Effects of pond density on staying in PPR
+    }
+  }
+          for(t in 1){
+            chi_pr_pr[1,t] <- exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t])/ (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]) + exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]))
+            chi_pr_pr[2,t] <- exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t])/ (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]) + exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]))
+            chi_pr_pr[3,t] <- 1 - chi_pr_pr[1,t]  - chi_pr_pr[2,t]  
+            
+            logit(chi_pac_pr[t]) <- mu_pac_pr + beta_pr_pond[3,1] *  pond.std[t]  
+            logit(chi_cen_pr[t]) <- mu_cen_pr 
+            
+            chi_pac_ak[t]  <- 1 - chi_pac_pr[t]
+            chi_cen_ak[t]  <- 1 - chi_cen_pr[t]
+          }
+          
+          for(t in 2){
+            chi_pr_pr[1,t] <- exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1] )/
+                        (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1] ) + 
+                              exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1] ))
+            
+            chi_pr_pr[2,t] <- exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1])/
+                        (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]) + 
+                              exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]))
+            
+            chi_pr_pr[3,t] <- 1 - chi_pr_pr[1,t]  - chi_pr_pr[2,t]  
+            
+            logit(chi_pac_pr[t]) <- mu_pac_pr + beta_pr_pond[3,1] *  pond.std[t]  +  beta_pr_pond[3,2] *  pond.std[t-1] 
+            logit(chi_cen_pr[t]) <- mu_cen_pr 
+                  chi_pac_ak[t]  <- 1 - chi_pac_pr[t]
+                  chi_cen_ak[t]  <- 1 - chi_cen_pr[t]
+          }
+          
+                  
+  for(t in 3:(nyear+1)){
+           chi_pr_pr[1,t] <- exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]  +  beta_pr_pond[1,3] *  pond.std[t-2] )/
+                       (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]  +  beta_pr_pond[1,3] *  pond.std[t-2] ) + 
+                             exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]  +  beta_pr_pond[2,3] *  pond.std[t-2] ))
+           
+           
+           chi_pr_pr[2,t] <- exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]  +  beta_pr_pond[2,3] *  pond.std[t-2] )/
+                       (1 +  exp(mu_pr_pr[1] + beta_pr_pond[1,1] *  pond.std[t]  +  beta_pr_pond[1,2] *  pond.std[t-1]  +  beta_pr_pond[1,3] *  pond.std[t-2] ) + 
+                             exp(mu_pr_pr[2] + beta_pr_pond[2,1] *  pond.std[t]  +  beta_pr_pond[2,2] *  pond.std[t-1]  +  beta_pr_pond[2,3] *  pond.std[t-2] ))
+           chi_pr_pr[3,t] <- 1 - chi_pr_pr[1,t]  - chi_pr_pr[2,t]  
+          
+           
+      logit(chi_pac_pr[t]) <- mu_pac_pr + beta_pr_pond[3,1] *  pond.std[t]  +  beta_pr_pond[3,2] *  pond.std[t-1]  +  beta_pr_pond[3,3] *  pond.std[t-2] 
+      logit(chi_cen_pr[t]) <- mu_cen_pr 
+            chi_pac_ak[t]  <- 1 - chi_pac_pr[t]
+            chi_cen_ak[t]  <- 1 - chi_cen_pr[t]
+  }
+      # Winter -> Breeding transitions
+      for(t in 1:(nyear+1)){         
+      chi[1,1,t] <- chi_cen_ak[t] + chi_cen_pr[t] * chi_pr_pr[1,t]                    # Gulf -> AK
+      chi[2,1,t] <- chi_cen_pr[t] * chi_pr_pr[2,t]                                    # Gulf -> North
+      chi[3,1,t] <- chi_cen_pr[t] * chi_pr_pr[3,t]                                    # Gulf -> PPR
+      
+      chi[1,2,t] <- chi_pac_ak[t] + chi_pac_pr[t] * chi_pr_pr[1,t]                    # Pacific -> AK
+      chi[2,2,t] <- chi_pac_pr[t] * chi_pr_pr[2,t]                                    # Pacific -> North
+      chi[3,2,t] <- chi_pac_pr[t] * chi_pr_pr[3,t]                                    # Pacific -> PPR
+      
+      # Breeding -> Breeding transitions
+      pi[1,1,t] <- pi_ak[1,t] *  chi[1,1,t] +  pi_ak[2,t] * chi[1,2,t]                # AK ->AK
+      pi[1,2,t] <- pi_ak[1,t] *  chi[2,1,t] +  pi_ak[2,t] * chi[2,2,t]                # AK->North
+      pi[1,3,t] <- pi_ak[1,t] *  chi[3,1,t] +  pi_ak[2,t] * chi[3,2,t]                # AK->PPR
+      pi[2,1,t] <- pi_no[1,t] *  chi[1,1,t] +  pi_no[2,t] * chi[1,2,t]                # North->AK
+      pi[2,2,t] <- pi_no[1,t] *  chi[2,1,t] +  pi_no[2,t] * chi[2,2,t]                # North->North
+      pi[2,3,t] <- pi_no[1,t] *  chi[3,1,t] +  pi_no[2,t] * chi[3,2,t]                # North->PPR
+      pi[3,1,t] <- pi_pr[1,t] *  chi[1,1,t] +  pi_pr[2,t] * chi[1,2,t]                # PPR->AK
+      pi[3,2,t] <- pi_pr[1,t] *  chi[2,1,t] +  pi_pr[2,t] * chi[2,2,t]                # PPR->North
+      pi[3,3,t] <- pi_pr[1,t] *  chi[3,1,t] +  pi_pr[2,t] * chi[3,2,t]                # PPR->PPR
+      }
+       # Winter -> Winter transitions
+   for(t in 1:nyear){
+      pi2[1,1,t] <-  chi[1,1,t] * pi_ak[1,t] +  chi[2,1,t] * pi_no[1,t] + chi[3,1,t] * pi_pr[1,t]     # GULF->GULF
+      pi2[1,2,t] <-  1 -  pi2[1,1,t]                                                                  # GULF->PAC
+      pi2[2,2,t] <-  chi[1,2,t] * pi_ak[2,t] +  chi[2,2,t] * pi_no[2,t] + chi[3,2,t] * pi_pr[2,t]     # PAC->GULF
+      pi2[2,1,t] <- 1 -  pi2[2,2,t]                                                                   # PAC->PAC
+  }
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Survival Model
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+          mu_age ~ dlogis(0,1)
+         sig_age ~ T(dt(0, pow(2.5, -2), 1),0,)
+       
+  # Intercept adjustment terms 
+       beta.direct ~ dnorm(0, sd = .5) # direct vs indirect recovery adjustment
+       for(t in 1:(nyear)){
+      beta.age.rec[t] ~ dnorm(mu_age, sd = sig_age) # HY vs AHY direct recovery adjustment
+       }
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Cholesky decomposition [annual covariance in demographic rates]
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  for(i in 1:3){
+          mu[i] <- 0
+         sig[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+     Delta[i,i] <- pow(Q[i,i], -0.5)
+    Lambda[i,i] <- sig[i]
+    
+  }
+  for (i in 2:3){
+    for (j in 1:(i-1)){
+      Lambda[i,j] <- 0
+       Delta[i,j] <- 0
+    }
+  }
+  Sigma[1:3,1:3] <- Lambda[1:3,1:3] %*% P[1:3,1:3] %*% Lambda[1:3,1:3]
+      Q[1:3,1:3] ~ dinvwish(S = I_m[1:3,1:3], df = 3 + 1)
+      P[1:3,1:3] <- Delta[1:3,1:3] %*% Q[1:3,1:3] %*% Delta[1:3,1:3]
+  for (i in 1:3){
+    for (j in 1:3){
+      rho[i,j] <- Sigma[i,j]/sqrt(Sigma[i,i] * Sigma[j,j])
+    }
+  }
+  for(i in 1:4){
+          mu_f[i] <- 0
+         sig_f[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+     Delta_f[i,i] <- pow(Q_f[i,i], -0.5)
+    Lambda_f[i,i] <- sig_f[i]
+  }
+  for (i in 2:4){
+    for (j in 1:(i-1)){
+      Lambda_f[i,j] <- 0
+       Delta_f[i,j] <- 0
+    }
+  }
+  Sigma_f[1:4,1:4] <- Lambda_f[1:4,1:4] %*% P_f[1:4,1:4] %*% Lambda_f[1:4,1:4]
+      Q_f[1:4,1:4] ~ dinvwish(S = I_f[1:4,1:4], df = 4 + 1)
+      P_f[1:4,1:4] <- Delta_f[1:4,1:4] %*% Q_f[1:4,1:4] %*% Delta_f[1:4,1:4]
+  for (i in 1:4){
+    for (j in 1:4){
+      rho_f[i,j] <- Sigma_f[i,j]/sqrt(Sigma_f[i,i] * Sigma_f[j,j])
+    }
+  }    
+  for (t in 1:(nyear-2)){
+    epsilon_m[t, 1:3] ~ dmnorm(mu[1:3], cov = Sigma[1:3, 1:3])
+    epsilon_f[t, 1:4] ~ dmnorm(mu_f[1:4], cov = Sigma_f[1:4, 1:4])
+  }
+  # Sum to zero constraint    
+  for(k in 1:3){
+    epsilon_m[nyear-1, k] <- -(sum(epsilon_m[1:(nyear-2), k]) )
+    epsilon_f[nyear-1, k] <- -(sum(epsilon_f[1:(nyear-2), k]) )
+      epsilon_m[nyear, k] <- 0
+      epsilon_f[nyear, k] <- 0
+  }  
+    epsilon_f[nyear-1, 4] <- -(sum(epsilon_f[1:(nyear-2), 4]) )
+      epsilon_f[nyear, 4] <- 0
+  # Correlated annual variation in population dynamics
+  for(t in 1:(nyear)){
+    theta.harv[1,t] <-epsilon_f[t,1]
+    theta.wint[1,t] <-epsilon_f[t,2]
+    theta.summ[1,t] <-epsilon_f[t,3]
+    theta.harv[2,t] <-epsilon_m[t,1]
+    theta.wint[2,t] <-epsilon_m[t,2]
+    theta.summ[2,t] <-epsilon_m[t,3]
+      theta.prod[t] <-epsilon_f[t,4]
+  }
+  for(t in (nyear+1):75){
+    theta.harv[1,t] <- 0   
+    theta.harv[2,t] <- 0   
+  }
+  # SEM inspired correlation between cause-specific mortality among regions
+    for(a in 1:2){
+     zeta.harv[a,1] <- 1
+     zeta.harv[a,2] ~ T(dnorm(1, sd = 0.2),0,)   # Association between pacific and central harvest mortality
+     zeta.wint[a,1] <- 1
+     zeta.wint[a,2] ~  T(dnorm(1, sd = 0.2),0,)     # Association between pacific and central natural winter mortality
+     zeta.summ[a,1] ~  T(dnorm(1, sd = 0.2),0,)     # Association between Alaska and Prairie natural summer mortality
+     zeta.summ[a,2] ~  T(dnorm(1, sd = 0.2),0,)     # Association between Northern and Prairie natural summer mortality
+     zeta.summ[a,3] <- 1
+    }
+  # Global intercept terms for natural winter, harvest, and natural summer mortality
+  ###########################################################################################
+      for(k in 1:2){
+        for(i in 1:n.summer){
+      mu_summ[i,k] ~ dbeta(8,2)
+    mean_summ[i,k] <- log(-log(mu_summ[i,k]))
+  }
+ # Winter mortality process
+  for(i in 1:n.winter){
+      mu_wint[i,k] ~ dbeta(8,2)
+      mu_harv[i,k] ~ dbeta(8,2)
+    mean_harv[i,k] <- log(-log(mu_harv[i,k]))
+    mean_wint[i,k] <- log(-log(mu_wint[i,k]))
+  }  
+}
+  for(a in 1:2){
+    for(j in 1:2){
+         beta_bag[j,a] ~ dnorm(0, sd = 0.25)
+         beta_den[j,a] ~ dnorm(0, sd = 0.25)
+    beta.age.mort[j,a] ~ dnorm(0, sd = 0.25)
+         beta.den[j,a] ~ dnorm(0, sd = 0.25)
+    }
+        beta_rice_w[a] ~ dnorm(0, sd = 0.25)
+  }
+  for(t in 1:nyear){
+    #Summer Survival
+    s.summer_ad_ak_f[t]    <-  exp(-(exp(mean_summ[1,1] +  theta.summ[1,t]*zeta.summ[1,1] )))
+    s.summer_ad_no_f[t]    <-  exp(-(exp(mean_summ[2,1] +  theta.summ[1,t]*zeta.summ[1,2] )))
+    s.summer_ad_pr_f[t]    <-  exp(-(exp(mean_summ[3,1] +  theta.summ[1,t]*zeta.summ[1,3] )))
+    s.summer_ad_ak_m[t]    <-  exp(-(exp(mean_summ[1,2] +  theta.summ[2,t]*zeta.summ[2,1] )))
+    s.summer_ad_no_m[t]    <-  exp(-(exp(mean_summ[2,2] +  theta.summ[2,t]*zeta.summ[2,2] )))
+    s.summer_ad_pr_m[t]    <-  exp(-(exp(mean_summ[3,2] +  theta.summ[2,t]*zeta.summ[2,3] )))
+  }
+    for(t in (nyear+1)){
+      #Summer Survival
+      s.summer_ad_ak_f[t]    <-  exp(-(exp(mean_summ[1,1])))
+      s.summer_ad_no_f[t]    <-  exp(-(exp(mean_summ[2,1])))
+      s.summer_ad_pr_f[t]    <-  exp(-(exp(mean_summ[3,1])))
+      s.summer_ad_ak_m[t]    <-  exp(-(exp(mean_summ[1,2])))
+      s.summer_ad_no_m[t]    <-  exp(-(exp(mean_summ[2,2])))
+      s.summer_ad_pr_m[t]    <-  exp(-(exp(mean_summ[3,2])))
+    }
+  # Risk of harvest mortality
+    for(a in 1:2){
+      for(t in 1:(nyear-1)){
+      kappa_central[1,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + theta.harv[a,t] * zeta.harv[a,1] + beta_bag[1,a] * bag[t] + beta_den[1,a] * fall_n_std[1,t] + beta.direct + beta.age.rec[t])))
+      kappa_pacific[1,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + theta.harv[a,t] * zeta.harv[a,2] + beta_bag[2,a] * bag[t] + beta_den[2,a] * fall_n_std[2,t] + beta.direct + beta.age.rec[t])))
+      kappa_central[2,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + theta.harv[a,t] * zeta.harv[a,1] + beta_bag[1,a] * bag[t] + beta_den[1,a] * fall_n_std[1,t] + beta.direct )))
+      kappa_pacific[2,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + theta.harv[a,t] * zeta.harv[a,2] + beta_bag[2,a] * bag[t] + beta_den[2,a] * fall_n_std[2,t] + beta.direct )))
+      kappa_central[3,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + theta.harv[a,t] * zeta.harv[a,1] + beta_bag[1,a] * bag[t] + beta_den[1,a] * fall_n_std[1,t] )))
+      kappa_pacific[3,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + theta.harv[a,t] * zeta.harv[a,2] + beta_bag[2,a] * bag[t] + beta_den[2,a] * fall_n_std[2,t] )))
+      }
+       for(t in nyear:(nyear+ nyear_use-1)){
+      # Kill Rates
+       kappa_central[1,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + beta.direct )))
+       kappa_pacific[1,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + beta.direct )))
+       kappa_central[2,a,t] <-  1 - exp(-(exp(mean_harv[1,a] + beta.direct )))
+       kappa_pacific[2,a,t] <-  1 - exp(-(exp(mean_harv[2,a] + beta.direct )))
+       kappa_central[3,a,t] <-  1 - exp(-(exp(mean_harv[1,a] )))
+       kappa_pacific[3,a,t] <-  1 - exp(-(exp(mean_harv[2,a] )))
+      }
+      for(t in 1:(nyear+nyear_use-1)){
+      # Reporting rate adjusted kill rates
+       fp_central[1,a,t] <- rr[t] * kappa_central[1,a,t] * (1-cr)
+       fp_pacific[1,a,t] <- rr[t] * kappa_pacific[1,a,t] * (1-cr)
+       fp_central[2,a,t] <- rr[t] * kappa_central[2,a,t] * (1-cr)
+       fp_pacific[2,a,t] <- rr[t] * kappa_pacific[2,a,t] * (1-cr)
+       fp_central[3,a,t] <- rr[t] * kappa_central[3,a,t] * (1-cr)
+       fp_pacific[3,a,t] <- rr[t] * kappa_pacific[3,a,t] * (1-cr)
+    }
+  }
+  # Crippling Rate Prior
+  cr ~ dbeta(20, 80)
+  # Pre-harvest survival constant for male and female HY individuals from each of 3 breeding regions
+  for(i in 1:6){
+    local[i] ~ dbeta(80,20)
+  }
+  for(t in 1:24){
+    # Winter Survival
+    sw_hy_central_f[t] <- exp(-exp(mean_wint[1,1] + beta.den[1,1] * fall_n_std[1,t] + theta.wint[1,t]*zeta.wint[1,1]  + beta.age.mort[1,1]))  * (1 - kappa_central[1,1,t])
+    sw_hy_pacific_f[t] <- exp(-exp(mean_wint[2,1] + beta.den[2,1] * fall_n_std[2,t] + theta.wint[1,t]*zeta.wint[1,2]  + beta.age.mort[1,2]))  * (1 - kappa_pacific[1,1,t])
+    sw_ad_central_f[t] <- exp(-exp(mean_wint[1,1] + beta.den[1,1] * fall_n_std[1,t] + theta.wint[1,t]*zeta.wint[1,1] ))                       * (1 - kappa_central[2,1,t])
+    sw_ad_pacific_f[t] <- exp(-exp(mean_wint[2,1] + beta.den[2,1] * fall_n_std[2,t] + theta.wint[1,t]*zeta.wint[1,2] ))                       * (1 - kappa_pacific[2,1,t])
+    sw_hy_central_m[t] <- exp(-exp(mean_wint[1,2] + beta.den[1,2] * fall_n_std[1,t] + theta.wint[2,t]*zeta.wint[2,1]  + beta.age.mort[2,1] )) * (1 - kappa_central[1,2,t])
+    sw_hy_pacific_m[t] <- exp(-exp(mean_wint[2,2] + beta.den[2,2] * fall_n_std[2,t] + theta.wint[2,t]*zeta.wint[2,2]  + beta.age.mort[2,2] )) * (1 - kappa_pacific[1,2,t])
+    sw_ad_central_m[t] <- exp(-exp(mean_wint[1,2] + beta.den[1,2] * fall_n_std[1,t] + theta.wint[2,t]*zeta.wint[2,1]  ))                      * (1 - kappa_central[2,2,t])
+    sw_ad_pacific_m[t] <- exp(-exp(mean_wint[2,2] + beta.den[2,2] * fall_n_std[2,t] + theta.wint[2,t]*zeta.wint[2,2]  ))                      * (1 - kappa_pacific[2,2,t])
+  }
+  for(t in 25:nyear){
+    # Winter Survival
+    sw_hy_central_f[t] <- exp(-exp(mean_wint[1,1] + beta.den[1,1] * fall_n_std[1,t] + beta_rice_w[1] * rice_std[t,1] + theta.wint[1,t]*zeta.wint[1,1]  + beta.age.mort[1,1]))   * (1 - kappa_central[1,1,t])
+    sw_hy_pacific_f[t] <- exp(-exp(mean_wint[2,1] + beta.den[2,1] * fall_n_std[2,t] + beta_rice_w[2] * rice_std[t,2] + theta.wint[1,t]*zeta.wint[1,2]  + beta.age.mort[1,2]))   * (1 - kappa_pacific[1,1,t])
+    sw_ad_central_f[t] <- exp(-exp(mean_wint[1,1] + beta.den[1,1] * fall_n_std[1,t] + beta_rice_w[1] * rice_std[t,1] + theta.wint[1,t]*zeta.wint[1,1] ))                        * (1 - kappa_central[2,1,t])
+    sw_ad_pacific_f[t] <- exp(-exp(mean_wint[2,1] + beta.den[2,1] * fall_n_std[2,t] + beta_rice_w[2] * rice_std[t,2] + theta.wint[1,t]*zeta.wint[1,2] ))                        * (1 - kappa_pacific[2,1,t])
+    sw_hy_central_m[t] <- exp(-exp(mean_wint[1,2] + beta.den[1,2] * fall_n_std[1,t] + beta_rice_w[1] * rice_std[t,1] + theta.wint[2,t]*zeta.wint[2,1]  + beta.age.mort[2,1] ))  * (1 - kappa_central[1,2,t])
+    sw_hy_pacific_m[t] <- exp(-exp(mean_wint[2,2] + beta.den[2,2] * fall_n_std[2,t] + beta_rice_w[2] * rice_std[t,2] + theta.wint[2,t]*zeta.wint[2,2]  + beta.age.mort[2,2] ))  * (1 - kappa_pacific[1,2,t])
+    sw_ad_central_m[t] <- exp(-exp(mean_wint[1,2] + beta.den[1,2] * fall_n_std[1,t] + beta_rice_w[1] * rice_std[t,1] + theta.wint[2,t]*zeta.wint[2,1]  ))                       * (1 - kappa_central[2,2,t])
+    sw_ad_pacific_m[t] <- exp(-exp(mean_wint[2,2] + beta.den[2,2] * fall_n_std[2,t] + beta_rice_w[2] * rice_std[t,2] + theta.wint[2,t]*zeta.wint[2,2]  ))                       * (1 - kappa_pacific[2,2,t])
+  }
+  for(t in 1:nyear){
+    # Pre-harvest HY Survival (1 month)
+    sw_hy_ak_f[t]    <-  local[1]
+    sw_hy_ak_m[t]    <-  local[2]
+    sw_hy_no_f[t]    <-  local[3]
+    sw_hy_no_m[t]    <-  local[4]
+    sw_hy_pr_f[t]    <-  local[5]
+    sw_hy_pr_m[t]    <-  local[6]
+    # Pre-harvest AHY Survival (1 month)
+    sw_ad_ak_f[t] <- (s.summer_ad_ak_f[t])^(1/6)
+    sw_ad_ak_m[t] <- (s.summer_ad_ak_m[t])^(1/6)
+    sw_ad_no_f[t] <- (s.summer_ad_no_f[t])^(1/6)
+    sw_ad_no_m[t] <- (s.summer_ad_no_m[t])^(1/6)
+    sw_ad_pr_f[t] <- (s.summer_ad_pr_f[t])^(1/6)
+    sw_ad_pr_m[t] <- (s.summer_ad_pr_m[t])^(1/6)
+    # Breeding Region Winter Survival [sum of the Winter survival x proportion of the breeding population associated with a wintering group]
+    s.winter_hy_ak_f[t]  <-  (sw_hy_central_f[t] * pi_ak[1,t] + sw_hy_pacific_f[t] * pi_ak[2,t])
+    s.winter_hy_mw_f[t]  <-  (sw_hy_central_f[t] * pi_mw[1,t] + sw_hy_pacific_f[t] * pi_mw[2,t])
+    s.winter_hy_no_f[t]  <-  (sw_hy_central_f[t] * pi_no[1,t] + sw_hy_pacific_f[t] * pi_no[2,t])
+    s.winter_hy_pc_f[t]  <-  (sw_hy_central_f[t] * pi_pc[1,t] + sw_hy_pacific_f[t] * pi_pc[2,t])
+    s.winter_hy_pr_f[t]  <-  (sw_hy_central_f[t] * pi_pr[1,t] + sw_hy_pacific_f[t] * pi_pr[2,t])
+    s.winter_ad_ak_f[t]  <-  (sw_ad_central_f[t] * pi_ak[1,t] + sw_ad_pacific_f[t] * pi_ak[2,t])
+    s.winter_ad_mw_f[t]  <-  (sw_ad_central_f[t] * pi_mw[1,t] + sw_ad_pacific_f[t] * pi_mw[2,t])
+    s.winter_ad_no_f[t]  <-  (sw_ad_central_f[t] * pi_no[1,t] + sw_ad_pacific_f[t] * pi_no[2,t])
+    s.winter_ad_pc_f[t]  <-  (sw_ad_central_f[t] * pi_pc[1,t] + sw_ad_pacific_f[t] * pi_pc[2,t])
+    s.winter_ad_pr_f[t]  <-  (sw_ad_central_f[t] * pi_pr[1,t] + sw_ad_pacific_f[t] * pi_pr[2,t])
+    s.winter_hy_ak_m[t]  <-  (sw_hy_central_m[t] * pi_ak[1,t] + sw_hy_pacific_m[t] * pi_ak[2,t])
+    s.winter_hy_mw_m[t]  <-  (sw_hy_central_m[t] * pi_mw[1,t] + sw_hy_pacific_m[t] * pi_mw[2,t])
+    s.winter_hy_no_m[t]  <-  (sw_hy_central_m[t] * pi_no[1,t] + sw_hy_pacific_m[t] * pi_no[2,t])
+    s.winter_hy_pc_m[t]  <-  (sw_hy_central_m[t] * pi_pc[1,t] + sw_hy_pacific_m[t] * pi_pc[2,t])
+    s.winter_hy_pr_m[t]  <-  (sw_hy_central_m[t] * pi_pr[1,t] + sw_hy_pacific_m[t] * pi_pr[2,t])
+    s.winter_ad_ak_m[t]  <-  (sw_ad_central_m[t] * pi_ak[1,t] + sw_ad_pacific_m[t] * pi_ak[2,t])
+    s.winter_ad_mw_m[t]  <-  (sw_ad_central_m[t] * pi_mw[1,t] + sw_ad_pacific_m[t] * pi_mw[2,t])
+    s.winter_ad_no_m[t]  <-  (sw_ad_central_m[t] * pi_no[1,t] + sw_ad_pacific_m[t] * pi_no[2,t])
+    s.winter_ad_pc_m[t]  <-  (sw_ad_central_m[t] * pi_pc[1,t] + sw_ad_pacific_m[t] * pi_pc[2,t])
+    s.winter_ad_pr_m[t]  <-  (sw_ad_central_m[t] * pi_pr[1,t] + sw_ad_pacific_m[t] * pi_pr[2,t])
+    # Winter Region Breeding Survival
+        sur_waf[2,1,t] <- s.summer_ad_ak_f[t + 1] * chi[1,1,t] + s.summer_ad_no_f[t + 1] * chi[2,1,t] + s.summer_ad_pr_f[t + 1] * chi[3,1,t]
+        sur_wam[2,1,t] <- s.summer_ad_ak_m[t + 1] * chi[1,1,t] + s.summer_ad_no_m[t + 1] * chi[2,1,t] + s.summer_ad_pr_m[t + 1] * chi[3,1,t]
+        sur_waf[2,2,t] <- s.summer_ad_ak_f[t + 1] * chi[1,2,t] + s.summer_ad_no_f[t + 1] * chi[2,2,t] + s.summer_ad_pr_f[t + 1] * chi[3,2,t]
+        sur_wam[2,2,t] <- s.summer_ad_ak_m[t + 1] * chi[1,2,t] + s.summer_ad_no_m[t + 1] * chi[2,2,t] + s.summer_ad_pr_m[t + 1] * chi[3,2,t]
+        sur_waf[1,1,t] <- sw_ad_central_f[t] 
+        sur_waf[1,2,t] <- sw_ad_pacific_f[t] 
+        sur_wam[1,1,t] <- sw_ad_central_m[t]
+        sur_wam[1,2,t] <- sw_ad_pacific_m[t]
+  }
+  # Annual survival for winter released pintails
+  for(t in 1:(nyear-1)){
+        a_sur_waf[1,t] <- sur_waf[2,1,t] * sur_waf[1,1,t+1]
+        a_sur_wam[1,t] <- sur_wam[2,1,t] * sur_wam[1,1,t+1]
+        a_sur_waf[2,t] <- sur_waf[2,2,t] * sur_waf[1,2,t+1]
+        a_sur_wam[2,t] <- sur_wam[2,2,t] * sur_wam[1,2,t+1]
+  }
+  for(t in 1:nyear){
+    # Pre-harvest survival
+    pre_harv_af[1,t] <-  sw_ad_ak_f[t] 
+    pre_harv_am[1,t] <-  sw_ad_ak_m[t] 
+    pre_harv_jf[1,t] <-  sw_hy_ak_f[t] 
+    pre_harv_jm[1,t] <-  sw_hy_ak_m[t] 
+    pre_harv_af[2,t] <-  sw_ad_no_f[t] 
+    pre_harv_am[2,t] <-  sw_ad_no_m[t] 
+    pre_harv_jf[2,t] <-  sw_hy_no_f[t] 
+    pre_harv_jm[2,t] <-  sw_hy_no_m[t] 
+    pre_harv_af[3,t] <-  sw_ad_pr_f[t] 
+    pre_harv_am[3,t] <-  sw_ad_pr_m[t] 
+    pre_harv_jf[3,t] <-  sw_hy_pr_f[t] 
+    pre_harv_jm[3,t] <-  sw_hy_pr_m[t] 
+    # Birds released during Migration
+    pre_harv_af[4,t] <-  1
+    pre_harv_am[4,t] <-  1
+    pre_harv_jf[4,t] <-  1
+    pre_harv_jm[4,t] <-  1
+    pre_harv_af[5,t] <-  1
+    pre_harv_am[5,t] <-  1
+    pre_harv_jf[5,t] <-  1
+    pre_harv_jm[5,t] <-  1
+    # Annual Survival for post-breeding released pintails
+    sur_af[1,t] <- s.winter_ad_ak_f[t] * s.summer_ad_ak_f[t+1]
+    sur_am[1,t] <- s.winter_ad_ak_m[t] * s.summer_ad_ak_m[t+1]
+    sur_jf[1,t] <- s.winter_hy_ak_f[t] * s.summer_ad_ak_f[t+1]
+    sur_jm[1,t] <- s.winter_hy_ak_m[t] * s.summer_ad_ak_m[t+1]
+    sur_af[2,t] <- s.winter_ad_no_f[t] * s.summer_ad_no_f[t+1]
+    sur_am[2,t] <- s.winter_ad_no_m[t] * s.summer_ad_no_m[t+1]
+    sur_jf[2,t] <- s.winter_hy_no_f[t] * s.summer_ad_no_f[t+1]
+    sur_jm[2,t] <- s.winter_hy_no_m[t] * s.summer_ad_no_m[t+1]
+    sur_af[3,t] <- s.winter_ad_pr_f[t] * s.summer_ad_pr_f[t+1]
+    sur_am[3,t] <- s.winter_ad_pr_m[t] * s.summer_ad_pr_m[t+1]
+    sur_jf[3,t] <- s.winter_hy_pr_f[t] * s.summer_ad_pr_f[t+1]
+    sur_jm[3,t] <- s.winter_hy_pr_m[t] * s.summer_ad_pr_m[t+1]
+    # Annual Survival for during migration released pintails
+    sur_af[4,t] <- s.winter_ad_mw_f[t] * (s.summer_ad_ak_f[t] * chi[1,1,t] + s.summer_ad_no_f[t] * chi[2,1,t] + s.summer_ad_pr_f[t] * chi[3,1,t])
+    sur_am[4,t] <- s.winter_ad_mw_m[t] * (s.summer_ad_ak_m[t] * chi[1,1,t] + s.summer_ad_no_m[t] * chi[2,1,t] + s.summer_ad_pr_m[t] * chi[3,1,t])
+    sur_jf[4,t] <- s.winter_hy_mw_f[t] * (s.summer_ad_ak_f[t] * chi[1,1,t] + s.summer_ad_no_f[t] * chi[2,1,t] + s.summer_ad_pr_f[t] * chi[3,1,t])
+    sur_jm[4,t] <- s.winter_hy_mw_m[t] * (s.summer_ad_ak_m[t] * chi[1,1,t] + s.summer_ad_no_m[t] * chi[2,1,t] + s.summer_ad_pr_m[t] * chi[3,1,t])
+    sur_af[5,t] <- s.winter_ad_pc_f[t] * (s.summer_ad_ak_f[t] * chi[1,2,t] + s.summer_ad_no_f[t] * chi[2,2,t] + s.summer_ad_pr_f[t] * chi[3,2,t])
+    sur_am[5,t] <- s.winter_ad_pc_m[t] * (s.summer_ad_ak_m[t] * chi[1,2,t] + s.summer_ad_no_m[t] * chi[2,2,t] + s.summer_ad_pr_m[t] * chi[3,2,t])
+    sur_jf[5,t] <- s.winter_hy_pc_f[t] * (s.summer_ad_ak_f[t] * chi[1,2,t] + s.summer_ad_no_f[t] * chi[2,2,t] + s.summer_ad_pr_f[t] * chi[3,2,t])
+    sur_jm[5,t] <- s.winter_hy_pc_m[t] * (s.summer_ad_ak_m[t] * chi[1,2,t] + s.summer_ad_no_m[t] * chi[2,2,t] + s.summer_ad_pr_m[t] * chi[3,2,t])   
+    
+              f_wf[1,1,t] <- fp_central[2,1,t]
+              f_wf[2,1,t] <- fp_central[2,1,t]
+              f_wm[1,1,t] <- fp_central[2,2,t]
+              f_wm[2,1,t] <- fp_central[2,2,t]
+              f_wf[1,2,t] <- fp_pacific[2,1,t]
+              f_wf[2,2,t] <- fp_pacific[2,1,t]
+              f_wm[1,2,t] <- fp_pacific[2,2,t]
+              f_wm[2,2,t] <- fp_pacific[2,2,t]
+              f_wf[1,3,t] <- (fp_central[2,1,t] * pi_gulf[1]) + (fp_pacific[2,1,t] * pi_gulf[2])
+              f_wf[2,3,t] <- (fp_central[2,1,t] * pi_pac[1])  +  (fp_pacific[2,1,t] * pi_pac[2])
+              f_wm[1,3,t] <- (fp_central[2,2,t] * pi_gulf[1]) + (fp_pacific[2,2,t] * pi_gulf[2])
+              f_wm[2,3,t] <- (fp_central[2,2,t] * pi_pac[1])  +  (fp_pacific[2,2,t] * pi_pac[2])
+  }
+  for(t in (nyear+1):(nyear + nyear_use-1)){
+    for(a in 1:2){
+      for(i in 1:3){
+        f_wf[a,i,t] <-       f_wf[a,i,nyear]
+        f_wm[a,i,t] <-       f_wm[a,i,nyear]
+      }
+    }
+  }
+  for(t in 1:(nyear + nyear_use-1)){
+    for(i in 1:5){
+        f_jf[i,1,t] <-  fp_central[1,1,t]
+        f_jm[i,1,t] <-  fp_central[1,2,t]
+        f_jf[i,2,t] <-  fp_pacific[1,1,t]
+        f_jm[i,2,t] <-  fp_pacific[1,2,t]
+      f_af[1,i,1,t] <-  fp_central[2,1,t]
+      f_am[1,i,1,t] <-  fp_central[2,2,t]
+      f_af[1,i,2,t] <-  fp_pacific[2,1,t]
+      f_am[1,i,2,t] <-  fp_pacific[2,2,t]
+      f_af[2,i,1,t] <-  fp_central[3,1,t]
+      f_am[2,i,1,t] <-  fp_central[3,2,t]
+      f_af[2,i,2,t] <-  fp_pacific[3,1,t]
+      f_am[2,i,2,t] <-  fp_pacific[3,2,t]
+    }
+      f_jf[1,3,t] <-  fp_central[1,1,t] * pi_ak[1,t] + fp_pacific[1,1,t] * pi_ak[2,t]
+      f_jf[2,3,t] <-  fp_central[1,1,t] * pi_no[1,t] + fp_pacific[1,1,t] * pi_no[2,t]
+      f_jf[3,3,t] <-  fp_central[1,1,t] * pi_pr[1,t] + fp_pacific[1,1,t] * pi_pr[2,t]
+      f_jf[4,3,t] <-  fp_central[1,1,t] * pi_mw[1,t] + fp_pacific[1,1,t] * pi_mw[2,t]
+      f_jf[5,3,t] <-  fp_central[1,1,t] * pi_pc[1,t] + fp_pacific[1,1,t] * pi_pc[2,t]
+    f_af[1,1,3,t] <-  fp_central[2,1,t] * pi_ak[1,t] + fp_pacific[2,1,t] * pi_ak[2,t]
+    f_af[1,2,3,t] <-  fp_central[2,1,t] * pi_no[1,t] + fp_pacific[2,1,t] * pi_no[2,t]
+    f_af[1,3,3,t] <-  fp_central[2,1,t] * pi_pr[1,t] + fp_pacific[2,1,t] * pi_pr[2,t]
+    f_af[1,4,3,t] <-  fp_central[2,1,t] * pi_mw[1,t] + fp_pacific[2,1,t] * pi_mw[2,t]
+    f_af[1,5,3,t] <-  fp_central[2,1,t] * pi_pc[1,t] + fp_pacific[2,1,t] * pi_pc[2,t]
+    f_af[2,1,3,t] <-  fp_central[3,1,t] * pi_ak[1,t] + fp_pacific[3,1,t] * pi_ak[2,t]
+    f_af[2,2,3,t] <-  fp_central[3,1,t] * pi_no[1,t] + fp_pacific[3,1,t] * pi_no[2,t]
+    f_af[2,3,3,t] <-  fp_central[3,1,t] * pi_pr[1,t] + fp_pacific[3,1,t] * pi_pr[2,t]
+    f_af[2,4,3,t] <-  fp_central[3,1,t] * pi_mw[1,t] + fp_pacific[3,1,t] * pi_mw[2,t]
+    f_af[2,5,3,t] <-  fp_central[3,1,t] * pi_pc[1,t] + fp_pacific[3,1,t] * pi_pc[2,t]
+      f_jm[1,3,t] <-  fp_central[1,2,t] * pi_ak[1,t] + fp_pacific[1,2,t] * pi_ak[2,t]
+      f_jm[2,3,t] <-  fp_central[1,2,t] * pi_no[1,t] + fp_pacific[1,2,t] * pi_no[2,t]
+      f_jm[3,3,t] <-  fp_central[1,2,t] * pi_pr[1,t] + fp_pacific[1,2,t] * pi_pr[2,t]
+      f_jm[4,3,t] <-  fp_central[1,2,t] * pi_mw[1,t] + fp_pacific[1,2,t] * pi_mw[2,t]
+      f_jm[5,3,t] <-  fp_central[1,2,t] * pi_pc[1,t] + fp_pacific[1,2,t] * pi_pc[2,t]
+    f_am[1,1,3,t] <-  fp_central[2,2,t] * pi_ak[1,t] + fp_pacific[2,2,t] * pi_ak[2,t]
+    f_am[1,2,3,t] <-  fp_central[2,2,t] * pi_no[1,t] + fp_pacific[2,2,t] * pi_no[2,t]
+    f_am[1,3,3,t] <-  fp_central[2,2,t] * pi_pr[1,t] + fp_pacific[2,2,t] * pi_pr[2,t]
+    f_am[1,4,3,t] <-  fp_central[2,2,t] * pi_mw[1,t] + fp_pacific[2,2,t] * pi_mw[2,t]
+    f_am[1,5,3,t] <-  fp_central[2,2,t] * pi_pc[1,t] + fp_pacific[2,2,t] * pi_pc[2,t]
+    f_am[2,1,3,t] <-  fp_central[3,2,t] * pi_ak[1,t] + fp_pacific[3,2,t] * pi_ak[2,t]
+    f_am[2,2,3,t] <-  fp_central[3,2,t] * pi_no[1,t] + fp_pacific[3,2,t] * pi_no[2,t]
+    f_am[2,3,3,t] <-  fp_central[3,2,t] * pi_pr[1,t] + fp_pacific[3,2,t] * pi_pr[2,t]
+    f_am[2,4,3,t] <-  fp_central[3,2,t] * pi_mw[1,t] + fp_pacific[3,2,t] * pi_mw[2,t]
+    f_am[2,5,3,t] <-  fp_central[3,2,t] * pi_pc[1,t] + fp_pacific[3,2,t] * pi_pc[2,t]
+  }
+  # Standardized regional harvest distributions
+  for(j in 1:5){
+    pi_mod[j] ~ dbeta(1,1)
+     mu_pi[j] ~ dlogis(0, 1)
+    sig_pi[j] ~ dunif(0, 10)
+    for(k in 1:2){
+      beta_temp[k,j] ~ dnorm(0, sd = 1)
+      beta_prec[k,j] ~ dnorm(0, sd = 1)
+    }
+  }
+for(t in 1:(nyear + nyear_use-1)){
+          l_pi_ak[t] ~ dnorm(mu_pi[1] + beta_temp[1,1] * T_GC[t] + beta_temp[2,1] * T_PC[t] + beta_prec[1,1] * P_GC[t] + beta_prec[2,1] * P_PC[t], sd = sig_pi[1])
+          l_pi_no[t] ~ dnorm(mu_pi[2] + beta_temp[1,2] * T_GC[t] + beta_temp[2,2] * T_PC[t] + beta_prec[1,2] * P_GC[t] + beta_prec[2,2] * P_PC[t], sd = sig_pi[2])
+          l_pi_pr[t] ~ dnorm(mu_pi[3] + beta_temp[1,3] * T_GC[t] + beta_temp[2,3] * T_PC[t] + beta_prec[1,3] * P_GC[t] + beta_prec[2,3] * P_PC[t], sd = sig_pi[3]) 
+          l_pi_mw[t] ~ dnorm(mu_pi[4] + beta_temp[1,4] * T_GC[t] + beta_temp[2,4] * T_PC[t] + beta_prec[1,4] * P_GC[t] + beta_prec[2,4] * P_PC[t], sd = sig_pi[4])
+          l_pi_pc[t] ~ dnorm(mu_pi[5] + beta_temp[1,5] * T_GC[t] + beta_temp[2,5] * T_PC[t] + beta_prec[1,5] * P_GC[t] + beta_prec[2,5] * P_PC[t], sd = sig_pi[5])
+      logit(pi_ak[1,t]) <- l_pi_ak[t]                   # ak -> gulf
+      logit(pi_mw[1,t]) <- l_pi_mw[t]                   # mw -> gulf
+      logit(pi_no[1,t]) <- l_pi_no[t]                   # no -> gulf
+      logit(pi_pc[1,t]) <- l_pi_pc[t]                   # pc -> gulf
+      logit(pi_pr[1,t]) <- l_pi_pr[t]                   # pr -> gulf
+            pi_ak[2,t] <- 1 - pi_ak[1,t]
+            pi_mw[2,t] <- 1 - pi_mw[1,t]
+            pi_no[2,t] <- 1 - pi_no[1,t]
+            pi_pc[2,t] <- 1 - pi_pc[1,t]
+            pi_pr[2,t] <- 1 - pi_pr[1,t]
+    for(i in 1:2){   
+      pi_harv[1,i,t] <- pi_ak[i,t] - (pi_ak[i,t] * pi_mod[1])
+      pi_harv[2,i,t] <- pi_no[i,t] - (pi_no[i,t] * pi_mod[2])
+      pi_harv[3,i,t] <- pi_pr[i,t] - (pi_pr[i,t] * pi_mod[3])
+      pi_harv[4,i,t] <- pi_mw[i,t] - (pi_mw[i,t] * pi_mod[4])
+      pi_harv[5,i,t] <- pi_pc[i,t] - (pi_pc[i,t] * pi_mod[5])
+    }
+      pi_harv[1,3,t] <- 1 - (pi_harv[1,1,t] + pi_harv[1,2,t])
+      pi_harv[2,3,t] <- 1 - (pi_harv[2,1,t] + pi_harv[2,2,t])
+      pi_harv[3,3,t] <- 1 - (pi_harv[3,1,t] + pi_harv[3,2,t])
+      pi_harv[4,3,t] <- 1 - (pi_harv[4,1,t] + pi_harv[4,2,t])
+      pi_harv[5,3,t] <- 1 - (pi_harv[5,1,t] + pi_harv[5,2,t])
+   }
+      for(i in 1:2){    
+    pi_gulf[i] <- pi_harv2[1,i]/(1 - pi_harv2[1,3])
+     pi_pac[i] <- pi_harv2[2,i]/(1 - pi_harv2[2,3])
+  }
+  # Breeding region composition of harvest
+  pi_harv2[1,1:3] ~ ddirch(alpha_gulf[1:3])
+  pi_harv2[2,1:3] ~ ddirch(alpha_pac[1:3])
+  ### Capture probability
+  for(i in 1:narea){
+          mu_p[i] ~ dbeta(1,1)
+          sd_p[i] ~ dexp(.1)
+       alpha_p[i] <- mu_p[i] * sd_p[i]
+        beta_p[i] <- (1 - mu_p[i]) * sd_p[i]
+       pcap_af[i] ~ dbeta(alpha_p[i],beta_p[i])
+       pcap_jf[i] ~ dbeta(alpha_p[i],beta_p[i])
+       pcap_am[i] ~ dbeta(alpha_p[i],beta_p[i])
+       pcap_jm[i] ~ dbeta(alpha_p[i],beta_p[i])
+     }
+       wpcap_af[1] ~ dbeta(5,95)
+       wpcap_af[2] ~ dbeta(5,95)
+       wpcap_am[1] ~ dbeta(5,95)
+       wpcap_am[2] ~ dbeta(5,95)
+  ##########################################################################
+  ### Availability
+  ##########################################################################
+  for (i in 1:narea) {
+             mu.psi[i] ~ dbeta(25, 5)
+            sig.psi[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+          alpha.psi[i] <-   mu.psi[i] *  sig.psi[i]
+           beta.psi[i] <-   (1 - mu.psi[i]) *  sig.psi[i]
+    for(t in 1:nyear){
+           psi[i,t] ~ dbeta(alpha.psi[i], beta.psi[i])
+    }
+  }
+  ##########################################################################
+  ### Productivity
+  ##########################################################################     
+  for(j in 1:3){
+      beta.den_ar[j] ~ dnorm(0, sd = .5)
+    log_ar_region[j] ~ dunif(-0.75,0.75)
+      beta_rice_p[j] ~ dnorm(0, sd = .5)
+      beta_rice_g[j] ~ dnorm(0, sd = .5)
+  }
+  ##### Yearly productivity
+  zeta.prod[1] ~ dnorm(1, sd = .25)
+  zeta.prod[2] ~ dnorm(1, sd = .25)
+  zeta.prod[3] <- 1
+  for(i in 1:3){  
+   beta.pnd_ar[i] ~ dnorm(0, sd = .5)
+  }
+  beta.crop_ar ~ dnorm(0, sd = .5)
+   beta.pnd_cr ~ dnorm(0, sd = .5)
+  for (t in 1:nyear) {
+    for(j in 1:3){
+      eps_production[j,t] <-  theta.prod[t] * zeta.prod[j]
+    }
+    log_ar[1,t] <- log_ar_mu_ak[t] 
+    log_ar[2,t] <- log_ar_mu_nh[t] 
+    log_ar[3,t] <- log_ar_mu_pr[t] 
+  }
+  for(t in 1:25){
+  log_ar_mu_ak[t] <- log_ar_region[1] + beta.den_ar[1] * spring_n_std[1,t] + beta.pnd_ar[1] * def_a[t] + eps_production[1,t]
+  log_ar_mu_nh[t] <- log_ar_region[2] + beta.den_ar[2] * spring_n_std[2,t] + beta.pnd_ar[2] * def_b[t] + eps_production[2,t]
+  log_ar_mu_pr[t] <- log_ar_region[3] + beta.den_ar[3] * spring_n_std[3,t] + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t]  + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
+} # t
+  for(t in 26:60){
+    log_ar_mu_ak[t] <- log_ar_region[1] + beta.den_ar[1] * spring_n_std[1,t] +  (beta_rice_g[1] * rice_std[t-1,1]) + (beta_rice_p[1] * rice_std[t-1,2]) + beta.pnd_ar[1] * def_a[t] + eps_production[1,t]
+    log_ar_mu_nh[t] <- log_ar_region[2] + beta.den_ar[2] * spring_n_std[2,t] +  (beta_rice_g[2] * rice_std[t-1,1]) + (beta_rice_p[2] * rice_std[t-1,2]) + beta.pnd_ar[2] * def_b[t] + eps_production[2,t]
+    log_ar_mu_pr[t] <- log_ar_region[3] + beta.den_ar[3] * spring_n_std[3,t] +  (beta_rice_g[3] * rice_std[t-1,1]) + (beta_rice_p[3] * rice_std[t-1,2]) + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t] + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
+  } # t
+   for(t in 61){
+     log_ar_mu_ak[t] <- log_ar_region[1] + beta.den_ar[1] * spring_n_std[1,t] + eps_production[1,t]
+     log_ar_mu_nh[t] <- log_ar_region[2] + beta.den_ar[2] * spring_n_std[2,t] + eps_production[2,t]
+     log_ar_mu_pr[t] <- log_ar_region[3] + beta.den_ar[3] * spring_n_std[3,t] + beta.pnd_ar[3] * pond.std[t] + beta.crop_ar * crop.std[t] + beta.pnd_cr * pond.std[t] * crop.std[t] + eps_production[3,t]
+   } # t
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      ar[i,t] <- exp(log_ar[i,t])
+    } # t
+  } # i
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Post-breeding banding m-arrays
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  ##### Adult female & male
+  for (i in 1:narea) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0 
+      pt_af[t,1,i] <- 1
+      pt_af[t,2,i] <- pre_harv_af[i,t] * pi_harv[i,1,t]
+      pt_af[t,3,i] <- pre_harv_af[i,t] * pi_harv[i,2,t]
+      pt_af[t,4,i] <- pre_harv_af[i,t] * pi_harv[i,3,t]
+      pt_am[t,1,i] <- 1
+      pt_am[t,2,i] <- pre_harv_am[i,t] * pi_harv[i,1,t]
+      pt_am[t,3,i] <- pre_harv_am[i,t] * pi_harv[i,2,t]
+      pt_am[t,4,i] <- pre_harv_am[i,t] * pi_harv[i,3,t]
+      # s = 1 
+      for (j in 1:narea) {
+        pt_af[t,4+j,i] <- pre_harv_af[i,t] * sur_af[i,t] * pi[i,j,t]
+        pt_am[t,4+j,i] <- pre_harv_am[i,t] * sur_am[i,t] * pi[i,j,t]
+      } # j
+      for(k in 1:nwint){ 
+        pt_af[t,4+narea+k,i] <- pre_harv_af[i,t] * sur_af[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- pre_harv_am[i,t] * sur_am[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 [11-13]
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1:narea) {
+          pt_af[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j,t+s])
+          pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
+        } # j [14-16]
+        for(k in 1:nwint){ 
+          pt_af[t,s*(narea+nwint)+k+1,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+        } #k
+      } # s
+    } # t
+    
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_af[t,1,i] <- 1
+      pt_af[t,2,i] <- pre_harv_af[i,t] * pi_harv[i,1,t]
+      pt_af[t,3,i] <- pre_harv_af[i,t] * pi_harv[i,2,t]
+      pt_af[t,4,i] <- pre_harv_af[i,t] * pi_harv[i,3,t]
+      pt_am[t,1,i] <- 1
+      pt_am[t,2,i] <- pre_harv_am[i,t] * pi_harv[i,1,t]
+      pt_am[t,3,i] <- pre_harv_am[i,t] * pi_harv[i,2,t]
+      pt_am[t,4,i] <- pre_harv_am[i,t] * pi_harv[i,3,t]
+      
+      # s = 1
+      for (j in 1:narea) {
+        pt_af[t,4+j,i] <- pre_harv_af[i,t] * sur_af[i,t] * pi[i,j,t]
+        pt_am[t,4+j,i] <- pre_harv_am[i,t] * sur_am[i,t] * pi[i,j,t]
+      } # j
+      
+      for(k in 1:nwint){ 
+        pt_af[t,4+narea+k,i] <- pre_harv_af[i,t] * sur_af[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- pre_harv_am[i,t] * sur_am[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 [11-13]
+      for (s in 2:(nyear-t)) {
+        for (j in 1:narea) {
+          pt_af[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j,t+s])
+          pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
+        } # j [14-16]
+        for(k in 1:nwint){ 
+          pt_af[t,s*(narea+nwint)+k+1,i] <- sum(pt_af[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- sum(pt_am[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+        }  #k
+      } # s
+      for (k in ((nyear-t)*(narea+nwint)+5):((nyear_use-1)*(narea+nwint)+4)) {
+        pt_af[t,k,i] <- 0
+        pt_am[t,k,i] <- 0
+      } # k
+    } # t
+    
+    # t = nyear - 1
+    # s = 0
+    pt_af[nyear-1,1,i] <- 1
+    pt_af[nyear-1,2,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_af[nyear-1,3,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_af[nyear-1,4,i] <- pre_harv_af[i,nyear-1] * pi_harv[i,3,nyear-1]
+    pt_am[nyear-1,1,i] <- 1
+    pt_am[nyear-1,2,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_am[nyear-1,3,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_am[nyear-1,4,i] <- pre_harv_am[i,nyear-1] * pi_harv[i,3,nyear-1]
+    
+    # s = 1
+    for (j in 1:narea) {
+      pt_af[nyear-1,4+j,i] <- pre_harv_af[i,nyear-1] * sur_af[i,nyear-1] * pi[i,j,nyear-1]
+      pt_am[nyear-1,4+j,i] <- pre_harv_am[i,nyear-1] * sur_am[i,nyear-1] * pi[i,j,nyear-1]
+    } # j
+    
+    for(k in 1:nwint){ 
+      pt_af[nyear-1,4+narea+k,i] <- pre_harv_af[i,nyear-1] * sur_af[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
+      pt_am[nyear-1,4+narea+k,i] <- pre_harv_am[i,nyear-1] * sur_am[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
+    } #k  
+    for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
+      pt_af[nyear-1,k,i] <- 0
+      pt_am[nyear-1,k,i] <- 0
+    } # k
+    
+    # t = nyear
+    # s = 0
+    pt_af[nyear,1,i] <- 1
+    pt_af[nyear,2,i] <- pre_harv_af[i,nyear] * pi_harv[i,1,nyear]
+    pt_af[nyear,3,i] <- pre_harv_af[i,nyear] * pi_harv[i,2,nyear]
+    pt_af[nyear,4,i] <- pre_harv_af[i,nyear] * pi_harv[i,3,nyear]
+    pt_am[nyear,1,i] <- 1
+    pt_am[nyear,2,i] <- pre_harv_am[i,nyear] * pi_harv[i,1,nyear]
+    pt_am[nyear,3,i] <- pre_harv_am[i,nyear] * pi_harv[i,2,nyear]
+    pt_am[nyear,4,i] <- pre_harv_am[i,nyear] * pi_harv[i,3,nyear]
+    
+    for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
+      pt_af[nyear,k,i] <- 0
+      pt_am[nyear,k,i] <- 0
+    } # k
+  } # i
+
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      pr_af[t,1,i] <- pt_af[t,1,i] * pcap_af[i]
+      pr_am[t,1,i] <- pt_am[t,1,i] * pcap_am[i]
+      for(k in 1:nwint){
+        pr_af[t,1+k,i] <- pt_af[t,1+k,i] * f_af[1,i,k,t]
+        pr_am[t,1+k,i] <- pt_am[t,1+k,i] * f_am[1,i,k,t]
+      }
+      for (s in 2:nyear_use) {
+        for (j in 1:narea) {
+          pr_af[t,(s-2)*(narea+nwint)+4+j,i] <- pt_af[t,(s-2)*(narea+nwint)+4+j,i] * ((1 - pcap_af[i]) ^ (s - 1)) *  pcap_af[i]
+          pr_am[t,(s-2)*(narea+nwint)+4+j,i] <- pt_am[t,(s-2)*(narea+nwint)+4+j,i] * ((1 - pcap_am[i]) ^ (s - 1)) *  pcap_am[i]
+        } # j
+        for(k in 1:nwint){
+          pr_af[t,(s-1)*(narea+nwint)+k+1,i] <- pt_af[t,(s-1)*(narea+nwint)+k+1,i] * ((1 - pcap_af[i]) ^ (s - 1)) * f_af[2,i,k,t+s-1]
+          pr_am[t,(s-1)*(narea+nwint)+k+1,i] <- pt_am[t,(s-1)*(narea+nwint)+k+1,i] * ((1 - pcap_am[i]) ^ (s - 1)) * f_am[2,i,k,t+s-1]
+        } #k
+      } # s
+      pr_af[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_af[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+      pr_am[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_am[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+    } # t
+  } # i
+  ##### Juvenile female & male
+  for (i in 1:narea) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0 
+      pt_jf[t,1,i] <- 1
+      pt_jf[t,2,i] <- pre_harv_jf[i,t] * pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pre_harv_jf[i,t] * pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pre_harv_jf[i,t] * pi_harv[i,3,t]
+      pt_jm[t,1,i] <- 1
+      pt_jm[t,2,i] <- pre_harv_jm[i,t] * pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pre_harv_jm[i,t] * pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pre_harv_jm[i,t] * pi_harv[i,3,t]
+      # s = 1 
+      for (j in 1:narea) {
+        pt_jf[t,4+j,i] <- pre_harv_jf[i,t] * sur_jf[i,t] * pi[i,j,t]
+        pt_jm[t,4+j,i] <- pre_harv_jm[i,t] * sur_jm[i,t] * pi[i,j,t]
+      } # j
+      for(k in 1:nwint){ 
+        pt_jf[t,4+narea+k,i] <- pre_harv_jf[i,t] * sur_jf[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <- pre_harv_jm[i,t] * sur_jm[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 [11-13]
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1:narea) {
+          pt_jf[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j,t+s])
+          pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
+        } # j [14-16]
+        for(k in 1:nwint){ 
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+        } #k
+      } # s
+    } # t
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_jf[t,1,i] <- 1
+      pt_jf[t,2,i] <- pre_harv_jf[i,t] * pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pre_harv_jf[i,t] * pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pre_harv_jf[i,t] * pi_harv[i,3,t]
+      pt_jm[t,1,i] <- 1
+      pt_jm[t,2,i] <- pre_harv_jm[i,t] * pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pre_harv_jm[i,t] * pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pre_harv_jm[i,t] * pi_harv[i,3,t]
+      # s = 1
+      for (j in 1:narea) {
+        pt_jf[t,4+j,i] <-pre_harv_jf[i,t] * sur_jf[i,t] * pi[i,j,t]
+        pt_jm[t,4+j,i] <-pre_harv_jm[i,t] * sur_jm[i,t] * pi[i,j,t]
+      } # j
+      for(k in 1:nwint){ 
+        pt_jf[t,4+narea+k,i] <-pre_harv_jf[i,t] * sur_jf[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <-pre_harv_jm[i,t] * sur_jm[i,t] * sum(pi[i,1:narea,t+1]) * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 [11-13]
+      for (s in 2:(nyear-t)) {
+        for (j in 1:narea) {
+          pt_jf[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] * pi[1:narea,j,t+s])
+          pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] * pi[1:narea,j,t+s])
+        } # j [14-16]
+        for(k in 1:nwint){ 
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- sum(pt_jf[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_af[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- sum(pt_jm[t,((s-2)*(narea+nwint)+4+1):((s-2)*(narea+nwint)+4+narea),i] * sur_am[1:narea,t+s-1] %*% pi[1:narea,1:narea,t+s]) * pi_harv[i,k,t]
+        }  #k
+      } # s
+      for (k in ((nyear-t)*(narea+nwint)+5):((nyear_use-1)*(narea+nwint)+4)) {
+        pt_jf[t,k,i] <- 0
+        pt_jm[t,k,i] <- 0
+      } # k
+    } # t
+    # t = nyear - 1
+    # s = 0
+    pt_jf[nyear-1,1,i] <- 1
+    pt_jf[nyear-1,2,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_jf[nyear-1,3,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_jf[nyear-1,4,i] <- pre_harv_jf[i,nyear-1] * pi_harv[i,3,nyear-1]
+    pt_jm[nyear-1,1,i] <- 1
+    pt_jm[nyear-1,2,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,1,nyear-1]
+    pt_jm[nyear-1,3,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,2,nyear-1]
+    pt_jm[nyear-1,4,i] <- pre_harv_jm[i,nyear-1] * pi_harv[i,3,nyear-1]
+    # s = 1
+    for (j in 1:narea) {
+      pt_jf[nyear-1,4+j,i] <-pre_harv_jf[i,nyear-1] * sur_jf[i,nyear-1] * pi[i,j,nyear-1]
+      pt_jm[nyear-1,4+j,i] <-pre_harv_jm[i,nyear-1] * sur_jm[i,nyear-1] * pi[i,j,nyear-1]
+    } # j
+    for(k in 1:nwint){ 
+      pt_jf[nyear-1,4+narea+k,i] <- pre_harv_jf[i,nyear-1] * sur_jf[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
+      pt_jm[nyear-1,4+narea+k,i] <- pre_harv_jm[i,nyear-1] * sur_jm[i,nyear-1] * sum(pi[i,1:narea,nyear]) * pi_harv[i,k,nyear-1]
+    } #k  
+    for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
+      pt_jf[nyear-1,k,i] <- 0
+      pt_jm[nyear-1,k,i] <- 0
+    } # k
+    # t = nyear
+    # s = 0
+    pt_jf[nyear,1,i] <- 1
+    pt_jf[nyear,2,i] <- pre_harv_jf[i,nyear] * pi_harv[i,1,nyear]
+    pt_jf[nyear,3,i] <- pre_harv_jf[i,nyear] * pi_harv[i,2,nyear]
+    pt_jf[nyear,4,i] <- pre_harv_jf[i,nyear] * pi_harv[i,3,nyear]
+    pt_jm[nyear,1,i] <- 1
+    pt_jm[nyear,2,i] <- pre_harv_jm[i,nyear] * pi_harv[i,1,nyear]
+    pt_jm[nyear,3,i] <- pre_harv_jm[i,nyear] * pi_harv[i,2,nyear]
+    pt_jm[nyear,4,i] <- pre_harv_jm[i,nyear] * pi_harv[i,3,nyear]
+    for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
+      pt_jf[nyear,k,i] <- 0
+      pt_jm[nyear,k,i] <- 0
+    } # k
+  } # i
+  for (i in 1:narea) {
+    for (t in 1:nyear) {
+      pr_jf[t,1,i] <- pt_jf[t,1,i] * pcap_jf[i]
+      pr_jm[t,1,i] <- pt_jm[t,1,i] * pcap_jm[i]
+      for(k in 1:nwint){
+        pr_jf[t,1+k,i] <- pt_jf[t,1+k,i] * f_jf[i,k,t]
+        pr_jm[t,1+k,i] <- pt_jm[t,1+k,i] * f_jm[i,k,t]
+      }
+      for (s in 2:nyear_use) {
+        for (j in 1:narea) {
+          pr_jf[t,(s-2)*(narea+nwint)+4+j,i] <- pt_jf[t,(s-2)*(narea+nwint)+4+j,i] * (1 - pcap_jf[i]) *  ((1 - pcap_af[i]) ^ (s - 2))  * pcap_af[i]
+          pr_jm[t,(s-2)*(narea+nwint)+4+j,i] <- pt_jm[t,(s-2)*(narea+nwint)+4+j,i] * (1 - pcap_jm[i]) *  ((1 - pcap_am[i]) ^ (s - 2))  * pcap_am[i]
+        } # j
+        for(k in 1:nwint){
+          pr_jf[t,(s-1)*(narea+nwint)+k+1,i] <- pt_jf[t,(s-1)*(narea+nwint)+k+1,i]  * f_af[2,i,k,t+s-1]
+          pr_jm[t,(s-1)*(narea+nwint)+k+1,i] <- pt_jm[t,(s-1)*(narea+nwint)+k+1,i]  * f_am[2,i,k,t+s-1]
+        } #
+      } # s
+      pr_jf[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_jf[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+      pr_jm[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_jm[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+    } # t
+  } # i
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Pre-Harvest migration (Mountain and Pacific zones) banding m-arrays
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  ##### Adult female & male
+  for (i in 4:5) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0 
+      pt_af[t,1,i] <- 1
+      pt_af[t,2,i] <- pi_harv[i,1,t]
+      pt_af[t,3,i] <- pi_harv[i,2,t]
+      pt_af[t,4,i] <- pi_harv[i,3,t]
+      pt_am[t,1,i] <- 1
+      pt_am[t,2,i] <- pi_harv[i,1,t]
+      pt_am[t,3,i] <- pi_harv[i,2,t]
+      pt_am[t,4,i] <- pi_harv[i,3,t]
+      # s = 1 
+      for (j in 1) {
+        pt_af[t,4+j,i] <- sur_af[i,t] 
+        pt_am[t,4+j,i] <- sur_am[i,t] 
+      } # j 
+      for (j in 2:3) {
+        pt_af[t,4+j,i] <- 0
+        pt_am[t,4+j,i] <- 0
+      } # j 
+      for(k in 1:nwint){ 
+        pt_af[t,4+narea+k,i] <- sur_af[i,t] * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- sur_am[i,t] * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1) {
+          pt_af[t,4+(s-1)*(narea+nwint)+j,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1]
+          pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1]
+        } # j [14-16]
+        for (j in 2:3) {
+          pt_af[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+          pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+        }
+        for(k in 1:nwint){ 
+          pt_af[t,s*(narea+nwint)+k+1,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
+        } #k
+      } # s
+    } # t
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_af[t,1,i] <- 1
+      pt_af[t,2,i] <- pi_harv[i,1,t]
+      pt_af[t,3,i] <- pi_harv[i,2,t]
+      pt_af[t,4,i] <- pi_harv[i,3,t]
+      pt_am[t,1,i] <- 1
+      pt_am[t,2,i] <- pi_harv[i,1,t]
+      pt_am[t,3,i] <- pi_harv[i,2,t]
+      pt_am[t,4,i] <- pi_harv[i,3,t]
+      # s = 1
+      for (j in 1) {
+        pt_af[t,4+j,i] <- sur_af[i,t] 
+        pt_am[t,4+j,i] <- sur_am[i,t] 
+      } # j
+      for (j in 2:3) {
+        pt_af[t,4+j,i] <- 0
+        pt_am[t,4+j,i] <- 0
+      } # j
+      for(k in 1:nwint){ 
+        pt_af[t,4+narea+k,i] <- sur_af[i,t] * pi_harv[i,k,t]
+        pt_am[t,4+narea+k,i] <- sur_am[i,t] * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 [11-13]
+      for (s in 2:(nyear-t)) {
+        for (j in 1) {
+          pt_af[t,4+(s-1)*(narea+nwint)+j,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1]
+          pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1]
+        } # j [14-16]
+        for (j in 2:3) {
+          pt_af[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+          pt_am[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+        } # j [14-16]
+        for(k in 1:nwint){ 
+          pt_af[t,s*(narea+nwint)+k+1,i] <- pt_af[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_am[t,s*(narea+nwint)+k+1,i] <- pt_am[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
+        } # s
+      } # t
+      for (k in ((nyear-t)*(narea+nwint)+5):((nyear_use-1)*(narea+nwint)+4)) {
+        pt_af[t,k,i] <- 0
+        pt_am[t,k,i] <- 0
+      } # k
+    } # t
+    # t = nyear - 1
+    # s = 0
+    pt_af[nyear-1,1,i] <- 1
+    pt_af[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_af[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_af[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
+    pt_am[nyear-1,1,i] <- 1
+    pt_am[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_am[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_am[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
+    # s = 1
+    for (j in 1) {
+      pt_af[nyear-1,4+j,i] <- sur_af[i,nyear-1]
+      pt_am[nyear-1,4+j,i] <- sur_am[i,nyear-1]
+    } # j
+    for (j in 2:3) {
+      pt_af[nyear-1,4+j,i] <- 0 
+      pt_am[nyear-1,4+j,i] <- 0
+    } # j
+    for(k in 1:nwint){ 
+      pt_af[nyear-1,4+narea+k,i] <- sur_af[i,nyear-1] * pi_harv[i,k,nyear-1]
+      pt_am[nyear-1,4+narea+k,i] <- sur_am[i,nyear-1] * pi_harv[i,k,nyear-1]
+    } #k  
+    for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
+      pt_af[nyear-1,k,i] <- 0
+      pt_am[nyear-1,k,i] <- 0
+    } # k
+    # t = nyear
+    # s = 0
+    pt_af[nyear,1,i] <- 1
+    pt_af[nyear,2,i] <- pre_harv_af[i,nyear] * pi_harv[i,1,nyear]
+    pt_af[nyear,3,i] <- pre_harv_af[i,nyear] * pi_harv[i,2,nyear]
+    pt_af[nyear,4,i] <- pre_harv_af[i,nyear] * pi_harv[i,3,nyear]
+    pt_am[nyear,1,i] <- 1
+    pt_am[nyear,2,i] <- pre_harv_am[i,nyear] * pi_harv[i,1,nyear]
+    pt_am[nyear,3,i] <- pre_harv_am[i,nyear] * pi_harv[i,2,nyear]
+    pt_am[nyear,4,i] <- pre_harv_am[i,nyear] * pi_harv[i,3,nyear]
+    for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
+      pt_af[nyear,k,i] <- 0
+      pt_am[nyear,k,i] <- 0
+    } # k
+  } # i
+  for (i in 4:5) {
+    for (t in 1:nyear) {
+      pr_af[t,1,i] <- 0
+      pr_am[t,1,i] <- 0
+      for(k in 1:nwint){
+        pr_af[t,1+k,i] <- pt_af[t,1+k,i] * f_af[1,i,k,t]
+        pr_am[t,1+k,i] <- pt_am[t,1+k,i] * f_am[1,i,k,t]
+      }
+      for (s in 2:nyear_use) {
+        for (j in 1:narea) {
+          pr_af[t,(s-2)*(narea+nwint)+4+j,i] <- 0
+          pr_am[t,(s-2)*(narea+nwint)+4+j,i] <- 0
+        } # j
+        for(k in 1:nwint){
+          pr_af[t,(s-1)*(narea+nwint)+k+1,i] <- pt_af[t,(s-1)*(narea+nwint)+k+1,i] * f_af[2,i,k,t+s-1]
+          pr_am[t,(s-1)*(narea+nwint)+k+1,i] <- pt_am[t,(s-1)*(narea+nwint)+k+1,i] * f_am[2,i,k,t+s-1]
+        } #k
+      } # s
+      pr_af[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_af[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+      pr_am[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_am[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+    } # t
+  } # i
+  
+  ##### Juvenile female & male
+  for (i in 4:5) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0 
+      pt_jf[t,1,i] <- 1
+      pt_jf[t,2,i] <- pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pi_harv[i,3,t]
+      pt_jm[t,1,i] <- 1
+      pt_jm[t,2,i] <- pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pi_harv[i,3,t]
+      
+      # s = 1 
+      for (j in 1) {
+        pt_jf[t,4+j,i] <- sur_jf[i,t] 
+        pt_jm[t,4+j,i] <- sur_jm[i,t] 
+      } # j 
+      for (j in 2:3) {
+        pt_jf[t,4+j,i] <- 0
+        pt_jm[t,4+j,i] <- 0
+      } # j 
+      for(k in 1:nwint){ 
+        pt_jf[t,4+narea+k,i] <- sur_jf[i,t] * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <- sur_jm[i,t] * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1) {
+          pt_jf[t,4+(s-1)*(narea+nwint)+j,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1]
+          pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1]
+        } # j [14-16]
+        for (j in 2:3) {
+          pt_jf[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+          pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+        }
+        for(k in 1:nwint){ 
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
+        } #k
+      } # s
+    } # t
+    
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_jf[t,1,i] <- 1
+      pt_jf[t,2,i] <- pi_harv[i,1,t]
+      pt_jf[t,3,i] <- pi_harv[i,2,t]
+      pt_jf[t,4,i] <- pi_harv[i,3,t]
+      pt_jm[t,1,i] <- 1
+      pt_jm[t,2,i] <- pi_harv[i,1,t]
+      pt_jm[t,3,i] <- pi_harv[i,2,t]
+      pt_jm[t,4,i] <- pi_harv[i,3,t]
+      
+      # s = 1
+      for (j in 1) {
+        pt_jf[t,4+j,i] <- sur_jf[i,t] 
+        pt_jm[t,4+j,i] <- sur_jm[i,t] 
+      } # j
+      for (j in 2:3) {
+        pt_jf[t,4+j,i] <- 0
+        pt_jm[t,4+j,i] <- 0
+      } # j
+      for(k in 1:nwint){ 
+        pt_jf[t,4+narea+k,i] <- sur_jf[i,t] * pi_harv[i,k,t]
+        pt_jm[t,4+narea+k,i] <- sur_jm[i,t] * pi_harv[i,k,t]
+      } #k  
+      # s >= 2 [11-13]
+      for (s in 2:(nyear-t)) {
+        for (j in 1) {
+          pt_jf[t,4+(s-1)*(narea+nwint)+j,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1]
+          pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1]
+        } # j [14-16]
+        for (j in 2:3) {
+          pt_jf[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+          pt_jm[t,4+(s-1)*(narea+nwint)+j,i] <- 0
+        } # j [14-16]
+        for(k in 1:nwint){ 
+          pt_jf[t,s*(narea+nwint)+k+1,i] <- pt_jf[t,((s-2)*(narea+nwint)+4+1),i] * sur_af[i,t+s-1] * pi_harv[i,k,t]
+          pt_jm[t,s*(narea+nwint)+k+1,i] <- pt_jm[t,((s-2)*(narea+nwint)+4+1),i] * sur_am[i,t+s-1] * pi_harv[i,k,t]
+        } # s
+      } # t
+      
+      for (k in ((nyear-t)*(narea+nwint)+5):((nyear_use-1)*(narea+nwint)+4)) {
+        pt_jf[t,k,i] <- 0
+        pt_jm[t,k,i] <- 0
+      } # k
+    } # t
+    
+    # t = nyear - 1
+    # s = 0
+    pt_jf[nyear-1,1,i] <- 1
+    pt_jf[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_jf[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_jf[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
+    pt_jm[nyear-1,1,i] <- 1
+    pt_jm[nyear-1,2,i] <-  pi_harv[i,1,nyear-1]
+    pt_jm[nyear-1,3,i] <-  pi_harv[i,2,nyear-1]
+    pt_jm[nyear-1,4,i] <-  pi_harv[i,3,nyear-1]
+    
+    # s = 1
+    for (j in 1) {
+      pt_jf[nyear-1,4+j,i] <- sur_jf[i,nyear-1] 
+      pt_jm[nyear-1,4+j,i] <- sur_jm[i,nyear-1]
+    } # j
+    for (j in 2:3) {
+      pt_jf[nyear-1,4+j,i] <- 0 
+      pt_jm[nyear-1,4+j,i] <- 0
+    } # j
+    for(k in 1:nwint){ 
+      pt_jf[nyear-1,4+narea+k,i] <- sur_jf[i,nyear-1] * pi_harv[i,k,nyear-1]
+      pt_jm[nyear-1,4+narea+k,i] <- sur_jm[i,nyear-1] * pi_harv[i,k,nyear-1]
+    } #k  
+    for (k in (narea+nwint+5):((nyear_use-1)*(narea+nwint)+4)) {
+      pt_jf[nyear-1,k,i] <- 0
+      pt_jm[nyear-1,k,i] <- 0
+    } # k
+    
+    # t = nyear
+    # s = 0
+    pt_jf[nyear,1,i] <- 1
+    pt_jf[nyear,2,i] <- pi_harv[i,1,nyear]
+    pt_jf[nyear,3,i] <- pi_harv[i,2,nyear]
+    pt_jf[nyear,4,i] <- pi_harv[i,3,nyear]
+    pt_jm[nyear,1,i] <- 1
+    pt_jm[nyear,2,i] <- pi_harv[i,1,nyear]
+    pt_jm[nyear,3,i] <- pi_harv[i,2,nyear]
+    pt_jm[nyear,4,i] <- pi_harv[i,3,nyear]
+    
+    for (k in 5:((nyear_use-1)*(narea+nwint)+4)) {
+      pt_jf[nyear,k,i] <- 0
+      pt_jm[nyear,k,i] <- 0
+    } # k
+  } # i
+
+  for (i in 4:5) {
+    for (t in 1:nyear) {
+      pr_jf[t,1,i] <- 0
+      pr_jm[t,1,i] <- 0
+      for(k in 1:nwint){
+        pr_jf[t,1+k,i] <- pt_jf[t,1+k,i] * f_af[1,i,k,t]
+        pr_jm[t,1+k,i] <- pt_jm[t,1+k,i] * f_am[1,i,k,t]
+      }
+      for (s in 2:nyear_use) {
+        for (j in 1:narea) {
+          pr_jf[t,(s-2)*(narea+nwint)+4+j,i] <- 0
+          pr_jm[t,(s-2)*(narea+nwint)+4+j,i] <- 0
+        } # j
+        for(k in 1:nwint){
+          pr_jf[t,(s-1)*(narea+nwint)+k+1,i] <- pt_jf[t,(s-1)*(narea+nwint)+k+1,i] * f_af[2,i,k,t+s-1]
+          pr_jm[t,(s-1)*(narea+nwint)+k+1,i] <- pt_jm[t,(s-1)*(narea+nwint)+k+1,i] * f_am[2,i,k,t+s-1]
+        } #k
+      } # s
+      pr_jf[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_jf[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+      pr_jm[t,(nyear_use-1)*(narea+nwint)+5,i] <- 1 - sum(pr_jm[t,1:((nyear_use-1)*(narea+nwint)+4),i])
+    } # t
+  } # i
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  ### joint live-dead encounter data in M-array
+  for (i in 1:5) {
+    for (t in 1:nyear) {
+      marr_af[t,1:((nyear_use-1)*(narea+nwint)+5),i] ~ dmultinom(pr_af[t,1:((nyear_use-1)*(narea+nwint)+5),i], nband_af[i,t])
+      marr_am[t,1:((nyear_use-1)*(narea+nwint)+5),i] ~ dmultinom(pr_am[t,1:((nyear_use-1)*(narea+nwint)+5),i], nband_am[i,t])
+      marr_jf[t,1:((nyear_use-1)*(narea+nwint)+5),i] ~ dmultinom(pr_jf[t,1:((nyear_use-1)*(narea+nwint)+5),i], nband_jf[i,t])
+      marr_jm[t,1:((nyear_use-1)*(narea+nwint)+5),i] ~ dmultinom(pr_jm[t,1:((nyear_use-1)*(narea+nwint)+5),i], nband_jm[i,t])
+    } # t
+  } # i
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Post-Harvest winter banding m-arrays
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # 1) Adult female & 2_ male
+  for (i in 1:warea) {
+    for (t in 1:(nyear-nyear_use+1)) {
+      # s = 0
+      pt_w_af[t,1,i] <- 1
+      # s = survived summer t, died winter t+1
+      pt_w_af[t,2,i] <- sur_waf[2,i,t] *  pi_harv2[i,1] # Recovered Gulf Coast
+      pt_w_af[t,3,i] <- sur_waf[2,i,t] *  pi_harv2[i,2] # Recovered Pacific Coast
+      pt_w_af[t,4,i] <- sur_waf[2,i,t] *  pi_harv2[i,3] # Recovered during migration
+      # s = 0
+      pt_w_am[t,1,i] <- 1
+      # s = survived summer t, died winter t+1
+      pt_w_am[t,2,i] <- sur_wam[2,i,t] *  pi_harv2[i,1] # Recovered Gulf Coast
+      pt_w_am[t,3,i] <- sur_wam[2,i,t] *  pi_harv2[i,2] # Recovered Pacific Coast
+      pt_w_am[t,4,i] <- sur_wam[2,i,t] *  pi_harv2[i,3] # Recovered during migration
+      
+      # s = 1
+      for (j in 1:warea) {
+        # survived summer t and winter t+1
+        pt_w_af[t,(nwint+1)+j,i] <- a_sur_waf[i,t] * pi2[i,j,t]
+        pt_w_am[t,(nwint+1)+j,i] <- a_sur_wam[i,t] * pi2[i,j,t]
+      } # j
+      for(k in 1:nwint){
+        # survived summer t, winter t+1, summer t+1, died winter t+2
+        pt_w_af[t,(nwint+1)+warea+k,i] <-a_sur_waf[i,t] * sum(pi2[i,1:warea,t] * sur_waf[2,i,t+1] * pi_harv2[i,k])
+        pt_w_am[t,(nwint+1)+warea+k,i] <-a_sur_wam[i,t] * sum(pi2[i,1:warea,t] * sur_wam[2,i,t+1] * pi_harv2[i,k])
+      } #k
+      # s >= 2 [11-13]
+      for (s in 2:(nyear_use-1)) {
+        for (j in 1:warea){
+          pt_w_af[t,(nwint+1)+(s-1)*(warea+nwint)+j,i] <- sum(pt_w_af[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_waf[1:warea,t+s-1] * pi2[1:warea,j,t])
+          pt_w_am[t,(nwint+1)+(s-1)*(warea+nwint)+j,i] <- sum(pt_w_am[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_wam[1:warea,t+s-1] * pi2[1:warea,j,t])
+        } # j [14-16]
+        for(k in 1:nwint){
+          pt_w_af[t,s*(warea+nwint)+k+1,i] <- sum(pt_w_af[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_waf[1:warea,t+s-1] %*% pi2[1:warea,1:warea,t] * sur_waf[2,i,t+1]) * pi_harv2[i,k]
+          pt_w_am[t,s*(warea+nwint)+k+1,i] <- sum(pt_w_am[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_wam[1:warea,t+s-1] %*% pi2[1:warea,1:warea,t] * sur_wam[2,i,t+1]) * pi_harv2[i,k]
+        } #k
+      } # s
+    } # t
+    
+    for (t in (nyear-nyear_use+2):(nyear-2)) {
+      # s = 0
+      pt_w_af[t,1,i] <- 1
+      pt_w_af[t,2,i] <- sur_waf[2,i,t] *  pi_harv2[i,1]
+      pt_w_af[t,3,i] <- sur_waf[2,i,t] *  pi_harv2[i,2]
+      pt_w_af[t,4,i] <- sur_waf[2,i,t] *  pi_harv2[i,3]
+      pt_w_am[t,1,i] <- 1
+      pt_w_am[t,2,i] <- sur_wam[2,i,t] *  pi_harv2[i,1]
+      pt_w_am[t,3,i] <- sur_wam[2,i,t] *  pi_harv2[i,2]
+      pt_w_am[t,4,i] <- sur_wam[2,i,t] *  pi_harv2[i,3]
+      
+      # s = 1
+      for (j in 1:warea) {
+        pt_w_af[t,(nwint+1)+j,i] <-  a_sur_waf[i,t]  * pi2[i,j,t]
+        pt_w_am[t,(nwint+1)+j,i] <-  a_sur_wam[i,t]  * pi2[i,j,t]
+      } # j
+      
+      for(k in 1:nwint){
+        pt_w_af[t,(nwint+1)+warea+k,i] <-a_sur_waf[i,t] * sum(pi2[i,1:warea,t] * sur_waf[2,i,t+1] ) * pi_harv2[i,k]
+        pt_w_am[t,(nwint+1)+warea+k,i] <-a_sur_wam[i,t] * sum(pi2[i,1:warea,t] * sur_wam[2,i,t+1] ) * pi_harv2[i,k]
+      } #k
+      # s >= 2 [11-13]
+      for (s in 2:(nyear-t)) {
+        for (j in 1:warea) {
+          pt_w_af[t,(nwint+1)+(s-1)*(warea+nwint)+j,i] <- sum(pt_w_af[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_waf[1:warea,t+s-1] * pi2[1:warea,j,t])
+          pt_w_am[t,(nwint+1)+(s-1)*(warea+nwint)+j,i] <- sum(pt_w_am[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_wam[1:warea,t+s-1] * pi2[1:warea,j,t])
+        } # j [14-16]
+        for(k in 1:nwint){
+          pt_w_af[t,s*(warea+nwint)+k+1,i] <- sum(pt_w_af[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_waf[1:warea,t+s-1] %*% pi2[1:warea,1:warea,t] * sur_waf[2,i,t+1]) * pi_harv2[i,k]
+          pt_w_am[t,s*(warea+nwint)+k+1,i] <- sum(pt_w_am[t,((s-2)*(warea+nwint)+(nwint+1)+1):((s-2)*(warea+nwint)+(nwint+1)+warea),i] * a_sur_wam[1:warea,t+s-1] %*% pi2[1:warea,1:warea,t] * sur_wam[2,i,t+1]) * pi_harv2[i,k]
+        }  #k
+      } # s
+      for (k in ((nyear-t)*(warea+nwint)+(nwint+2)):((nyear_use-1)*(warea+nwint)+(nwint+1))) {
+        pt_w_af[t,k,i] <- 0
+        pt_w_am[t,k,i] <- 0
+      } # k
+    } # t
+    
+    # t = nyear - 1
+    # s = 0
+    pt_w_af[nyear-1,1,i] <- 1
+    pt_w_af[nyear-1,2,i] <- sur_waf[2,i,nyear-1] * pi_harv2[i,1]
+    pt_w_af[nyear-1,3,i] <- sur_waf[2,i,nyear-1] * pi_harv2[i,2]
+    pt_w_af[nyear-1,4,i] <- sur_waf[2,i,nyear-1] * pi_harv2[i,3]
+    pt_w_am[nyear-1,1,i] <- 1
+    pt_w_am[nyear-1,2,i] <- sur_wam[2,i,nyear-1] * pi_harv2[i,1]
+    pt_w_am[nyear-1,3,i] <- sur_wam[2,i,nyear-1] * pi_harv2[i,2]
+    pt_w_am[nyear-1,4,i] <- sur_wam[2,i,nyear-1] * pi_harv2[i,3]
+    
+    # s = 1
+    for (j in 1:warea) {
+      pt_w_af[nyear-1,(nwint+1)+j,i] <- a_sur_waf[i,nyear-1] * pi2[i,j,nyear-1]
+      pt_w_am[nyear-1,(nwint+1)+j,i] <- a_sur_wam[i,nyear-1] * pi2[i,j,nyear-1]
+    } # j
+    
+    for(k in 1:nwint){
+      pt_w_af[nyear-1,(nwint+1)+warea+k,i] <-a_sur_waf[i,nyear-1] * sum(pi2[i,1:warea,nyear-1] * sur_waf[2,i,nyear]) * pi_harv2[i,k]
+      pt_w_am[nyear-1,(nwint+1)+warea+k,i] <-a_sur_wam[i,nyear-1] * sum(pi2[i,1:warea,nyear-1] * sur_wam[2,i,nyear]) * pi_harv2[i,k]
+    } #k
+    for (k in (warea+nwint+(nwint+2)):((nyear_use-1)*(warea+nwint)+(nwint+1))) {
+      pt_w_af[nyear-1,k,i] <- 0
+      pt_w_am[nyear-1,k,i] <- 0
+    } # k
+    
+    # t = nyear
+    # s = 0
+    pt_w_af[nyear,1,i] <- 1
+    pt_w_af[nyear,2,i] <- sur_waf[2,i,nyear] * pi_harv2[i,1]
+    pt_w_af[nyear,3,i] <- sur_waf[2,i,nyear] * pi_harv2[i,2]
+    pt_w_af[nyear,4,i] <- sur_waf[2,i,nyear] * pi_harv2[i,3]
+    pt_w_am[nyear,1,i] <- 1
+    pt_w_am[nyear,2,i] <- sur_wam[2,i,nyear] * pi_harv2[i,1]
+    pt_w_am[nyear,3,i] <- sur_wam[2,i,nyear] * pi_harv2[i,2]
+    pt_w_am[nyear,4,i] <- sur_wam[2,i,nyear] * pi_harv2[i,3]
+    
+    for (k in (nwint+2):((nyear_use-1)*(warea+nwint)+(nwint+1))) {
+      pt_w_af[nyear,k,i] <- 0
+      pt_w_am[nyear,k,i] <- 0
+    } # k
+  } # i
+  
+  for (i in 1:warea) {
+    for (t in 1:nyear) {
+      pr_w_af[t,1,i] <- pt_w_af[t,1,i] * wpcap_af[i]
+      pr_w_am[t,1,i] <- pt_w_am[t,1,i] * wpcap_am[i]
+      for(k in 1:nwint){
+        pr_w_af[t,1+k,i] <- pt_w_af[t,1+k,i] * f_wf[i,k,t]
+        pr_w_am[t,1+k,i] <- pt_w_am[t,1+k,i] * f_wm[i,k,t]
+      }
+      for (s in 2:nyear_use) {
+        for (j in 1:warea) {
+          pr_w_af[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] <- pt_w_af[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] * ((1 - wpcap_af[i]) ^ (s - 1)) * wpcap_af[i]
+          pr_w_am[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] <- pt_w_am[t,(s-2)*(warea+nwint)+(nwint+1)+j,i] * ((1 - wpcap_am[i]) ^ (s - 1)) * wpcap_am[i]
+        } # j
+        for(k in 1:nwint){
+          pr_w_af[t,(s-1)*(warea+nwint)+k+1,i] <- pt_w_af[t,(s-1)*(warea+nwint)+k+1,i] * ((1 - wpcap_af[i]) ^ (s - 1)) * f_wf[i,k,t+s-1]
+          pr_w_am[t,(s-1)*(warea+nwint)+k+1,i] <- pt_w_am[t,(s-1)*(warea+nwint)+k+1,i] * ((1 - wpcap_am[i]) ^ (s - 1)) * f_wm[i,k,t+s-1]
+        } #k
+      } # s
+      pr_w_af[t,(nyear_use-1)*(warea+nwint)+(nwint+2),i] <- 1 - sum(pr_w_af[t,1:((nyear_use-1)*(warea+nwint)+(nwint+1)),i])
+      pr_w_am[t,(nyear_use-1)*(warea+nwint)+(nwint+2),i] <- 1 - sum(pr_w_am[t,1:((nyear_use-1)*(warea+nwint)+(nwint+1)),i])
+    
+      marr_w_af[t,1:((nyear_use-1)*(warea+nwint)+(nwint+2)),i] ~ dmultinom(pr_w_af[t,1:((nyear_use-1)*(warea+nwint)+(nwint+2)),i], w_nband_af[i,t])
+      marr_w_am[t,1:((nyear_use-1)*(warea+nwint)+(nwint+2)),i] ~ dmultinom(pr_w_am[t,1:((nyear_use-1)*(warea+nwint)+(nwint+2)),i], w_nband_am[i,t])
+    } # t
+  } # i
+  
+   # Reporting rate likelihood
+   for(t in nyear:(nyear+nyear_use)){
+     rr[t] <- 1  # hack to deal with the fake 'future' recovery rates
+   }
+   for (t in 1:(nyear-1)) {
+           rr[t] ~ dbeta(alpha.rr[t], beta.rr[t])
+     alpha.rr[t] <- pow(SD.rr[t],-2) * RR.rr[t]
+      beta.rr[t] <- pow(SD.rr[t],-2) * (1 - RR.rr[t])
+   }
+
+#    for(k in 1:2){
+#         mu.r[k] ~ dbeta(6,3)
+#         sd.r[k] ~ dexp(1)
+#      
+#      r.alpha[k] <-  mu.r[k] * sd.r[k]
+#       r.beta[k] <-  (1 - mu.r[k]) * sd.r[k]
+# }
+#    for (t in 1:(nyear-1)) {
+#      rr[t] <- mu.r[r_opt[t]]
+#    }
+  # Production Likelihood
+  ### Age-ratio at banding
+  for (i in 1:narea) {
+         vul[i] ~ T(dnorm(2.04, sd =	0.38),0,) # Prior based on Arnold 2018
+    tau_band[i] ~ dlnorm(0, 0.04)               # overdisperion parameter
+    for (t in 1:nyear) {
+      # USA wing-bee data: 1961-2019
+      bands[i,t,1:3] ~ ddirchmulti(q[i,t,1:3], nband_jf_jm_af[i,t]) # *  tau_band[i] 
+            q[i,t,1] <- (n1f_fall[i,t]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
+            q[i,t,2] <- (n1m_fall[i,t]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
+            q[i,t,3] <- (n2f_fall[i,t] * 1/vul[i]) / (n1f_fall[i,t] + n1m_fall[i,t] + (n2f_fall[i,t] * 1/vul[i]))
+    }
+  }
+
+  # Priors for starting age and sex structure
+        sr[1:4] ~ddirch(alpha_sr[1:4])
+  for(i in 1:3){
+         n1f[i] <-  sn[i] * sr[1]
+         n1m[i] <-  sn[i] * sr[2]
+         n2f[i] <-  sn[i] * sr[3]
+         n2m[i] <-  sn[i] * sr[4]
+
+       N1F[i,1] <- n1f[i]/mu.psi[i]
+       N1M[i,1] <- n1m[i]/mu.psi[i]
+       N2F[i,1] <- n2f[i]/mu.psi[i]
+       N2M[i,1] <- n2m[i]/mu.psi[i]
+
+       NAF[i,1] <- N1F[i,1] + N2F[i,1]
+       NAM[i,1] <- N1M[i,1] + N2M[i,1]
+         N[i,1] <- NAF[i,1] + NAM[i,1]
+    Bpop_N[i,1] <-   N[i,1] * psi[i,1]
+  }
+    # Informed prior for relative juvenile breeding propensity
+    bp~ dbeta(60,40)
+
+  for (t in 2:(nyear+1)) {
+    
+    # Pre-Harvest Abundance for each wintering group (N * survival from bpop to fall * winter movement probability)
+    # First index: 1) Central 2) Pacific; Second index: 1) AK 2) NO 3) PR
+    N2M_Fall[1,t-1] <- NAM[1,t-1] * s.summer_ad_ak_m[t-1]^(1/2) * pi_ak[1,t-1] +  NAM[2,t-1] * s.summer_ad_no_m[t-1]^(1/2) * pi_no[1,t-1] + NAM[3,t-1] * s.summer_ad_pr_m[t-1]^(1/2) * pi_pr[1,t-1]
+    N2M_Fall[2,t-1] <- NAM[1,t-1] * s.summer_ad_ak_m[t-1]^(1/2) * pi_ak[2,t-1] +  NAM[2,t-1] * s.summer_ad_no_m[t-1]^(1/2) * pi_no[2,t-1] + NAM[3,t-1] * s.summer_ad_pr_m[t-1]^(1/2) * pi_pr[2,t-1]
+    N2F_Fall[1,t-1] <- NAF[1,t-1] * s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1,t-1] +  NAF[2,t-1] * s.summer_ad_no_f[t-1]^(1/2) * pi_no[1,t-1] + NAF[3,t-1] * s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1,t-1]
+    N2F_Fall[2,t-1] <- NAF[1,t-1] * s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2,t-1] +  NAF[2,t-1] * s.summer_ad_no_f[t-1]^(1/2) * pi_no[2,t-1] + NAF[3,t-1] * s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2,t-1]
+    
+    # Pre-Harvest Abundance for each wintering group (N breeding females * adult survival from bpop to fall * winter movement probability * production rate * primary sex ratio)
+    N1M_Fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[1,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1,t-1] * ar[3,t-1] * 0.5
+    N1M_Fall[2,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[2,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2,t-1] * ar[3,t-1] * 0.5
+    
+    N1F_Fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[1,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[1,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[1,t-1] * ar[3,t-1] * 0.5
+    N1F_Fall[2,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * pi_ak[2,t-1] * ar[1,t-1] * 0.5 + 
+                      ((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * pi_no[2,t-1] * ar[2,t-1] * 0.5 +
+                      ((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * pi_pr[2,t-1] * ar[3,t-1] * 0.5
+    
+    
+   #  Collapse juvenile M & F and adult F for the production model into breeding-region specific estimates
+    n1f_fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * ar[1,t-1] * 0.5
+    n1f_fall[2,t-1] <-((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * ar[2,t-1] * 0.5
+    n1f_fall[3,t-1] <-((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * ar[3,t-1] * 0.5
+    
+    n1m_fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2) * ar[1,t-1] * 0.5
+    n1m_fall[2,t-1] <-((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2) * ar[2,t-1] * 0.5
+    n1m_fall[3,t-1] <-((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2) * ar[3,t-1] * 0.5
+    
+    n2f_fall[1,t-1] <-((N1F[1,t-1] * bp) + N2F[1,t-1]) *  s.summer_ad_ak_f[t-1]^(1/2)
+    n2f_fall[2,t-1] <-((N1F[2,t-1] * bp) + N2F[2,t-1]) *  s.summer_ad_no_f[t-1]^(1/2)
+    n2f_fall[3,t-1] <-((N1F[3,t-1] * bp) + N2F[3,t-1]) *  s.summer_ad_pr_f[t-1]^(1/2)
+  }
+  for (t in 2:nyear) {
+    #######################################################################################################################################################################################
+    # Pre-breeding Abundance (index 1 = destination breeding population)
+
+    
+    N1M_Central[1,t-1] <- N1M_Fall[1,t-1] * sw_hy_central_m[t-1] * chi[1,1,t-1] * s.summer_ad_ak_m[t]^(1/2)
+    N1M_Central[2,t-1] <- N1M_Fall[1,t-1] * sw_hy_central_m[t-1] * chi[2,1,t-1] * s.summer_ad_no_m[t]^(1/2)
+    N1M_Central[3,t-1] <- N1M_Fall[1,t-1] * sw_hy_central_m[t-1] * chi[3,1,t-1] * s.summer_ad_pr_m[t]^(1/2)
+    N1F_Central[1,t-1] <- N1F_Fall[1,t-1] * sw_hy_central_f[t-1] * chi[1,1,t-1] * s.summer_ad_ak_f[t]^(1/2)
+    N1F_Central[2,t-1] <- N1F_Fall[1,t-1] * sw_hy_central_f[t-1] * chi[2,1,t-1] * s.summer_ad_no_f[t]^(1/2)
+    N1F_Central[3,t-1] <- N1F_Fall[1,t-1] * sw_hy_central_f[t-1] * chi[3,1,t-1] * s.summer_ad_pr_f[t]^(1/2)
+    N2M_Central[1,t-1] <- N2M_Fall[1,t-1] * sw_ad_central_m[t-1] * chi[1,1,t-1] * s.summer_ad_ak_m[t]^(1/2)
+    N2M_Central[2,t-1] <- N2M_Fall[1,t-1] * sw_ad_central_m[t-1] * chi[2,1,t-1] * s.summer_ad_no_m[t]^(1/2)
+    N2M_Central[3,t-1] <- N2M_Fall[1,t-1] * sw_ad_central_m[t-1] * chi[3,1,t-1] * s.summer_ad_pr_m[t]^(1/2)
+    N2F_Central[1,t-1] <- N2F_Fall[1,t-1] * sw_ad_central_f[t-1] * chi[1,1,t-1] * s.summer_ad_ak_f[t]^(1/2)
+    N2F_Central[2,t-1] <- N2F_Fall[1,t-1] * sw_ad_central_f[t-1] * chi[2,1,t-1] * s.summer_ad_no_f[t]^(1/2)
+    N2F_Central[3,t-1] <- N2F_Fall[1,t-1] * sw_ad_central_f[t-1] * chi[3,1,t-1] * s.summer_ad_pr_f[t]^(1/2)
+
+    N1M_Pacific[1,t-1] <- N1M_Fall[2,t-1] * sw_hy_pacific_m[t-1] * chi[1,2,t-1] * s.summer_ad_ak_m[t]^(1/2)
+    N1M_Pacific[2,t-1] <- N1M_Fall[2,t-1] * sw_hy_pacific_m[t-1] * chi[2,2,t-1] * s.summer_ad_no_m[t]^(1/2)
+    N1M_Pacific[3,t-1] <- N1M_Fall[2,t-1] * sw_hy_pacific_m[t-1] * chi[3,2,t-1] * s.summer_ad_pr_m[t]^(1/2)
+    N1F_Pacific[1,t-1] <- N1F_Fall[2,t-1] * sw_hy_pacific_f[t-1] * chi[1,2,t-1] * s.summer_ad_ak_f[t]^(1/2)
+    N1F_Pacific[2,t-1] <- N1F_Fall[2,t-1] * sw_hy_pacific_f[t-1] * chi[2,2,t-1] * s.summer_ad_no_f[t]^(1/2)
+    N1F_Pacific[3,t-1] <- N1F_Fall[2,t-1] * sw_hy_pacific_f[t-1] * chi[3,2,t-1] * s.summer_ad_pr_f[t]^(1/2)
+    N2M_Pacific[1,t-1] <- N2M_Fall[2,t-1] * sw_ad_pacific_m[t-1] * chi[1,2,t-1] * s.summer_ad_ak_m[t]^(1/2)
+    N2M_Pacific[2,t-1] <- N2M_Fall[2,t-1] * sw_ad_pacific_m[t-1] * chi[2,2,t-1] * s.summer_ad_no_m[t]^(1/2)
+    N2M_Pacific[3,t-1] <- N2M_Fall[2,t-1] * sw_ad_pacific_m[t-1] * chi[3,2,t-1] * s.summer_ad_pr_m[t]^(1/2)
+    N2F_Pacific[1,t-1] <- N2F_Fall[2,t-1] * sw_ad_pacific_f[t-1] * chi[1,2,t-1] * s.summer_ad_ak_f[t]^(1/2)
+    N2F_Pacific[2,t-1] <- N2F_Fall[2,t-1] * sw_ad_pacific_f[t-1] * chi[2,2,t-1] * s.summer_ad_no_f[t]^(1/2)
+    N2F_Pacific[3,t-1] <- N2F_Fall[2,t-1] * sw_ad_pacific_f[t-1] * chi[3,2,t-1] * s.summer_ad_pr_f[t]^(1/2)
+
+    # Total Spring Flight Abundance
+    N_Central[t-1] <- sum(N1M_Central[1:3,t-1]) + sum(N1F_Central[1:3,t-1]) + sum(N2M_Central[1:3,t-1]) + sum(N2F_Central[1:3,t-1])
+    N_Pacific[t-1] <- sum(N1M_Pacific[1:3,t-1]) + sum(N1F_Pacific[1:3,t-1]) + sum(N2M_Pacific[1:3,t-1]) + sum(N2F_Pacific[1:3,t-1])
+  }
+
+  for (t in 2:nyear) {
+    # Regional Breeding Abundance
+               N1F[1,t] <- N1F_Pacific[1,t-1] + N1F_Central[1,t-1]
+               N1M[1,t] <- N1M_Pacific[1,t-1] + N1M_Central[1,t-1]
+               N2F[1,t] <- N2F_Pacific[1,t-1] + N2F_Central[1,t-1]
+               N2M[1,t] <- N2M_Pacific[1,t-1] + N2M_Central[1,t-1]
+               N1F[2,t] <- N1F_Pacific[2,t-1] + N1F_Central[2,t-1]
+               N1M[2,t] <- N1M_Pacific[2,t-1] + N1M_Central[2,t-1]
+               N2F[2,t] <- N2F_Pacific[2,t-1] + N2F_Central[2,t-1]
+               N2M[2,t] <- N2M_Pacific[2,t-1] + N2M_Central[2,t-1]
+               
+               N1F[3,t] <- N1F_Pacific[3,t-1] + N1F_Central[3,t-1]
+               N1M[3,t] <- N1M_Pacific[3,t-1] + N1M_Central[3,t-1]
+               N2F[3,t] <- N2F_Pacific[3,t-1] + N2F_Central[3,t-1]
+               N2M[3,t] <- N2M_Pacific[3,t-1] + N2M_Central[3,t-1]
+
+    for(i in 1:3){
+         NAF[i,t] <- N1F[i,t] + N2F[i,t]         # Female Breeding Abundance
+         NAM[i,t] <- N1M[i,t] + N2M[i,t]         # Male Breeding Abundance
+           N[i,t] <- NAF[i,t] + NAM[i,t]         # Total Breeding Population
+        logN[i,t] <- log(N[i,t])                 # Total Breeding Population: log-scale
+      Bpop_N[i,t] <- (N1F[i,t] + N1M[i,t] + N2F[i,t] + N2M[i,t]) * psi[i,t]
+    }
+  }
+
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  # Arnold et al. reporting rate prior
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  for(i in 1:4){
+    sig.lincoln[i] ~ T(dt(0, pow(2.5, -2), 1),0,)
+  }
+    hc ~ dnorm(0.73, sd = 0.01)
+    # Estimated H (Fall Flight x X kill rate recovery rate)
+    for (t in 1:(nyear-1)) {
+      N2M.harvest[1,t] <-  N2M_Fall[1,t] * (kappa_central[2,2,t] * rr[t])/hc
+      N2M.harvest[2,t] <-  N2M_Fall[2,t] * (kappa_pacific[2,2,t] * rr[t])/hc
+      N2F.harvest[1,t] <-  N2F_Fall[1,t] * (kappa_central[2,1,t] * rr[t])/hc
+      N2F.harvest[2,t] <-  N2F_Fall[2,t] * (kappa_pacific[2,1,t] * rr[t])/hc
+      N1M.harvest[1,t] <-  N1M_Fall[1,t] * (kappa_central[1,2,t] * rr[t])/hc
+      N1M.harvest[2,t] <-  N1M_Fall[2,t] * (kappa_pacific[1,2,t] * rr[t])/hc
+      N1F.harvest[1,t] <-  N1F_Fall[1,t] * (kappa_central[1,1,t] * rr[t])/hc
+      N1F.harvest[2,t] <-  N1F_Fall[2,t] * (kappa_pacific[1,1,t] * rr[t])/hc 
+      
+      # Estimated number harvested in central/miss flyways
+      N1F.Lincoln[1,t] <- N1F.harvest[1,t] * us[t]
+      N1M.Lincoln[1,t] <- N1M.harvest[1,t] * us[t]
+      N2F.Lincoln[1,t] <- N2F.harvest[1,t] * us[t]
+      N2M.Lincoln[1,t] <- N2M.harvest[1,t] * us[t]
+      # Estimated number harvested in pacific flyway
+      N1F.Lincoln[2,t] <-  N1F.harvest[2,t] * us[t]
+      N1M.Lincoln[2,t] <-  N1M.harvest[2,t] * us[t]
+      N2F.Lincoln[2,t] <-  N2F.harvest[2,t] * us[t]
+      N2M.Lincoln[2,t] <-  N2M.harvest[2,t] * us[t]
+      # Estimated number harvested in canada
+      N1F.Lincoln[3,t] <-  sum(N1F.harvest[1:2,t]) * ( 1- us[t])
+      N1M.Lincoln[3,t] <-  sum(N1M.harvest[1:2,t]) * ( 1- us[t])
+      N2F.Lincoln[3,t] <-  sum(N2F.harvest[1:2,t]) * ( 1- us[t])
+      N2M.Lincoln[3,t] <-  sum(N2M.harvest[1:2,t]) * ( 1- us[t])
+      # Lincoln Estimator
+                 H1F[1,t] ~ dnorm(N1F.Lincoln[1,t], sd = sig.lincoln[1])
+                 H1M[1,t] ~ dnorm(N1M.Lincoln[1,t], sd = sig.lincoln[1])
+                 H2F[1,t] ~ dnorm(N2F.Lincoln[1,t], sd = sig.lincoln[1])
+                 H2M[1,t] ~ dnorm(N2M.Lincoln[1,t], sd = sig.lincoln[1])
+                 H1F[2,t] ~ dnorm(N1F.Lincoln[2,t], sd = sig.lincoln[2])
+                 H1M[2,t] ~ dnorm(N1M.Lincoln[2,t], sd = sig.lincoln[2])
+                 H2F[2,t] ~ dnorm(N2F.Lincoln[2,t], sd = sig.lincoln[2])
+                 H2M[2,t] ~ dnorm(N2M.Lincoln[2,t], sd = sig.lincoln[2])
+                  HC1F[t] ~ dnorm(N1F.Lincoln[3,t], sd = sig.lincoln[3])
+                  HC1M[t] ~ dnorm(N2F.Lincoln[3,t], sd = sig.lincoln[3])
+                  HC2F[t] ~ dnorm(N1M.Lincoln[3,t], sd = sig.lincoln[3])
+                  HC2M[t] ~ dnorm(N2M.Lincoln[3,t], sd = sig.lincoln[3])
+      # Secondary Lincoln Estimate to deal with Canada data during the first few years
+                 N_CAN[t] <- (HC1F[t]+ HC1M[t]+HC2F[t]+HC2M[t])
+                 H_CAN[t] ~ dnorm(N_CAN[t] , sd = sig.lincoln[4])
+  }
+
+    # Canada proportional harvest model
+     b_t ~ dlogis(0,1)
+    b_t2 ~ dlogis(0,1)
+      b00 ~ dlogis(0,1)
+  sig.us ~ dunif(0,1)
+  for (t in 1:nyear) {
+    eps.usa[t] ~ dnorm(0, sd = sig.us)
+      mu.us[t] <- (b00 + b_t * time[t])
+  }
+
+  for (t in 1:nyear) {
+    logit(us[t]) <- mu.us[t]
+  }
+  # Bpop Model
+  for (t in 1:(nyear-3)) {
+    bpop_obs[1,t] ~ dnorm(Bpop_N[1,t], sd = bpop_se[1,t])
+    bpop_obs[2,t] ~ dnorm(Bpop_N[2,t], sd = bpop_se[2,t])
+    bpop_obs[3,t] ~ dnorm(Bpop_N[3,t], sd = bpop_se[3,t])
+  } # t
+
+})
