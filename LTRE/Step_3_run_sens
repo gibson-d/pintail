@@ -75,12 +75,15 @@ for (j in 1:samples){
     for(l in 1:n.region){
       for(t in 1:noyears){
       # Regional breeding abundances decomposed into the number of individuals that remained faithful (diagonaols) versus emigrated to another population (off-diag)
+      # This decomposition allows one to model the spatial variation in demographic rates.
       nrf1[t,j,k,l] <- nf1[t,j,k] * pi_all[k,l,t,j] # Abundance at breeding popoulation k at time t * prob of moving to population j at time t
       nrf2[t,j,k,l] <- nf2[t,j,k] * pi_all[k,l,t,j]
       nrm1[t,j,k,l] <- nm1[t,j,k] * pi_all[k,l,t,j]
       nrm2[t,j,k,l] <- nm2[t,j,k] * pi_all[k,l,t,j]
     }
   
+
+      
     mu_nrf1[j,k,l] <- mean( nrf1[1:noyears,j,k,l])
     mu_nrf2[j,k,l] <- mean( nrf2[1:noyears,j,k,l])
     mu_nrm1[j,k,l] <- mean( nrm1[1:noyears,j,k,l])
