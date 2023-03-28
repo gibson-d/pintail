@@ -1120,7 +1120,6 @@ std_fall_n   <- apply(load_fall_n,2, sd)
 mu_spring_n  <- apply(load_spring_mean,2, mean)
 std_spring_n <- apply(load_spring_mean,2, sd)
 
-
 logN.inits <- matrix(1, ncol = 61, nrow = 3)
 #================
 # setup for Nimble
@@ -1196,6 +1195,7 @@ nimble.constants <- list(narea=narea, nyear=nyear, nyear_use=nyear_use, ncoho=nc
                         load_fall_n = load_fall_n, load_fall_sd = load_fall_sd, mu_fall_n = mu_fall_n    ,  std_fall_n   =std_fall_n   ,
                         load_spring_n = load_spring_mean,load_spring_sd=load_spring_sd,mu_spring_n  =mu_spring_n  ,std_spring_n =std_spring_n ,
                          n.summer = 3, n.winter = 2,
+                         alpha_sr = c(20,20,25,35),
                          log_N_mean =c(1.1365896, 0.1946357, 0.9895127), 
                          log_N_se=c(0.1693641, 0.2739492, 0.2992044))
 
@@ -1203,25 +1203,25 @@ initsFunction <- function()list(
   
   Lambda = Lambda1, Delta = Delta1, P = P1, Q = Q1, Sigma = Sigma1, sig = sig1,
   Lambda_f = Lambda2, Delta_f = Delta2, P_f = P2, Q_f = Q2, Sigma_f = Sigma2, sig_f = sig2,
-  
+  sr = c(.20,.20,.25,.35),
   mu_cen_pr = 1.5,
   mu_pac_pr = 0,
      ch_no_ak = .05, 
      ch_pr_pr = .90,
   beta_temp_rice = c(0,0),beta_prec_rice = c(0,0),beta_year= c(0,0),b0 = c(5,3), phi = c(.5,.5), sig_rice = 1, sig_rice_cv = 1,
   beta_rice_w = c(0,0), beta_rice_g = c(0,0,0),beta_rice_p = c(0,0,0),
-  beta_temp = matrix(0,2,5),beta_prec = matrix(0,2,5), beta_den = matrix(0,2,2), beta.den_ar= rep(0,3),
-  beta.age.mort = rep(0,62), mu_wint = matrix(.9,2,2), mu_summ = matrix(.9,3,2), mu_harv = matrix(.9,2,2),
+  beta_temp = matrix(0,2,5),beta_prec = matrix(0,2,5), beta_den = matrix(0,2,2), beta.den_ar= rep(0,3),beta.den = matrix(0,2,2),
+  beta.age.mort = matrix(0,2,2), mu_wint = matrix(.9,2,2), mu_summ = matrix(.9,3,2), mu_harv = matrix(.9,2,2),
   tau = c(1,1,1,1), A = diag(4) * .5, L = matrix(0,4,4),  
   zeta =matrix(1,2,2), zeta.prod = c(1,1,1), zeta.wint =matrix(1,2,2),  zeta.summ =matrix(1,2,3),
-  beta.age.rec = rep(0,62), mu_age=c(0,0), sig_age = c(.1,.1),
+  beta.age.rec = rep(0,62), mu_age=c(0), sig_age = c(.1),
   beta.wint = c(1,1), beta.summ = c(1,1,1), beta.harv = c(1,1), beta.prod =c(1,1,1),
   theta.summ = matrix(0,2,62), theta.wint = matrix(0,2,62),theta.harv = matrix(0,2,75), 
   
   epsilon_m = matrix(0,62,3), epsilon_f = matrix(0,62,4), eps_production  = matrix(0,3,62), 
   
   theta.mod = c(0,0,0,1), hc = 0.73,
-  beta.direct = 0, mu.r = -2, sig.rec = c(1,1), sig.sum = c(1,1,1),u.rec = c(2,2),
+  beta.direct = 0, mu.r = -2, sig.rec = c(1,1), sig.sum = c(1,1,1),
   sig.prod =1, beta.prod = c(1,1,1), theta.prod = rnorm(62,0,.15), sig.theta = 1,
   wpcap_af = c(.01,.01), wpcap_am = c(.01,.01), 
   
@@ -1233,14 +1233,14 @@ initsFunction <- function()list(
   psi_ak = c(.1,.6,.3), psi_no = c(.3,.4,.3), psi_pr = c(.4,.3,.3),
   psi_mw = c(.3,.3,.4), psi_pc = c(.05,.9,.05),
   mu_pr_pr = c(-5,-.25), beta_pr_pond = matrix(0,3,3),
-  log_ar_region = c(0,0,0), a_r =.2,
+  log_ar_region = c(0,0,0), 
   H_CAN = H_CAN.inits,b_t =0,b_t2=0, b00 = 2,sig.us = 1,
   HC1F = HC1F.inits,  HC1M = HC1M.inits,  HC2F = HC2F.inits,  HC2M = HC2M.inits, 
   mean.psi =-.5, sd.psi = .1,
   rho.theta = c(0.25,-.25,.25,1),
   mu_log_ar = 0, sd_log_ar = .2,
   logN = logN.inits, N = exp(logN.inits),eps.usa= rep(0,61),
-  sig.lincoln = c(.5,.5,.5,.5),  rr = c(MU_R,0.781 ,0.781, rep(1,15)), mu.n = 6, sr = c(.4), sp = apply(bpop_obs[,1:10], 1, mean)/sum(apply(bpop_obs[,1:10], 1, mean)),
+  sig.lincoln = c(.5,.5,.5,.5),  rr = c(MU_R,0.781 ,0.781, rep(1,15)), mu.n = 6, sp = apply(bpop_obs[,1:10], 1, mean)/sum(apply(bpop_obs[,1:10], 1, mean)),
   mu.psi = c(.8,.8,.8), sig.psi = c(10,10,10), log_psi_ponds = c(0,0,0), eps.psi = matrix(0,3,61), psi = matrix(.5,3,61),
   bpop_obs = bpop_obs.inits,
   beta.pnd_cr = 0,beta.crop_ar = 0,
@@ -1260,10 +1260,7 @@ initsFunction <- function()list(
 
 nimble.inits <- initsFunction() 
 
-
-
 NOPI_model_data <- list(pt_ipm,nimble.inits,nimble.data,nimble.constants,initsFunction)
 save(NOPI_model_data, file = 'NOPI_model_data.rdata')
 
 rm(list=ls()[! ls() %in% c("pt_ipm","nimble.inits",'nimble.data','nimble.constants','initsFunction')])
-
