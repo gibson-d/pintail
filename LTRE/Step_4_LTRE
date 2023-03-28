@@ -108,15 +108,17 @@ pi_edit1 <- aperm(pi_all[,1,1:60,], c(2,3,1))
 pi_edit2 <- aperm(pi_all[,2,1:60,], c(2,3,1))
 pi_edit3 <- aperm(pi_all[,3,1:60,], c(2,3,1))
 
+# Number of demographic rates built into the LTRE
 params <- 29
 
+# Winter moverment rates
 psi_1 <- mu_psi[1:60,,]
 psi_2 <- 1 - mu_psi[1:60,,]
 
 dp_dif <- matrix(0,3,params)
 for (j in 1:samples){ #samples
   for(k in 1:n.region){
-    # array of annual demographic rates
+    # array of all annual demographic rates
     dp_stoch <- abind(F1[,j,],F2[,j,],
                       Sfj_w1_r[,j,],Sfj_w2_r[,j,],Sfj_h1_r[,j,],Sfj_h2_r[,j,],Sfj_s[,j,],Sfa_w1_r[,j,],Sfa_w2_r[,j,],Sfa_h1_r[,j,],Sfa_h2_r[,j,],Sfa_s[,j,],nf1[,j,],nf2[,j,],
                       Smj_w1_r[,j,],Smj_w2_r[,j,],Smj_h1_r[,j,],Smj_h2_r[,j,],Smj_s[,j,],Sma_w1_r[,j,],Sma_w2_r[,j,],Sma_h1_r[,j,],Sma_h2_r[,j,],Sma_s[,j,],nm1[,j,],nm2[,j,],
@@ -127,7 +129,8 @@ for (j in 1:samples){ #samples
       
       # Derive process variance and covariance among demographic parameters using 'shrinkage' estimates of vital rates and proportionate abundances:
       dp_varcov <- array(apply(dp_stoch, 2, var), dim = c(params,params,3))
-      sensvec   <- abind(sens_F1[j,],sens_F2[j,],
+     
+     sensvec   <- abind(sens_F1[j,],sens_F2[j,],
                          sens_Sfj_w1[j,],sens_Sfj_w2[j,],sens_Sfj_h1[j,],sens_Sfj_h2[j,],sens_Sfj_s[j,],sens_Sfa_w1[j,],sens_Sfa_w2[j,],sens_Sfa_h1[j,],sens_Sfa_h2[j,],sens_Sfa_s[j,],sens_nf1[j,],sens_nf2[j,],
                          sens_Smj_w1[j,],sens_Smj_w2[j,],sens_Smj_h1[j,],sens_Smj_h2[j,],sens_Smj_s[j,],sens_Sma_w1[j,],sens_Sma_w2[j,],sens_Sma_h1[j,],sens_Sma_h2[j,],sens_Sma_s[j,],sens_nm1[j,],sens_nm2[j,],
                          sens_pi[j,1,],sens_pi[j,2,],sens_pi[j,3,], along = 2)
