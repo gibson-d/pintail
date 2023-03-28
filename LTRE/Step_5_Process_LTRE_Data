@@ -1,0 +1,522 @@
+
+# Calculate elasticiticies
+elas_F1   <-       sens_F1 * mu_F1      /mu_lam  ;elas_F2 <-       sens_F2 * mu_F2      /mu_lam  ;elas_w1_f <- sens_Sfj_w1 * mu_Sfj_w1  /mu_lam  ;elas_w2_f <- sens_Sfj_w2 * mu_Sfj_w2  /mu_lam  ;elas_h1_f <- sens_Sfj_h1 * mu_Sfj_h1  /mu_lam  ;elas_h2_f <- sens_Sfj_h2 * mu_Sfj_h2  /mu_lam ;elas_js_f <- sens_Sfj_s  * mu_Sfj_s   /mu_lam;elas_W1_f <- sens_Sfa_w1 * mu_Sfa_w1  /mu_lam ;elas_W2_f <- sens_Sfa_w2 * mu_Sfa_w2  /mu_lam ;elas_H1_f <- sens_Sfa_h1 * mu_Sfa_h1  /mu_lam ;elas_H2_f <- sens_Sfa_h2 * mu_Sfa_h2  /mu_lam;elas_AS_f <-  sens_Sfa_s * mu_Sfa_s   /mu_lam  ;elas_n1_f <-    sens_nf1 * mu_nf1     /mu_lam    ;elas_n2_f <-    sens_nf2 * mu_nf2     /mu_lam
+elas_w1_m <- sens_Smj_w1 * mu_Smj_w1  /mu_lam  ;elas_w2_m <- sens_Smj_w2 * mu_Smj_w2  /mu_lam  ;elas_h1_m <- sens_Smj_h1 * mu_Smj_h1  /mu_lam  ;elas_h2_m <- sens_Smj_h2 * mu_Smj_h2  /mu_lam ;elas_js_m <- sens_Smj_s  * mu_Smj_s   /mu_lam;elas_W1_m <- sens_Sma_w1 * mu_Sma_w1  /mu_lam ;elas_W2_m <- sens_Sma_w2 * mu_Sma_w2  /mu_lam ;elas_H1_m <- sens_Sma_h1 * mu_Sma_h1  /mu_lam ;elas_H2_m <- sens_Sma_h2 * mu_Sma_h2  /mu_lam;elas_AS_m <-  sens_Sma_s * mu_Sma_s   /mu_lam  ;elas_n1_m <-    sens_nm1 * mu_nm1     /mu_lam    ;elas_n2_m <-    sens_nm2 * mu_nm2     /mu_lam 
+elas_p1   <-     sens_pi[,1,] * mu_pi1  /mu_lam;elas_p2 <-     sens_pi[,2,] * mu_pi2  /mu_lam;elas_p3 <-     sens_pi[,3,] * mu_pi3  /mu_lam
+
+# Rename sensitivities
+sens_F1   <-     sens_F1 ;sens_F2   <-     sens_F2 ;sens_w1_f <- sens_Sfj_w1 ;sens_w2_f <- sens_Sfj_w2 ;sens_h1_f <- sens_Sfj_h1 ;sens_h2_f <- sens_Sfj_h2 ;sens_js_f <- sens_Sfj_s  ;sens_W1_f <- sens_Sfa_w1 ;sens_W2_f <- sens_Sfa_w2 ;sens_H1_f <- sens_Sfa_h1 ;sens_H2_f <- sens_Sfa_h2 ;sens_AS_f <-  sens_Sfa_s ;sens_n1_f <-    sens_nf1 ;sens_n2_f <-    sens_nf2 
+sens_w1_m <- sens_Smj_w1 ;sens_w2_m <- sens_Smj_w2 ;sens_h1_m <- sens_Smj_h1 ;sens_h2_m <- sens_Smj_h2 ;sens_js_m <- sens_Smj_s  ;sens_W1_m <- sens_Sma_w1 ;sens_W2_m <- sens_Sma_w2 ;sens_H1_m <- sens_Sma_h1 ;sens_H2_m <- sens_Sma_h2 ;sens_AS_m <-  sens_Sma_s ;sens_n1_m <-    sens_nm1 ;sens_n2_m <-    sens_nm2 
+sens_p1   <-     sens_pi[,1,] ;sens_p2 <-     sens_pi[,2,] ;sens_p3 <-     sens_pi[,3,] 
+# Rename LTREs
+cont_F1   <-     cont_F1;cont_F2   <-     cont_F2;cont_w1_f <- cont_Sfj_w1;cont_w2_f <- cont_Sfj_w2;cont_h1_f <- cont_Sfj_h1;cont_h2_f <- cont_Sfj_h2;cont_js_f <- cont_Sfj_s;cont_W1_f <- cont_Sfa_w1;cont_W2_f <- cont_Sfa_w2;cont_H1_f <- cont_Sfa_h1;cont_H2_f <- cont_Sfa_h2;cont_AS_f <-  cont_Sfa_s;cont_n1_f <-    cont_nf1;cont_n2_f <-    cont_nf2
+cont_w1_m <-  cont_Smj_w1;cont_w2_m <-  cont_Smj_w2;cont_h1_m <-  cont_Smj_h1;cont_h2_m <-  cont_Smj_h2;cont_js_m <-  cont_Smj_s;cont_W1_m <-  cont_Sma_w1;cont_W2_m <-  cont_Sma_w2;cont_H1_m <-  cont_Sma_h1;cont_H2_m <-  cont_Sma_h2;cont_AS_m <-  cont_Sma_s;cont_n1_m <-    cont_nm1;cont_n2_m <-    cont_nm2
+cont_p1 <-    cont_pi1 ;cont_p2 <-    cont_pi2 ;cont_p3 <-    cont_pi3
+# Rename tLTREs
+cont_F1_t    <- cont_F1_t;cont_F2_t    <- cont_F2_t;cont_w1_f_t  <- cont_Sfj_w1_t;cont_w2_f_t  <- cont_Sfa_w1_t;cont_h1_f_t  <- cont_Sfj_w2_t;cont_h2_f_t  <- cont_Sfa_w2_t;cont_js_f_t  <- cont_Sfj_s_t;cont_W1_f_t  <- cont_Sfj_h1_t;cont_W2_f_t  <- cont_Sfa_h1_t;cont_H1_f_t  <- cont_Sfj_h2_t;cont_H2_f_t  <- cont_Sfa_h2_t;cont_AS_f_t  <- cont_Sfa_s_t;cont_n1_f_t  <- cont_nf1_t;cont_n2_f_t  <- cont_nf2_t
+cont_w1_m_t  <- cont_Smj_w1_t;cont_w2_m_t  <- cont_Sma_w1_t;cont_h1_m_t  <- cont_Smj_w2_t;cont_h2_m_t  <- cont_Sma_w2_t;cont_js_m_t  <- cont_Smj_s_t;cont_W1_m_t  <- cont_Smj_h1_t;cont_W2_m_t  <- cont_Sma_h1_t;cont_H1_m_t  <- cont_Smj_h2_t;cont_H2_m_t  <- cont_Sma_h2_t;cont_AS_m_t  <- cont_Sma_s_t;cont_n1_m_t  <- cont_nm1_t;cont_n2_m_t  <- cont_nm2_t
+cont_p1_t  <- cont_pi1_t;cont_p2_t  <- cont_pi2_t;cont_p3_t  <- cont_pi3_t
+
+elas_F1_mn   <- t(rbind.data.frame(mean = (apply(elas_F1, 2, mean)),   low_95 = (apply(elas_F1, 2,quantile, probs = 0.025)),   upp_95 = (apply(elas_F1, 2,quantile, probs = 0.975)   )))
+elas_F2_mn   <- t(rbind.data.frame(mean = (apply(elas_F2, 2, mean)),   low_95 = (apply(elas_F2, 2,quantile, probs = 0.025)),   upp_95 = (apply(elas_F2, 2,quantile, probs = 0.975)   )))
+elas_w1_f_mn <- t(rbind.data.frame(mean = (apply(elas_w1_f, 2, mean)), low_95 = (apply(elas_w1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_w1_f, 2,quantile, probs = 0.975) )))
+elas_w2_f_mn <- t(rbind.data.frame(mean = (apply(elas_w2_f, 2, mean)), low_95 = (apply(elas_w2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_w2_f, 2,quantile, probs = 0.975) )))
+elas_h1_f_mn <- t(rbind.data.frame(mean = (apply(elas_h1_f, 2, mean)), low_95 = (apply(elas_h1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_h1_f, 2,quantile, probs = 0.975) )))
+elas_h2_f_mn <- t(rbind.data.frame(mean = (apply(elas_h2_f, 2, mean)), low_95 = (apply(elas_h2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_h2_f, 2,quantile, probs = 0.975) )))
+elas_js_f_mn <- t(rbind.data.frame(mean = (apply(elas_js_f, 2, mean)), low_95 = (apply(elas_js_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_js_f, 2,quantile, probs = 0.975) )))
+elas_W1_f_mn <- t(rbind.data.frame(mean = (apply(elas_W1_f, 2, mean)), low_95 = (apply(elas_W1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_W1_f, 2,quantile, probs = 0.975) )))
+elas_W2_f_mn <- t(rbind.data.frame(mean = (apply(elas_W2_f, 2, mean)), low_95 = (apply(elas_W2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_W2_f, 2,quantile, probs = 0.975) )))
+elas_H1_f_mn <- t(rbind.data.frame(mean = (apply(elas_H1_f, 2, mean)), low_95 = (apply(elas_H1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_H1_f, 2,quantile, probs = 0.975) )))
+elas_H2_f_mn <- t(rbind.data.frame(mean = (apply(elas_H2_f, 2, mean)), low_95 = (apply(elas_H2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_H2_f, 2,quantile, probs = 0.975) )))
+elas_AS_f_mn <- t(rbind.data.frame(mean = (apply(elas_AS_f, 2, mean)), low_95 = (apply(elas_AS_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_AS_f, 2,quantile, probs = 0.975) )))
+elas_n1_f_mn <- t(rbind.data.frame(mean = (apply(elas_n1_f, 2, mean)), low_95 = (apply(elas_n1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_n1_f, 2,quantile, probs = 0.975) )))
+elas_n2_f_mn <- t(rbind.data.frame(mean = (apply(elas_n2_f, 2, mean)), low_95 = (apply(elas_n2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_n2_f, 2,quantile, probs = 0.975) )))
+
+elas_w1_m_mn <- t(rbind.data.frame(mean = (apply(elas_w1_m, 2, mean)), low_95 = (apply(elas_w1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_w1_m, 2,quantile, probs = 0.975) )))
+elas_w2_m_mn <- t(rbind.data.frame(mean = (apply(elas_w2_m, 2, mean)), low_95 = (apply(elas_w2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_w2_m, 2,quantile, probs = 0.975) )))
+elas_h1_m_mn <- t(rbind.data.frame(mean = (apply(elas_h1_m, 2, mean)), low_95 = (apply(elas_h1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_h1_m, 2,quantile, probs = 0.975) )))
+elas_h2_m_mn <- t(rbind.data.frame(mean = (apply(elas_h2_m, 2, mean)), low_95 = (apply(elas_h2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_h2_m, 2,quantile, probs = 0.975) )))
+elas_js_m_mn <- t(rbind.data.frame(mean = (apply(elas_js_m, 2, mean)), low_95 = (apply(elas_js_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_js_m, 2,quantile, probs = 0.975) )))
+elas_W1_m_mn <- t(rbind.data.frame(mean = (apply(elas_W1_m, 2, mean)), low_95 = (apply(elas_W1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_W1_m, 2,quantile, probs = 0.975) )))
+elas_W2_m_mn <- t(rbind.data.frame(mean = (apply(elas_W2_m, 2, mean)), low_95 = (apply(elas_W2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_W2_m, 2,quantile, probs = 0.975) )))
+elas_H1_m_mn <- t(rbind.data.frame(mean = (apply(elas_H1_m, 2, mean)), low_95 = (apply(elas_H1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_H1_m, 2,quantile, probs = 0.975) )))
+elas_H2_m_mn <- t(rbind.data.frame(mean = (apply(elas_H2_m, 2, mean)), low_95 = (apply(elas_H2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_H2_m, 2,quantile, probs = 0.975) )))
+elas_AS_m_mn <- t(rbind.data.frame(mean = (apply(elas_AS_m, 2, mean)), low_95 = (apply(elas_AS_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_AS_m, 2,quantile, probs = 0.975) )))
+elas_n1_m_mn <- t(rbind.data.frame(mean = (apply(elas_n1_m, 2, mean)), low_95 = (apply(elas_n1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_n1_m, 2,quantile, probs = 0.975) )))
+elas_n2_m_mn <- t(rbind.data.frame(mean = (apply(elas_n2_m, 2, mean)), low_95 = (apply(elas_n2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_n2_m, 2,quantile, probs = 0.975) )))
+
+elas_p1_mn <- t(rbind.data.frame(mean = (apply(elas_p1, 2, mean)), low_95 = (apply(elas_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_p1, 2,quantile, probs = 0.975) )))
+elas_p2_mn <- t(rbind.data.frame(mean = (apply(elas_p2, 2, mean)), low_95 = (apply(elas_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_p2, 2,quantile, probs = 0.975) )))
+elas_p3_mn <- t(rbind.data.frame(mean = (apply(elas_p3, 2, mean)), low_95 = (apply(elas_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(elas_p3, 2,quantile, probs = 0.975) )))
+
+rownames(elas_F1_mn)   <- NULL; colnames(elas_F1_mn)   <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_F2_mn)   <- NULL; colnames(elas_F2_mn)   <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_w1_f_mn) <- NULL; colnames(elas_w1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_w2_f_mn) <- NULL; colnames(elas_w2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_h1_f_mn) <- NULL; colnames(elas_h1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_h2_f_mn) <- NULL; colnames(elas_h2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_js_f_mn) <- NULL; colnames(elas_js_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_W1_f_mn) <- NULL; colnames(elas_W1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_W2_f_mn) <- NULL; colnames(elas_W2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_H1_f_mn) <- NULL; colnames(elas_H1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_H2_f_mn) <- NULL; colnames(elas_H2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_AS_f_mn) <- NULL; colnames(elas_AS_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_n1_f_mn) <- NULL; colnames(elas_n1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_n2_f_mn) <- NULL; colnames(elas_n2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+rownames(elas_w1_m_mn) <- NULL; colnames(elas_w1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_w2_m_mn) <- NULL; colnames(elas_w2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_h1_m_mn) <- NULL; colnames(elas_h1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_h2_m_mn) <- NULL; colnames(elas_h2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_js_m_mn) <- NULL; colnames(elas_js_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_W1_m_mn) <- NULL; colnames(elas_W1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_W2_m_mn) <- NULL; colnames(elas_W2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_H1_m_mn) <- NULL; colnames(elas_H1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_H2_m_mn) <- NULL; colnames(elas_H2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_AS_m_mn) <- NULL; colnames(elas_AS_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_n1_m_mn) <- NULL; colnames(elas_n1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_n2_m_mn) <- NULL; colnames(elas_n2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+rownames(elas_p1_mn) <- NULL; colnames(elas_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_p2_mn) <- NULL; colnames(elas_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(elas_p3_mn) <- NULL; colnames(elas_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_elas <- cbind.data.frame(rbind.data.frame(elas_F1_mn,elas_F2_mn,
+                                               elas_w1_f_mn,elas_w2_f_mn,elas_h1_f_mn,elas_h2_f_mn,elas_js_f_mn,elas_W1_f_mn,elas_W2_f_mn,
+                                               elas_H1_f_mn,elas_H2_f_mn,elas_AS_f_mn,elas_n1_f_mn,elas_n2_f_mn,
+                                               elas_w1_m_mn,elas_w2_m_mn,elas_h1_m_mn,elas_h2_m_mn,elas_js_m_mn,elas_W1_m_mn,elas_W2_m_mn,
+                                               elas_H1_m_mn,elas_H2_m_mn,elas_AS_m_mn,elas_n1_m_mn,elas_n2_m_mn,
+                                               elas_p1_mn,elas_p2_mn,elas_p3_mn),
+                              expand.grid(region = c('AK','NO','PR'),
+                                          parameter = c('F1','F2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'P1','P2','P3') ))
+
+
+sens_F1_mn <- t(rbind.data.frame(mean = (apply(sens_F1, 2, mean)), low_95 = (apply(sens_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_F1, 2,quantile, probs = 0.975) )))
+sens_F2_mn <- t(rbind.data.frame(mean = (apply(sens_F2, 2, mean)), low_95 = (apply(sens_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_F2, 2,quantile, probs = 0.975) )))
+sens_w1_f_mn <- t(rbind.data.frame(mean = (apply(sens_w1_f, 2, mean)), low_95 = (apply(sens_w1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_w1_f, 2,quantile, probs = 0.975) )))
+sens_w2_f_mn <- t(rbind.data.frame(mean = (apply(sens_w2_f, 2, mean)), low_95 = (apply(sens_w2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_w2_f, 2,quantile, probs = 0.975) )))
+sens_h1_f_mn <- t(rbind.data.frame(mean = (apply(sens_h1_f, 2, mean)), low_95 = (apply(sens_h1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_h1_f, 2,quantile, probs = 0.975) )))
+sens_h2_f_mn <- t(rbind.data.frame(mean = (apply(sens_h2_f, 2, mean)), low_95 = (apply(sens_h2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_h2_f, 2,quantile, probs = 0.975) )))
+sens_js_f_mn <- t(rbind.data.frame(mean = (apply(sens_js_f, 2, mean)), low_95 = (apply(sens_js_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_js_f, 2,quantile, probs = 0.975) )))
+sens_W1_f_mn <- t(rbind.data.frame(mean = (apply(sens_W1_f, 2, mean)), low_95 = (apply(sens_W1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_W1_f, 2,quantile, probs = 0.975) )))
+sens_W2_f_mn <- t(rbind.data.frame(mean = (apply(sens_W2_f, 2, mean)), low_95 = (apply(sens_W2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_W2_f, 2,quantile, probs = 0.975) )))
+sens_H1_f_mn <- t(rbind.data.frame(mean = (apply(sens_H1_f, 2, mean)), low_95 = (apply(sens_H1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_H1_f, 2,quantile, probs = 0.975) )))
+sens_H2_f_mn <- t(rbind.data.frame(mean = (apply(sens_H2_f, 2, mean)), low_95 = (apply(sens_H2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_H2_f, 2,quantile, probs = 0.975) )))
+sens_AS_f_mn <- t(rbind.data.frame(mean = (apply(sens_AS_f, 2, mean)), low_95 = (apply(sens_AS_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_AS_f, 2,quantile, probs = 0.975) )))
+sens_n1_f_mn <- t(rbind.data.frame(mean = (apply(sens_n1_f, 2, mean)), low_95 = (apply(sens_n1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_n1_f, 2,quantile, probs = 0.975) )))
+sens_n2_f_mn <- t(rbind.data.frame(mean = (apply(sens_n2_f, 2, mean)), low_95 = (apply(sens_n2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_n2_f, 2,quantile, probs = 0.975) )))
+
+sens_w1_m_mn <- t(rbind.data.frame(mean = (apply(sens_w1_m, 2, mean)), low_95 = (apply(sens_w1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_w1_m, 2,quantile, probs = 0.975) )))
+sens_w2_m_mn <- t(rbind.data.frame(mean = (apply(sens_w2_m, 2, mean)), low_95 = (apply(sens_w2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_w2_m, 2,quantile, probs = 0.975) )))
+sens_h1_m_mn <- t(rbind.data.frame(mean = (apply(sens_h1_m, 2, mean)), low_95 = (apply(sens_h1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_h1_m, 2,quantile, probs = 0.975) )))
+sens_h2_m_mn <- t(rbind.data.frame(mean = (apply(sens_h2_m, 2, mean)), low_95 = (apply(sens_h2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_h2_m, 2,quantile, probs = 0.975) )))
+sens_js_m_mn <- t(rbind.data.frame(mean = (apply(sens_js_m, 2, mean)), low_95 = (apply(sens_js_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_js_m, 2,quantile, probs = 0.975) )))
+sens_W1_m_mn <- t(rbind.data.frame(mean = (apply(sens_W1_m, 2, mean)), low_95 = (apply(sens_W1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_W1_m, 2,quantile, probs = 0.975) )))
+sens_W2_m_mn <- t(rbind.data.frame(mean = (apply(sens_W2_m, 2, mean)), low_95 = (apply(sens_W2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_W2_m, 2,quantile, probs = 0.975) )))
+sens_H1_m_mn <- t(rbind.data.frame(mean = (apply(sens_H1_m, 2, mean)), low_95 = (apply(sens_H1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_H1_m, 2,quantile, probs = 0.975) )))
+sens_H2_m_mn <- t(rbind.data.frame(mean = (apply(sens_H2_m, 2, mean)), low_95 = (apply(sens_H2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_H2_m, 2,quantile, probs = 0.975) )))
+sens_AS_m_mn <- t(rbind.data.frame(mean = (apply(sens_AS_m, 2, mean)), low_95 = (apply(sens_AS_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_AS_m, 2,quantile, probs = 0.975) )))
+sens_n1_m_mn <- t(rbind.data.frame(mean = (apply(sens_n1_m, 2, mean)), low_95 = (apply(sens_n1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_n1_m, 2,quantile, probs = 0.975) )))
+sens_n2_m_mn <- t(rbind.data.frame(mean = (apply(sens_n2_m, 2, mean)), low_95 = (apply(sens_n2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_n2_m, 2,quantile, probs = 0.975) )))
+
+sens_p1_mn <- t(rbind.data.frame(mean = (apply(sens_p1, 2, mean)), low_95 = (apply(sens_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_p1, 2,quantile, probs = 0.975) )))
+sens_p2_mn <- t(rbind.data.frame(mean = (apply(sens_p2, 2, mean)), low_95 = (apply(sens_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_p2, 2,quantile, probs = 0.975) )))
+sens_p3_mn <- t(rbind.data.frame(mean = (apply(sens_p3, 2, mean)), low_95 = (apply(sens_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(sens_p3, 2,quantile, probs = 0.975) )))
+
+rownames(sens_F1_mn) <- NULL; colnames(sens_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_F2_mn) <- NULL; colnames(sens_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_w1_f_mn) <- NULL; colnames(sens_w1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_w2_f_mn) <- NULL; colnames(sens_w2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_h1_f_mn) <- NULL; colnames(sens_h1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_h2_f_mn) <- NULL; colnames(sens_h2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_js_f_mn) <- NULL; colnames(sens_js_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_W1_f_mn) <- NULL; colnames(sens_W1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_W2_f_mn) <- NULL; colnames(sens_W2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_H1_f_mn) <- NULL; colnames(sens_H1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_H2_f_mn) <- NULL; colnames(sens_H2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_AS_f_mn) <- NULL; colnames(sens_AS_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_n1_f_mn) <- NULL; colnames(sens_n1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_n2_f_mn) <- NULL; colnames(sens_n2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_w1_m_mn) <- NULL; colnames(sens_w1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_w2_m_mn) <- NULL; colnames(sens_w2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_h1_m_mn) <- NULL; colnames(sens_h1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_h2_m_mn) <- NULL; colnames(sens_h2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_js_m_mn) <- NULL; colnames(sens_js_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_W1_m_mn) <- NULL; colnames(sens_W1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_W2_m_mn) <- NULL; colnames(sens_W2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_H1_m_mn) <- NULL; colnames(sens_H1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_H2_m_mn) <- NULL; colnames(sens_H2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_AS_m_mn) <- NULL; colnames(sens_AS_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_n1_m_mn) <- NULL; colnames(sens_n1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_n2_m_mn) <- NULL; colnames(sens_n2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_p1_mn) <- NULL; colnames(sens_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_p2_mn) <- NULL; colnames(sens_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(sens_p3_mn) <- NULL; colnames(sens_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+#rownames(sens_m1_mn) <- NULL; colnames(sens_m1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+#rownames(sens_m2_mn) <- NULL; colnames(sens_m2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_sens <- cbind.data.frame(rbind.data.frame(sens_F1_mn,sens_F2_mn,
+                                               sens_w1_f_mn,sens_w2_f_mn,sens_h1_f_mn,sens_h2_f_mn,sens_js_f_mn,sens_W1_f_mn,sens_W2_f_mn,sens_H1_f_mn,sens_H2_f_mn,sens_AS_f_mn,sens_n1_f_mn,sens_n2_f_mn,
+                                               sens_w1_m_mn,sens_w2_m_mn,sens_h1_m_mn,sens_h2_m_mn,sens_js_m_mn,sens_W1_m_mn,sens_W2_m_mn,sens_H1_m_mn,sens_H2_m_mn,sens_AS_m_mn,sens_n1_m_mn,sens_n2_m_mn,
+                                               sens_p1_mn,sens_p2_mn,sens_p3_mn),
+                              expand.grid(region = c('AK','NO','PR'),
+                                          parameter = c('F1','F2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'P1','P2','P3') ))
+
+cont_F1_mn <- t(rbind.data.frame(mean = (apply(cont_F1, 2, mean)), low_95 = (apply(cont_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_F1, 2,quantile, probs = 0.975) )))
+cont_F2_mn <- t(rbind.data.frame(mean = (apply(cont_F2, 2, mean)), low_95 = (apply(cont_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_F2, 2,quantile, probs = 0.975) )))
+cont_w1_f_mn <- t(rbind.data.frame(mean = (apply(cont_w1_f, 2, mean)), low_95 = (apply(cont_w1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_w1_f, 2,quantile, probs = 0.975) )))
+cont_w2_f_mn <- t(rbind.data.frame(mean = (apply(cont_w2_f, 2, mean)), low_95 = (apply(cont_w2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_w2_f, 2,quantile, probs = 0.975) )))
+cont_h1_f_mn <- t(rbind.data.frame(mean = (apply(cont_h1_f, 2, mean)), low_95 = (apply(cont_h1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_h1_f, 2,quantile, probs = 0.975) )))
+cont_h2_f_mn <- t(rbind.data.frame(mean = (apply(cont_h2_f, 2, mean)), low_95 = (apply(cont_h2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_h2_f, 2,quantile, probs = 0.975) )))
+cont_js_f_mn <- t(rbind.data.frame(mean = (apply(cont_js_f, 2, mean)), low_95 = (apply(cont_js_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_js_f, 2,quantile, probs = 0.975) )))
+cont_W1_f_mn <- t(rbind.data.frame(mean = (apply(cont_W1_f, 2, mean)), low_95 = (apply(cont_W1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_W1_f, 2,quantile, probs = 0.975) )))
+cont_W2_f_mn <- t(rbind.data.frame(mean = (apply(cont_W2_f, 2, mean)), low_95 = (apply(cont_W2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_W2_f, 2,quantile, probs = 0.975) )))
+cont_H1_f_mn <- t(rbind.data.frame(mean = (apply(cont_H1_f, 2, mean)), low_95 = (apply(cont_H1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_H1_f, 2,quantile, probs = 0.975) )))
+cont_H2_f_mn <- t(rbind.data.frame(mean = (apply(cont_H2_f, 2, mean)), low_95 = (apply(cont_H2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_H2_f, 2,quantile, probs = 0.975) )))
+cont_AS_f_mn <- t(rbind.data.frame(mean = (apply(cont_AS_f, 2, mean)), low_95 = (apply(cont_AS_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_AS_f, 2,quantile, probs = 0.975) )))
+cont_n1_f_mn <- t(rbind.data.frame(mean = (apply(cont_n1_f, 2, mean)), low_95 = (apply(cont_n1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_n1_f, 2,quantile, probs = 0.975) )))
+cont_n2_f_mn <- t(rbind.data.frame(mean = (apply(cont_n2_f, 2, mean)), low_95 = (apply(cont_n2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_n2_f, 2,quantile, probs = 0.975) )))
+cont_w1_m_mn <- t(rbind.data.frame(mean = (apply(cont_w1_m, 2, mean)), low_95 = (apply(cont_w1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_w1_m, 2,quantile, probs = 0.975) )))
+cont_w2_m_mn <- t(rbind.data.frame(mean = (apply(cont_w2_m, 2, mean)), low_95 = (apply(cont_w2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_w2_m, 2,quantile, probs = 0.975) )))
+cont_h1_m_mn <- t(rbind.data.frame(mean = (apply(cont_h1_m, 2, mean)), low_95 = (apply(cont_h1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_h1_m, 2,quantile, probs = 0.975) )))
+cont_h2_m_mn <- t(rbind.data.frame(mean = (apply(cont_h2_m, 2, mean)), low_95 = (apply(cont_h2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_h2_m, 2,quantile, probs = 0.975) )))
+cont_js_m_mn <- t(rbind.data.frame(mean = (apply(cont_js_m, 2, mean)), low_95 = (apply(cont_js_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_js_m, 2,quantile, probs = 0.975) )))
+cont_W1_m_mn <- t(rbind.data.frame(mean = (apply(cont_W1_m, 2, mean)), low_95 = (apply(cont_W1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_W1_m, 2,quantile, probs = 0.975) )))
+cont_W2_m_mn <- t(rbind.data.frame(mean = (apply(cont_W2_m, 2, mean)), low_95 = (apply(cont_W2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_W2_m, 2,quantile, probs = 0.975) )))
+cont_H1_m_mn <- t(rbind.data.frame(mean = (apply(cont_H1_m, 2, mean)), low_95 = (apply(cont_H1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_H1_m, 2,quantile, probs = 0.975) )))
+cont_H2_m_mn <- t(rbind.data.frame(mean = (apply(cont_H2_m, 2, mean)), low_95 = (apply(cont_H2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_H2_m, 2,quantile, probs = 0.975) )))
+cont_AS_m_mn <- t(rbind.data.frame(mean = (apply(cont_AS_m, 2, mean)), low_95 = (apply(cont_AS_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_AS_m, 2,quantile, probs = 0.975) )))
+cont_n1_m_mn <- t(rbind.data.frame(mean = (apply(cont_n1_m, 2, mean)), low_95 = (apply(cont_n1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_n1_m, 2,quantile, probs = 0.975) )))
+cont_n2_m_mn <- t(rbind.data.frame(mean = (apply(cont_n2_m, 2, mean)), low_95 = (apply(cont_n2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_n2_m, 2,quantile, probs = 0.975) )))
+cont_p1_mn <- t(rbind.data.frame(mean = (apply(cont_p1, 2, mean)), low_95 = (apply(cont_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_p1, 2,quantile, probs = 0.975) )))
+cont_p2_mn <- t(rbind.data.frame(mean = (apply(cont_p2, 2, mean)), low_95 = (apply(cont_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_p2, 2,quantile, probs = 0.975) )))
+cont_p3_mn <- t(rbind.data.frame(mean = (apply(cont_p3, 2, mean)), low_95 = (apply(cont_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(cont_p3, 2,quantile, probs = 0.975) )))
+
+rownames(cont_F1_mn) <- NULL; colnames(cont_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_F2_mn) <- NULL; colnames(cont_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_w1_f_mn) <- NULL; colnames(cont_w1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_w2_f_mn) <- NULL; colnames(cont_w2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_h1_f_mn) <- NULL; colnames(cont_h1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_h2_f_mn) <- NULL; colnames(cont_h2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_js_f_mn) <- NULL; colnames(cont_js_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_W1_f_mn) <- NULL; colnames(cont_W1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_W2_f_mn) <- NULL; colnames(cont_W2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_H1_f_mn) <- NULL; colnames(cont_H1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_H2_f_mn) <- NULL; colnames(cont_H2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_AS_f_mn) <- NULL; colnames(cont_AS_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_n1_f_mn) <- NULL; colnames(cont_n1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_n2_f_mn) <- NULL; colnames(cont_n2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_w1_m_mn) <- NULL; colnames(cont_w1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_w2_m_mn) <- NULL; colnames(cont_w2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_h1_m_mn) <- NULL; colnames(cont_h1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_h2_m_mn) <- NULL; colnames(cont_h2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_js_m_mn) <- NULL; colnames(cont_js_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_W1_m_mn) <- NULL; colnames(cont_W1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_W2_m_mn) <- NULL; colnames(cont_W2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_H1_m_mn) <- NULL; colnames(cont_H1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_H2_m_mn) <- NULL; colnames(cont_H2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_AS_m_mn) <- NULL; colnames(cont_AS_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_n1_m_mn) <- NULL; colnames(cont_n1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_n2_m_mn) <- NULL; colnames(cont_n2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_p1_mn) <- NULL; colnames(cont_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_p2_mn) <- NULL; colnames(cont_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(cont_p3_mn) <- NULL; colnames(cont_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_cont <- cbind.data.frame(rbind.data.frame(cont_F1_mn,cont_F2_mn,
+                                               cont_w1_f_mn,cont_w2_f_mn,cont_h1_f_mn,cont_h2_f_mn,cont_js_f_mn,
+                                               cont_W1_f_mn,cont_W2_f_mn,cont_H1_f_mn,cont_H2_f_mn,cont_AS_f_mn,
+                                               cont_n1_f_mn,cont_n2_f_mn,
+                                               cont_w1_m_mn,cont_w2_m_mn,cont_h1_m_mn,cont_h2_m_mn,cont_js_m_mn,
+                                               cont_W1_m_mn,cont_W2_m_mn,cont_H1_m_mn,cont_H2_m_mn,cont_AS_m_mn,
+                                               cont_n1_m_mn,cont_n2_m_mn,
+                                               cont_p1_mn,cont_p2_mn,cont_p3_mn),
+                              expand.grid(region = c('Alaska','Boreal','Prairie'),
+                                          parameter = c('F1','F2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'P1','P2','P3') ))
+
+total <- cont_F1 + cont_F2+ cont_w1_f+ cont_w2_f+ cont_h1_f+ cont_h2_f+ cont_js_f+ cont_W1_f+ cont_W2_f+ cont_H1_f+ cont_H2_f+ cont_AS_f+ cont_n1_f+ cont_n2_f+ cont_w1_m+ cont_w2_m+ cont_h1_m+ cont_h2_m+ cont_js_m+ cont_W1_m+ cont_W2_m+ cont_H1_m+ cont_H2_m+ cont_AS_m+ cont_n1_m+ cont_n2_m+cont_p1+cont_p2+cont_p3
+
+
+prop_F1 <- cont_F1/total
+prop_F2 <- cont_F2/total
+prop_w1_f <- cont_w1_f/total
+prop_w2_f <- cont_w2_f/total
+prop_h1_f <- cont_h1_f/total
+prop_h2_f <- cont_h2_f/total
+prop_js_f <- cont_js_f/total
+prop_W1_f <- cont_W1_f/total
+prop_W2_f <- cont_W2_f/total
+prop_H1_f <- cont_H1_f/total
+prop_H2_f <- cont_H2_f/total
+prop_AS_f <- cont_AS_f/total
+prop_n1_f <- cont_n1_f/total
+prop_n2_f <- cont_n2_f/total
+prop_w1_m <- cont_w1_m/total
+prop_w2_m <- cont_w2_m/total
+prop_h1_m <- cont_h1_m/total
+prop_h2_m <- cont_h2_m/total
+prop_js_m <- cont_js_m/total
+prop_W1_m <- cont_W1_m/total
+prop_W2_m <- cont_W2_m/total
+prop_H1_m <- cont_H1_m/total
+prop_H2_m <- cont_H2_m/total
+prop_AS_m <- cont_AS_m/total
+prop_n1_m <- cont_n1_m/total
+prop_n2_m <- cont_n2_m/total
+prop_p1 <- cont_p1/total
+prop_p2 <- cont_p2/total
+prop_p3 <- cont_p3/total
+
+prop_F1_mn <- t(rbind.data.frame(mean = (apply(prop_F1, 2, mean)), low_95 = (apply(prop_F1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_F1, 2,quantile, probs = 0.975) )))
+prop_F2_mn <- t(rbind.data.frame(mean = (apply(prop_F2, 2, mean)), low_95 = (apply(prop_F2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_F2, 2,quantile, probs = 0.975) )))
+prop_w1_f_mn <- t(rbind.data.frame(mean = (apply(prop_w1_f, 2, mean)), low_95 = (apply(prop_w1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_w1_f, 2,quantile, probs = 0.975) )))
+prop_w2_f_mn <- t(rbind.data.frame(mean = (apply(prop_w2_f, 2, mean)), low_95 = (apply(prop_w2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_w2_f, 2,quantile, probs = 0.975) )))
+prop_h1_f_mn <- t(rbind.data.frame(mean = (apply(prop_h1_f, 2, mean)), low_95 = (apply(prop_h1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_h1_f, 2,quantile, probs = 0.975) )))
+prop_h2_f_mn <- t(rbind.data.frame(mean = (apply(prop_h2_f, 2, mean)), low_95 = (apply(prop_h2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_h2_f, 2,quantile, probs = 0.975) )))
+prop_js_f_mn <- t(rbind.data.frame(mean = (apply(prop_js_f, 2, mean)), low_95 = (apply(prop_js_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_js_f, 2,quantile, probs = 0.975) )))
+prop_W1_f_mn <- t(rbind.data.frame(mean = (apply(prop_W1_f, 2, mean)), low_95 = (apply(prop_W1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_W1_f, 2,quantile, probs = 0.975) )))
+prop_W2_f_mn <- t(rbind.data.frame(mean = (apply(prop_W2_f, 2, mean)), low_95 = (apply(prop_W2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_W2_f, 2,quantile, probs = 0.975) )))
+prop_H1_f_mn <- t(rbind.data.frame(mean = (apply(prop_H1_f, 2, mean)), low_95 = (apply(prop_H1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_H1_f, 2,quantile, probs = 0.975) )))
+prop_H2_f_mn <- t(rbind.data.frame(mean = (apply(prop_H2_f, 2, mean)), low_95 = (apply(prop_H2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_H2_f, 2,quantile, probs = 0.975) )))
+prop_AS_f_mn <- t(rbind.data.frame(mean = (apply(prop_AS_f, 2, mean)), low_95 = (apply(prop_AS_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_AS_f, 2,quantile, probs = 0.975) )))
+prop_n1_f_mn <- t(rbind.data.frame(mean = (apply(prop_n1_f, 2, mean)), low_95 = (apply(prop_n1_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_n1_f, 2,quantile, probs = 0.975) )))
+prop_n2_f_mn <- t(rbind.data.frame(mean = (apply(prop_n2_f, 2, mean)), low_95 = (apply(prop_n2_f, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_n2_f, 2,quantile, probs = 0.975) )))
+prop_w1_m_mn <- t(rbind.data.frame(mean = (apply(prop_w1_m, 2, mean)), low_95 = (apply(prop_w1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_w1_m, 2,quantile, probs = 0.975) )))
+prop_w2_m_mn <- t(rbind.data.frame(mean = (apply(prop_w2_m, 2, mean)), low_95 = (apply(prop_w2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_w2_m, 2,quantile, probs = 0.975) )))
+prop_h1_m_mn <- t(rbind.data.frame(mean = (apply(prop_h1_m, 2, mean)), low_95 = (apply(prop_h1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_h1_m, 2,quantile, probs = 0.975) )))
+prop_h2_m_mn <- t(rbind.data.frame(mean = (apply(prop_h2_m, 2, mean)), low_95 = (apply(prop_h2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_h2_m, 2,quantile, probs = 0.975) )))
+prop_js_m_mn <- t(rbind.data.frame(mean = (apply(prop_js_m, 2, mean)), low_95 = (apply(prop_js_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_js_m, 2,quantile, probs = 0.975) )))
+prop_W1_m_mn <- t(rbind.data.frame(mean = (apply(prop_W1_m, 2, mean)), low_95 = (apply(prop_W1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_W1_m, 2,quantile, probs = 0.975) )))
+prop_W2_m_mn <- t(rbind.data.frame(mean = (apply(prop_W2_m, 2, mean)), low_95 = (apply(prop_W2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_W2_m, 2,quantile, probs = 0.975) )))
+prop_H1_m_mn <- t(rbind.data.frame(mean = (apply(prop_H1_m, 2, mean)), low_95 = (apply(prop_H1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_H1_m, 2,quantile, probs = 0.975) )))
+prop_H2_m_mn <- t(rbind.data.frame(mean = (apply(prop_H2_m, 2, mean)), low_95 = (apply(prop_H2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_H2_m, 2,quantile, probs = 0.975) )))
+prop_AS_m_mn <- t(rbind.data.frame(mean = (apply(prop_AS_m, 2, mean)), low_95 = (apply(prop_AS_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_AS_m, 2,quantile, probs = 0.975) )))
+prop_n1_m_mn <- t(rbind.data.frame(mean = (apply(prop_n1_m, 2, mean)), low_95 = (apply(prop_n1_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_n1_m, 2,quantile, probs = 0.975) )))
+prop_n2_m_mn <- t(rbind.data.frame(mean = (apply(prop_n2_m, 2, mean)), low_95 = (apply(prop_n2_m, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_n2_m, 2,quantile, probs = 0.975) )))
+prop_p1_mn <- t(rbind.data.frame(mean = (apply(prop_p1, 2, mean)), low_95 = (apply(prop_p1, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_p1, 2,quantile, probs = 0.975) )))
+prop_p2_mn <- t(rbind.data.frame(mean = (apply(prop_p2, 2, mean)), low_95 = (apply(prop_p2, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_p2, 2,quantile, probs = 0.975) )))
+prop_p3_mn <- t(rbind.data.frame(mean = (apply(prop_p3, 2, mean)), low_95 = (apply(prop_p3, 2,quantile, probs = 0.025)), upp_95 = (apply(prop_p3, 2,quantile, probs = 0.975) )))
+
+
+rownames(prop_F1_mn) <- NULL; colnames(prop_F1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_F2_mn) <- NULL; colnames(prop_F2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_w1_f_mn) <- NULL; colnames(prop_w1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_w2_f_mn) <- NULL; colnames(prop_w2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_h1_f_mn) <- NULL; colnames(prop_h1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_h2_f_mn) <- NULL; colnames(prop_h2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_js_f_mn) <- NULL; colnames(prop_js_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_W1_f_mn) <- NULL; colnames(prop_W1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_W2_f_mn) <- NULL; colnames(prop_W2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_H1_f_mn) <- NULL; colnames(prop_H1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_H2_f_mn) <- NULL; colnames(prop_H2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_AS_f_mn) <- NULL; colnames(prop_AS_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_n1_f_mn) <- NULL; colnames(prop_n1_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_n2_f_mn) <- NULL; colnames(prop_n2_f_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_w1_m_mn) <- NULL; colnames(prop_w1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_w2_m_mn) <- NULL; colnames(prop_w2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_h1_m_mn) <- NULL; colnames(prop_h1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_h2_m_mn) <- NULL; colnames(prop_h2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_js_m_mn) <- NULL; colnames(prop_js_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_W1_m_mn) <- NULL; colnames(prop_W1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_W2_m_mn) <- NULL; colnames(prop_W2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_H1_m_mn) <- NULL; colnames(prop_H1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_H2_m_mn) <- NULL; colnames(prop_H2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_AS_m_mn) <- NULL; colnames(prop_AS_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_n1_m_mn) <- NULL; colnames(prop_n1_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_n2_m_mn) <- NULL; colnames(prop_n2_m_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_p1_mn) <- NULL; colnames(prop_p1_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_p2_mn) <- NULL; colnames(prop_p2_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+rownames(prop_p3_mn) <- NULL; colnames(prop_p3_mn) <- c('Mean', 'Lower_95', 'Upper_95')
+
+LTRE_prop <- cbind.data.frame(rbind.data.frame(prop_F1_mn,prop_F2_mn,
+                                               prop_w1_f_mn,prop_w2_f_mn,prop_h1_f_mn,prop_h2_f_mn,prop_js_f_mn,prop_W1_f_mn,prop_W2_f_mn,prop_H1_f_mn,prop_H2_f_mn,prop_AS_f_mn,prop_n1_f_mn,prop_n2_f_mn,
+                                               prop_w1_m_mn,prop_w2_m_mn,prop_h1_m_mn,prop_h2_m_mn,prop_js_m_mn,prop_W1_m_mn,prop_W2_m_mn,prop_H1_m_mn,prop_H2_m_mn,prop_AS_m_mn,prop_n1_m_mn,prop_n2_m_mn,
+                                               prop_p1_mn,prop_p2_mn,prop_p3_mn),
+                              expand.grid(region = c('Alaska','Boreal','Prairie'),
+                                          parameter = c('F1','F2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'P1','P2','P3') ), sex = c(rep('Female', 14*3), rep('Male',12*3), rep('Move',3*3)))
+
+cont_F1_t_mn <- apply(cont_F1_t, c(2,3), mean)
+cont_F2_t_mn <- apply(cont_F2_t, c(2,3), mean)
+cont_w1_f_t_mn <- apply(cont_w1_f_t, c(2,3), mean)
+cont_w2_f_t_mn <- apply(cont_w2_f_t, c(2,3), mean)
+cont_h1_f_t_mn <- apply(cont_h1_f_t, c(2,3), mean)
+cont_h2_f_t_mn <- apply(cont_h2_f_t, c(2,3), mean)
+cont_js_f_t_mn <- apply(cont_js_f_t, c(2,3), mean)
+cont_W1_f_t_mn <- apply(cont_W1_f_t, c(2,3), mean)
+cont_W2_f_t_mn <- apply(cont_W2_f_t, c(2,3), mean)
+cont_H1_f_t_mn <- apply(cont_H1_f_t, c(2,3), mean)
+cont_H2_f_t_mn <- apply(cont_H2_f_t, c(2,3), mean)
+cont_AS_f_t_mn <- apply(cont_AS_f_t, c(2,3), mean)
+cont_n1_f_t_mn <- apply(cont_n1_f_t, c(2,3), mean)
+cont_n2_f_t_mn <- apply(cont_n2_f_t, c(2,3), mean)
+cont_w1_m_t_mn <- apply(cont_w1_m_t, c(2,3), mean)
+cont_w2_m_t_mn <- apply(cont_w2_m_t, c(2,3), mean)
+cont_h1_m_t_mn <- apply(cont_h1_m_t, c(2,3), mean)
+cont_h2_m_t_mn <- apply(cont_h2_m_t, c(2,3), mean)
+cont_js_m_t_mn <- apply(cont_js_m_t, c(2,3), mean)
+cont_W1_m_t_mn <- apply(cont_W1_m_t, c(2,3), mean)
+cont_W2_m_t_mn <- apply(cont_W2_m_t, c(2,3), mean)
+cont_H1_m_t_mn <- apply(cont_H1_m_t, c(2,3), mean)
+cont_H2_m_t_mn <- apply(cont_H2_m_t, c(2,3), mean)
+cont_AS_m_t_mn <- apply(cont_AS_m_t, c(2,3), mean)
+cont_n1_m_t_mn <- apply(cont_n1_m_t, c(2,3), mean)
+cont_n2_m_t_mn <- apply(cont_n2_m_t, c(2,3), mean)
+cont_p1_t_mn <- apply(cont_p1_t, c(2,3), mean)
+cont_p2_t_mn <- apply(cont_p2_t, c(2,3), mean)
+cont_p3_t_mn <- apply(cont_p3_t, c(2,3), mean)
+
+cont_F_t      <- cont_F1_t + cont_F2_t
+cont_F_t_lead <-  cont_F_t[,,-59]
+cor_F <- array(NA, dim = c(3,dim(cont_F_t)[1],(params-1)))
+
+# Estimate lagged correlation between fecundity and all other demographic rates
+for(k in 1:n.region){
+  for(i in 1:dim(cor_F)[2]){
+    cor_F[k,i,1]  <- cor(cont_F_t_lead[i,k,], cont_F_t[i,k,-1])
+    cor_F[k,i,2]  <- cor(cont_F_t_lead[i,k,],cont_w1_f_t[i,k,-1]) 
+    cor_F[k,i,3]  <- cor(cont_F_t_lead[i,k,],cont_w2_f_t[i,k,-1]) 
+    cor_F[k,i,4]  <- cor(cont_F_t_lead[i,k,],cont_h1_f_t[i,k,-1]) 
+    cor_F[k,i,5]  <- cor(cont_F_t_lead[i,k,],cont_h2_f_t[i,k,-1]) 
+    cor_F[k,i,6]  <- cor(cont_F_t_lead[i,k,],cont_js_f_t[i,k,-1]) 
+    cor_F[k,i,7]  <- cor(cont_F_t_lead[i,k,],cont_W1_f_t[i,k,-1]) 
+    cor_F[k,i,8]  <- cor(cont_F_t_lead[i,k,],cont_W2_f_t[i,k,-1]) 
+    cor_F[k,i,9]  <- cor(cont_F_t_lead[i,k,],cont_H1_f_t[i,k,-1]) 
+    cor_F[k,i,10] <- cor(cont_F_t_lead[i,k,],cont_H2_f_t[i,k,-1]) 
+    cor_F[k,i,11] <- cor(cont_F_t_lead[i,k,],cont_AS_f_t[i,k,-1]) 
+    cor_F[k,i,12] <- cor(cont_F_t_lead[i,k,],cont_n1_f_t[i,k,-1]) 
+    cor_F[k,i,13] <- cor(cont_F_t_lead[i,k,],cont_n2_f_t[i,k,-1]) 
+    
+    cor_F[k,i,14]  <- cor(cont_F_t_lead[i,k,],cont_w1_m_t[i,k,-1]) 
+    cor_F[k,i,15]  <- cor(cont_F_t_lead[i,k,],cont_w2_m_t[i,k,-1]) 
+    cor_F[k,i,16]  <- cor(cont_F_t_lead[i,k,],cont_h1_m_t[i,k,-1]) 
+    cor_F[k,i,17]  <- cor(cont_F_t_lead[i,k,],cont_h2_m_t[i,k,-1]) 
+    cor_F[k,i,18]  <- cor(cont_F_t_lead[i,k,],cont_js_m_t[i,k,-1]) 
+    cor_F[k,i,19]  <- cor(cont_F_t_lead[i,k,],cont_W1_m_t[i,k,-1]) 
+    cor_F[k,i,20]  <- cor(cont_F_t_lead[i,k,],cont_W2_m_t[i,k,-1]) 
+    cor_F[k,i,21]  <- cor(cont_F_t_lead[i,k,],cont_H1_m_t[i,k,-1]) 
+    cor_F[k,i,22] <- cor(cont_F_t_lead[i,k,],cont_H2_m_t[i,k,-1]) 
+    cor_F[k,i,23] <- cor(cont_F_t_lead[i,k,],cont_AS_m_t[i,k,-1]) 
+    cor_F[k,i,24] <- cor(cont_F_t_lead[i,k,],cont_n1_m_t[i,k,-1]) 
+    cor_F[k,i,25] <- cor(cont_F_t_lead[i,k,],cont_n2_m_t[i,k,-1]) 
+    
+    cor_F[k,i,26] <- cor(cont_F_t_lead[i,k,],cont_p1_t[i,k,-1]) 
+    cor_F[k,i,27] <- cor(cont_F_t_lead[i,k,],cont_p2_t[i,k,-1]) 
+    cor_F[k,i,28] <- cor(cont_F_t_lead[i,k,],cont_p3_t[i,k,-1]) 
+
+  }
+}
+
+lags <- cbind.data.frame( mean = c(apply(cor_F, c(1,3), mean)), 
+                          lower = c(apply(cor_F , c(1,3),quantile, probs = 0.025)),
+                          upper = c(apply(cor_F , c(1,3),quantile, probs = 0.975)), 
+                          expand.grid(region = c('Alaska','Boreal','Prairie'),
+                                      Parameter = c('F','w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                        'w1','w2','h1','h2','JS','W1','W2','H1','H2','AS','N1','N2',
+                                                    'P1','P2','P3')),
+                          sex = c(rep('Female', 13*3), rep('Male',12*3), rep('Move',3*3))) 
+
+library(reshape2)
+
+cont_t <- melt(rbind(
+  t(cont_F1_t_mn + cont_F2_t_mn),
+  t(cont_w1_f_t_mn),t(cont_w2_f_t_mn),t(cont_h1_f_t_mn),t(cont_h2_f_t_mn),t(cont_js_f_t_mn),t(cont_W1_f_t_mn),t(cont_W2_f_t_mn),t(cont_H1_f_t_mn),t(cont_H2_f_t_mn),t(cont_AS_f_t_mn),t(cont_n1_f_t_mn+cont_n2_f_t_mn),
+  t(cont_w1_m_t_mn),t(cont_w2_m_t_mn),t(cont_h1_m_t_mn),t(cont_h2_m_t_mn),t(cont_js_m_t_mn),t(cont_W1_m_t_mn),t(cont_W2_m_t_mn),t(cont_H1_m_t_mn),t(cont_H2_m_t_mn),t(cont_AS_m_t_mn),t(cont_n1_m_t_mn+cont_n2_m_t_mn),
+  t(cont_p1_t_mn), t(cont_p2_t_mn), t(cont_p3_t_mn)))
+
+cont_t2 <- melt(rbind(
+                t(cont_F1_t_mn + cont_F2_t_mn),
+                t(cont_w1_f_t_mn+cont_w2_f_t_mn),t(cont_h1_f_t_mn+cont_h2_f_t_mn),t(cont_js_f_t_mn),t(cont_W1_f_t_mn+cont_W2_f_t_mn), t(cont_H1_f_t_mn+cont_H2_f_t_mn),t(cont_AS_f_t_mn),t(cont_n1_f_t_mn+cont_n2_f_t_mn),
+                t(cont_w1_m_t_mn+cont_w2_m_t_mn),t(cont_h1_m_t_mn+cont_h2_m_t_mn),t(cont_js_m_t_mn),t(cont_W1_m_t_mn+cont_W2_m_t_mn), t(cont_H1_m_t_mn+cont_H2_m_t_mn),t(cont_AS_m_t_mn),t(cont_n1_m_t_mn+cont_n2_m_t_mn),
+                t(cont_p1_t_mn+cont_p2_t_mn+cont_p3_t_mn)))
+
+
+cont_t <- cbind.data.frame(cont_t, 
+                           expand.grid(year = 1962:2020,  
+                                       Parameter = c('F','S[c,w,j]','S[p,w,j]','S[c,h,j]','S[p,h,j]','S[b,s,j]','S[c,w,a]','S[p,w,a]','S[c,h,a]','S[p,h,a]','S[b,s,a]','N',
+                                                         'S[c,w,j]','S[p,w,j]','S[c,h,j]','S[p,h,j]','S[b,s,j]','S[c,w,a]','S[p,w,a]','S[c,h,a]','S[p,h,a]','S[b,s,a]','N',
+                                                          'C[AK]','C[NO]','C[PR]'), region = c('Alaska','Boreal','Prairie')), sex = c(rep('Female', 12 * 59),rep('Male', 11 * 59),rep('Move', 3 * 59) ))
+
+cont_t2 <- cbind.data.frame(cont_t2, 
+                           expand.grid(year = 1962:2020,  
+                                       Parameter = c('F','S[w,j]','S[h,j]','S[b,s,j]','S[w,a]','S[h,a]','S[b,s,a]','N',
+                                                         'S[w,j]','S[h,j]','S[b,s,j]','S[w,a]','S[h,a]','S[b,s,a]','N','C'), region = c('Alaska','Boreal','Prairie')),
+                           sex = c(rep('Female', 8 * 59),rep('Male', 7 * 59),rep('Move', 1 * 59) ))
+
+
+
+
+library(ggplot2); library(see);library(scico)
+
+ltre_plot <-  ggplot(data = subset(cont_t2,sex != 'Move'), aes(fill = Parameter, x = year, y = value)) + 
+  geom_bar(position="stack", stat="identity") + geom_hline(yintercept = 0) +
+  scale_fill_metro_d(labels = c(expression(F[net],W[HY],H[HY],S[SY], W[AHY], H[AHY],S[ASY],N[net] ))) +
+  labs(y = 'Contribution of each demographic\nparameter to population growth', x = 'Year') +
+  facet_wrap(sex~region, ncol = 3) + coord_cartesian(ylim = c(-.5,.5)) + theme_modern(legend.position = 'top', base_size = 20, legend.text.size = 20, legend.title.size = 20, axis.title.size = 20 )
+ltre_plot
+
+ggsave(ltre_plot, file = 'tLTRE.jpg', height = 12, width = 16, dpi = 320)
+
+
+LTRE_cont$sex <- c(rep('Female',42), rep('Male',36),rep('Move',9))
+
+ltre_plot2 <- ggplot(data = subset(LTRE_cont, sex != 'Move'), aes(fill = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95), 
+                   size = .66, position = position_dodge2(.5), shape = 21) +
+  geom_point(aes(fill = region, x = parameter, y = Mean),
+             size = 3, position = position_dodge2(.5), shape = 21) +
+  scale_fill_see_d() + geom_hline(yintercept = 0) + facet_wrap(~sex, ncol = 1) +
+  geom_vline(xintercept = 2.5) +  geom_vline(xintercept = 7.5) +   geom_vline(xintercept = 12.5)  + geom_vline(xintercept = 14.5) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY], W['HY,GC'],W['HY,CV'],H['HY,GC'],H['HY,CV'],S['SY'], W['AHY,GC'],W['AHY,CV'],H['AHY,GC'],H['AHY,CV'],S['ASY'],N[SY],N['ASY'])))+
+  labs(y = expression(atop('Estimated  transient life table response', paste('experiment contribution to population growth'))), x = 'Demographic Rate', fill = 'Region') +
+  theme_modern(legend.position = 'top', base_size = 20,axis.text.size = 20,axis.title.size = 20, legend.text.size = 20, legend.title.size  = 20)
+ltre_plot2
+
+ggsave(ltre_plot2, file = 'ltre_complex.jpg', height =  8, width = 18, dpi = 320)
+
+
+ltre_plot_prop <- ggplot(data = LTRE_prop, aes(color = region, x = parameter, y = Mean)) + 
+  geom_pointrange2(aes(fill = region, x = parameter, y = Mean, ymin = Lower_95, ymax =Upper_95, shape = sex), 
+                   size = .66, position = position_dodge2(.5), color = 'black') +
+  geom_point(aes(color = region, x = parameter, y = Mean, shape = sex),
+             size = 3, position = position_dodge2(.5)) +
+  scale_color_see_d() + geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 2.5) +  geom_vline(xintercept = 7.5) +   geom_vline(xintercept = 12.5)  + geom_vline(xintercept = 14.5) +
+  scale_x_discrete(labels = c(expression(F['SY'],F['ASY'], W['GC,HY'],W['CV,HY'],H['GC,HY'],H['CV,HY'],S['SY'], W['GC,AHY'],W['CV,AHY'],H['GC,AHY'],H['GC,AHY'],S['ASY'],N['SY'],N['ASY'],psi[AK],psi[NO],psi[PR],M[GC],M[CV])))+
+  labs(y = expression(atop('Estimated proportional transient life table response', paste('experiment contribution to population growth'))), 
+       x = 'Demographic Rate', color = 'Breeding Region',fill = 'Breeding Region', shape = 'Type') +
+  theme_modern(legend.position = 'top', base_size = 20,axis.text.size = 20,axis.title.size = 20, legend.text.size = 20, legend.title.size  = 20)
+ltre_plot_prop
+ggsave(ltre_plot_prop, file = 'ltre_prop.jpg', height =  8, width = 18, dpi = 320)
+
+
+
+lag_plot <- ggplot(data = lags, aes(fill = region, x = Parameter, y = mean)) +
+  geom_pointrange2(aes(fill = region, x = Parameter, y = mean, ymin = lower, ymax =upper, shape = sex),
+                   size = .5, position = position_dodge2(.5),color = 'black') +
+  geom_point(aes(color = region, x = Parameter, y = mean,shape = sex),
+             size = 3, position = position_dodge2(.5)) +
+  scale_color_see_d() + geom_hline(yintercept = 0) +
+  scale_x_discrete(labels = c(expression(F[net], W['HY,GC'],W['HY,CV'],H['HY,GC'],H['HY,CV'],S['SY'], W['AHY,GC'],W['AHY,CV'],H['AHY,GC'],H['AHY,CV'],S['ASY'],N[SY],N['ASY'],psi[AK],psi[NO],psi[PR])))+
+  labs(y = expression(atop("Correlation between LTRE contributions of", paste("F"["t"], " and the LTRE contributions of ", theta[' t+1']))), 
+       x = 'Demographic Rate', fill = 'Region', color = 'Region', shape = 'Type') +
+  theme_modern(legend.position = 'top', base_size = 20,axis.text.size = 20,axis.title.size = 20, legend.text.size = 20, legend.title.size  = 20)
+lag_plot
+ggsave(lag_plot, file = 'lag_plot.jpg', height = 8, width = 18, dpi = 320)
+
+
+results <- rbind.data.frame(LTRE_sens, LTRE_elas, LTRE_conts)
+write.csv(results, file = 'sens_results.csv')
+
+
+
