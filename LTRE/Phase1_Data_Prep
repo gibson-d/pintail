@@ -32,7 +32,7 @@ keep2 <- c(keep2, keep2+ ch2) #, keep2 + ch2*2)
 max_year <- 61
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# Step 1: Extract the full posterior distribution for each demographic rate
+# Phase 1: Extract the full posterior distribution for each demographic rate
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #Total Winter Survival (female)
 s_tw_hy_central_f <- (MCMCpstr(mcmcList1, params = 'sw_hy_central_f',type = 'chains')$sw_hy_central_f[,keep1])
@@ -127,9 +127,6 @@ pr_cen <- MCMCpstr(mcmcList1, params = 'pi_pr', type= 'chains')$pi_pr[1,1:62,kee
 # Annual movements
 pi_all <- MCMCpstr(mcmcList1, params = 'pi', type= 'chains')$pi[,,,keep1]
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# Step 2: Compute realized population growth rates for Canvasbacks and Redheads given the IPM output 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 library(matrixStats)
 noyears   <- max_year
 n.region <- 3
@@ -232,7 +229,7 @@ tempvar_real <- apply(lam_tot,c(1,3),  mean)
 mu_lam       <- apply(tempvar_real,2, function(x) exp(mean(log(x))))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# Step 3: Calculate stage-specific proportions of survivals and abundances for each region
+# Calculate stage-specific proportions of survivals and abundances for each region
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 mu_psi <- abind(ak_cen,no_cen,pr_cen,along = 3)
 noyears <- 60
@@ -299,3 +296,9 @@ for (i in 1:noyears){
     }
   }
 }
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# End Phase 1
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
