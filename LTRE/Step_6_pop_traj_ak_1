@@ -1,0 +1,1349 @@
+
+# Step 6: Calculate desired statistics (e.g. the mean and Bayesian credible  
+# interval) from the derived posterior distributions of the LTRE             
+# contributions. The following is an example for the total contribution      
+# from all demographic parameters.
+
+total_ak <- cont_F1[,1]+cont_F2[,1]+
+  cont_w1_f[,1]+cont_w2_f[,1]+cont_h1_f[,1]+cont_h2_f[,1]+cont_js_f[,1]+cont_W1_f[,1]+cont_W2_f[,1]+cont_H1_f[,1]+cont_H2_f[,1]+cont_AS_f[,1]+cont_n1_f[,1]+cont_n2_f[,1]+ 
+  cont_w1_m[,1]+cont_w2_m[,1]+cont_h1_m[,1]+cont_h2_m[,1]+cont_js_m[,1]+cont_W1_m[,1]+cont_W2_m[,1]+cont_H1_m[,1]+cont_H2_m[,1]+cont_AS_m[,1]+cont_n1_m[,1]+cont_n2_m[,1]+
+  cont_p1[,1]+cont_p2[,1]+cont_p3[,1]
+
+total_no <- cont_F1[,2]+cont_F2[,2]+
+  cont_w1_f[,2]+cont_w2_f[,2]+cont_h1_f[,2]+cont_h2_f[,2]+cont_js_f[,2]+cont_W1_f[,2]+cont_W2_f[,2]+cont_H1_f[,2]+cont_H2_f[,2]+cont_AS_f[,2]+cont_n1_f[,2]+cont_n2_f[,2]+ 
+  cont_w1_m[,2]+cont_w2_m[,2]+cont_h1_m[,2]+cont_h2_m[,2]+cont_js_m[,2]+cont_W1_m[,2]+cont_W2_m[,2]+cont_H1_m[,2]+cont_H2_m[,2]+cont_AS_m[,2]+cont_n1_m[,2]+cont_n2_m[,2]+
+  cont_p1[,2]+cont_p2[,2]+cont_p3[,2]
+
+total_pr <- cont_F1[,3]+cont_F2[,3]+
+  cont_w1_f[,3]+cont_w2_f[,3]+cont_h1_f[,3]+cont_h2_f[,3]+cont_js_f[,3]+cont_W1_f[,3]+cont_W2_f[,3]+cont_H1_f[,3]+cont_H2_f[,3]+cont_AS_f[,3]+cont_n1_f[,3]+cont_n2_f[,3]+ 
+  cont_w1_m[,3]+cont_w2_m[,3]+cont_h1_m[,3]+cont_h2_m[,3]+cont_js_m[,3]+cont_W1_m[,3]+cont_W2_m[,3]+cont_H1_m[,3]+cont_H2_m[,3]+cont_AS_m[,3]+cont_n1_m[,3]+cont_n2_m[,3]+
+  cont_p1[,3]+cont_p2[,3]+cont_p3[,3]
+
+
+pi_ak <- aperm(pi_all[1,,1:60,],c(2,3,1))
+pi_no <- aperm(pi_all[2,,1:60,],c(2,3,1))
+pi_pr <- aperm(pi_all[3,,1:60,],c(2,3,1))
+
+# Write out population model in matrix form
+matrix.elements <- expression(0.5*F1*(Sfj_w1*Sfj_h1 + Sfj_w2*Sfj_h2) * Sfj_s * pi_ak +
+                              0.5*F1*(Sfj_w1*Sfj_h1 + Sfj_w2*Sfj_h2) * Sfj_s * pi_no +
+                              0.5*F1*(Sfj_w1*Sfj_h1 + Sfj_w2*Sfj_h2) * Sfj_s * pi_pr,
+                              
+                              0.5*F2*(Sfj_w1*Sfj_h1 + Sfj_w2*Sfj_h2) * Sfj_s * pi_ak+
+                              0.5*F2*(Sfj_w1*Sfj_h1 + Sfj_w2*Sfj_h2) * Sfj_s * pi_no+
+                              0.5*F2*(Sfj_w1*Sfj_h1 + Sfj_w2*Sfj_h2) * Sfj_s * pi_pr,
+                              
+                              0,0,
+                              
+                              (Sfa_w1*Sfa_h1+ Sfa_w2*Sfa_h2) * Sfa_s * pi_ak + 
+                              (Sfa_w1*Sfa_h1+ Sfa_w2*Sfa_h2) * Sfa_s * pi_no +
+                              (Sfa_w1*Sfa_h1+ Sfa_w2*Sfa_h2) * Sfa_s * pi_pr,
+                              
+                              (Sfa_w1*Sfa_h1+ Sfa_w2*Sfa_h2) * Sfa_s * pi_ak + 
+                              (Sfa_w1*Sfa_h1+ Sfa_w2*Sfa_h2) * Sfa_s * pi_no +
+                              (Sfa_w1*Sfa_h1+ Sfa_w2*Sfa_h2) * Sfa_s * pi_pr,
+                              0,0,
+                              
+                              0.5*F1*(Smj_w1*Smj_h1 + Smj_w2*Smj_h2) * Smj_s * pi_ak +
+                              0.5*F1*(Smj_w1*Smj_h1 + Smj_w2*Smj_h2) * Smj_s * pi_no +
+                              0.5*F1*(Smj_w1*Smj_h1 + Smj_w2*Smj_h2) * Smj_s * pi_pr,
+                              
+                              0.5*F2*(Smj_w1*Smj_h1 + Smj_w2*Smj_h2) * Smj_s * pi_ak+
+                              0.5*F2*(Smj_w1*Smj_h1 + Smj_w2*Smj_h2) * Smj_s * pi_no+
+                              0.5*F2*(Smj_w1*Smj_h1 + Smj_w2*Smj_h2) * Smj_s * pi_pr,
+                              
+                              0,0,
+                              0,0,
+                              (Sma_w1*Sma_h1+ Sma_w2*Sma_h2) * Sma_s * pi_ak + 
+                              (Sma_w1*Sma_h1+ Sma_w2*Sma_h2) * Sma_s * pi_no +
+                              (Sma_w1*Sma_h1+ Sma_w2*Sma_h2) * Sma_s * pi_pr,
+                              
+                              (Sma_w1*Sma_h1+ Sma_w2*Sma_h2) * Sma_s * pi_ak + 
+                              (Sma_w1*Sma_h1+ Sma_w2*Sma_h2) * Sma_s * pi_no +
+                              (Sma_w1*Sma_h1+ Sma_w2*Sma_h2) * Sma_s * pi_pr
+                              
+                              
+)
+
+#Extract formulas for each partial derative [i.e., sensitivity]
+
+dF1      <- as.expression(sapply(matrix.elements,D,"F1"))
+dF2      <- as.expression(sapply(matrix.elements,D,"F2"))
+
+dSfj_w1  <- as.expression(sapply(matrix.elements,D,"Sfj_w1"))
+dSfj_w2  <- as.expression(sapply(matrix.elements,D,"Sfj_w2"))
+dSfj_h1  <- as.expression(sapply(matrix.elements,D,"Sfj_h1"))
+dSfj_h2  <- as.expression(sapply(matrix.elements,D,"Sfj_h2"))
+dSfj_s   <- as.expression(sapply(matrix.elements,D,"Sfj_s"))
+
+dSfa_w1  <- as.expression(sapply(matrix.elements,D,"Sfa_w1"))
+dSfa_w2  <- as.expression(sapply(matrix.elements,D,"Sfa_w2"))
+dSfa_h1  <- as.expression(sapply(matrix.elements,D,"Sfa_h1"))
+dSfa_h2  <- as.expression(sapply(matrix.elements,D,"Sfa_h2"))
+dSfa_s   <- as.expression(sapply(matrix.elements,D,"Sfa_s"))
+
+dSmj_w1  <- as.expression(sapply(matrix.elements,D,"Smj_w1"))
+dSmj_w2  <- as.expression(sapply(matrix.elements,D,"Smj_w2"))
+dSmj_h1  <- as.expression(sapply(matrix.elements,D,"Smj_h1"))
+dSmj_h2  <- as.expression(sapply(matrix.elements,D,"Smj_h2"))
+dSmj_s   <- as.expression(sapply(matrix.elements,D,"Smj_s"))
+
+dSma_w1  <- as.expression(sapply(matrix.elements,D,"Sma_w1"))
+dSma_w2  <- as.expression(sapply(matrix.elements,D,"Sma_w2"))
+dSma_h1  <- as.expression(sapply(matrix.elements,D,"Sma_h1"))
+dSma_h2  <- as.expression(sapply(matrix.elements,D,"Sma_h2"))
+dSma_s   <- as.expression(sapply(matrix.elements,D,"Sma_s"))
+
+dpi_ak    <- as.expression(sapply(matrix.elements,D,"pi_ak"))
+dpi_no    <- as.expression(sapply(matrix.elements,D,"pi_no"))
+dpi_pr    <- as.expression(sapply(matrix.elements,D,"pi_pr"))
+
+samples <- length(keep1)    
+loggeolam_1 <- matrix(NA,samples,3)
+loggeolam_2 <- matrix(NA,samples,3)
+loggeolam_3 <- matrix(NA,samples,3)
+diffgeolam1 <- matrix(NA,samples,3) 
+diffgeolam2 <- matrix(NA,samples,3) 
+
+sta1 <- 1
+end1 <- 20
+
+sta2 <- 21
+end2 <- 40
+
+sta3 <- 41
+end3 <- 60
+
+n.region <- 3
+for (j in 1:samples){
+  for(k in 1:n.region){
+    loggeolam_1[j,k] <- mean(log(lam_tot[sta1:end1,j,k]))
+    loggeolam_2[j,k] <- mean(log(lam_tot[sta2:end2,j,k]))
+    loggeolam_3[j,k] <- mean(log(lam_tot[sta3:end3,j,k]))
+    diffgeolam1[j,k] <- loggeolam_2[j,k] - loggeolam_1[j,k]
+    diffgeolam2[j,k] <- loggeolam_3[j,k] - loggeolam_1[j,k]
+  }
+}
+apply(exp(loggeolam_1),2,mean)
+apply(exp(loggeolam_2),2,mean)
+apply(exp(loggeolam_3),2,mean)
+
+apply(diffgeolam1,2,mean)
+apply(diffgeolam2,2,mean)
+
+apply(exp(loggeolam_1),2,sd)
+apply(exp(loggeolam_2),2,sd)
+apply(exp(loggeolam_3),2,sd)
+
+apply(diffgeolam1,2,sd)
+apply(diffgeolam2,2,sd)
+
+(apply(exp(loggeolam_1),2,sd)/apply(exp(loggeolam_1),2,mean))
+(apply(exp(loggeolam_2),2,sd)/apply(exp(loggeolam_2),2,mean))
+(apply(exp(loggeolam_3),2,sd)/apply(exp(loggeolam_3),2,mean))
+
+###########################################################################
+# Step 7: Calculate population dynamics for a reference population that      
+# represents average initial conditions and average per time step vital rates 
+# between the two time periods being compared.
+############################################################################
+
+# Region Alaska, Comparison 1
+Time <- 20
+refpi_ak <- refpi_no <- refpi_pr <- refF1 <- refF2 <- refSfj_w1 <- refSfa_w1 <- refSfj_w2 <- refSfa_w2  <- refSfj_s <- refSfa_s <- refSfj_h1 <- refSfa_h1 <- refSfj_h2 <- refSfa_h2  <- refSmj_w1 <- refSma_w1 <- refSmj_w2 <- refSma_w2  <- refSmj_s <- refSma_s <- refSmj_h1 <- refSma_h1 <- refSmj_h2 <- refSma_h2  <- lam_realref <- array(NA,dim = c(samples,Time,3))
+refnf1   <- refnf2 <-refnm1 <- refnm2 <- matrix(NA,samples, 3)
+refn     <- array(NA,dim=c(4,1,samples,Time+1,3))
+Sfj_w1_reg <- Sfj_w2_reg <- Sfj_h1_reg <- Sfj_h2_reg <- Sfa_w1_reg <- Sfa_w2_reg <- Sfa_h1_reg <- Sfa_h2_reg <-Smj_w1_reg <- Smj_w2_reg <- Smj_h1_reg <- Smj_h2_reg <- Sma_w1_reg <- Sma_w2_reg <- Sma_h1_reg <- Sma_h2_reg <- array(NA,dim=c(60,samples,3))
+
+# Annual vital rates
+for (j in 1:samples){
+  for(k in 1:n.region){
+    for(t in 1:60){
+      Sfj_w1_reg[t,j,k] <- Sfj_w1[t,j] * mu_psi[t,j,k]
+      Sfa_w1_reg[t,j,k] <- Sfa_w1[t,j] * mu_psi[t,j,k]
+      Sfj_w2_reg[t,j,k] <- Sfj_w2[t,j] * (1 - mu_psi[t,j,k])
+      Sfa_w2_reg[t,j,k] <- Sfa_w2[t,j] * (1 - mu_psi[t,j,k])
+      
+      Sfj_h1_reg[t,j,k] <- Sfj_h1[t,j] * mu_psi[t,j,k]
+      Sfa_h1_reg[t,j,k] <- Sfa_h1[t,j] * mu_psi[t,j,k]
+      Sfj_h2_reg[t,j,k] <- Sfj_h2[t,j] * (1 - mu_psi[t,j,k])
+      Sfa_h2_reg[t,j,k] <- Sfa_h2[t,j] * (1 - mu_psi[t,j,k])
+      
+      Smj_w1_reg[t,j,k] <- Smj_w1[t,j] * mu_psi[t,j,k]
+      Sma_w1_reg[t,j,k] <- Sma_w1[t,j] * mu_psi[t,j,k]
+      Smj_w2_reg[t,j,k] <- Smj_w2[t,j] * (1 - mu_psi[t,j,k])
+      Sma_w2_reg[t,j,k] <- Sma_w2[t,j] * (1 - mu_psi[t,j,k])
+      
+      Smj_h1_reg[t,j,k] <- Smj_h1[t,j] * mu_psi[t,j,k]
+      Sma_h1_reg[t,j,k] <- Sma_h1[t,j] * mu_psi[t,j,k]
+      Smj_h2_reg[t,j,k] <- Smj_h2[t,j] * (1 - mu_psi[t,j,k])
+      Sma_h2_reg[t,j,k] <- Sma_h2[t,j] * (1 - mu_psi[t,j,k])
+    }
+    # Average vital rate between the starts of each time period
+    refnf1[j,k] <- (nf1[sta1,j,k] + nf1[sta2,j,k]) / 2
+    refnf2[j,k] <- (nf2[sta1,j,k] + nf2[sta2,j,k]) / 2
+    refnm1[j,k] <- (nm1[sta1,j,k] + nm1[sta2,j,k]) / 2
+    refnm2[j,k] <- (nm2[sta1,j,k] + nm2[sta2,j,k]) / 2
+    
+    refn[1,1,j,1,k] <- refnf1[j,k]
+    refn[2,1,j,1,k] <- refnf2[j,k]
+    
+    refn[3,1,j,1,k] <- refnm1[j,k]
+    refn[4,1,j,1,k] <- refnm2[j,k]
+    
+    for (i in 1:Time){
+      refpi_ak[j,i,k] <-   (pi_ak[i+sta1-1,j,k] +   pi_ak[i+sta2-1,j,k]) / 2
+      refpi_no[j,i,k] <-   (pi_no[i+sta1-1,j,k] +   pi_no[i+sta2-1,j,k]) / 2
+      refpi_pr[j,i,k] <-   (pi_pr[i+sta1-1,j,k] +   pi_pr[i+sta2-1,j,k]) / 2
+      
+      refF1[j,i,k] <-   (F1[i+sta1-1,j,k] + F1[i+sta2-1,j,k]) / 2
+      refF2[j,i,k] <-   (F2[i+sta1-1,j,k] + F2[i+sta2-1,j,k]) / 2
+      
+      refSfj_w1[j,i,k] <- ((Sfj_w1_reg[i+sta1-1,j,k] + Sfj_w1_reg[i+sta2-1,j,k]) / 2)
+      refSfa_w1[j,i,k] <- ((Sfa_w1_reg[i+sta1-1,j,k] + Sfa_w1_reg[i+sta2-1,j,k]) / 2)
+      
+      refSfj_w2[j,i,k] <- ((Sfj_w2_reg[i+sta1-1,j,k] + Sfj_w2_reg[i+sta2-1,j,k]) / 2) 
+      refSfa_w2[j,i,k] <- ((Sfa_w2_reg[i+sta1-1,j,k] + Sfa_w2_reg[i+sta2-1,j,k]) / 2) 
+    
+      refSfj_s[j,i,k]    <- (Sfj_s[i+sta1-1,j,k] +  Sfj_s[i+sta2-1,j,k]) / 2
+      refSfa_s[j,i,k]    <- (Sfa_s[i+sta1-1,j,k] +  Sfa_s[i+sta2-1,j,k]) / 2
+      
+      refSfj_h1[j,i,k] <- ((Sfj_h1_reg[i+sta1-1,j,k] + Sfj_h1_reg[i+sta2-1,j,k]) / 2)
+      refSfa_h1[j,i,k] <- ((Sfa_h1_reg[i+sta1-1,j,k] + Sfa_h1_reg[i+sta2-1,j,k]) / 2)
+      
+      refSfj_h2[j,i,k] <- ((Sfj_h2_reg[i+sta1-1,j,k] + Sfj_h2_reg[i+sta2-1,j,k]) / 2) 
+      refSfa_h2[j,i,k] <- ((Sfa_h2_reg[i+sta1-1,j,k] + Sfa_h2_reg[i+sta2-1,j,k]) / 2) 
+      
+      refSmj_w1[j,i,k] <- ((Smj_w1_reg[i+sta1-1,j,k] + Smj_w1_reg[i+sta2-1,j,k]) / 2)
+      refSma_w1[j,i,k] <- ((Sma_w1_reg[i+sta1-1,j,k] + Sma_w1_reg[i+sta2-1,j,k]) / 2)
+      
+      refSmj_w2[j,i,k] <- ((Smj_w2_reg[i+sta1-1,j,k] + Smj_w2_reg[i+sta2-1,j,k]) / 2) 
+      refSma_w2[j,i,k] <- ((Sma_w2_reg[i+sta1-1,j,k] + Sma_w2_reg[i+sta2-1,j,k]) / 2) 
+      
+      refSmj_s[j,i,k] <-    (Smj_s[i+sta1-1,j,k] +  Smj_s[i+sta2-1,j,k]) / 2
+      refSma_s[j,i,k] <-    (Sma_s[i+sta1-1,j,k] +  Sma_s[i+sta2-1,j,k]) / 2
+      
+      refSmj_h1[j,i,k] <- ((Smj_h1_reg[i+sta1-1,j,k] + Smj_h1_reg[i+sta2-1,j,k]) / 2)
+      refSma_h1[j,i,k] <- ((Sma_h1_reg[i+sta1-1,j,k] + Sma_h1_reg[i+sta2-1,j,k]) / 2)
+      
+      refSmj_h2[j,i,k] <- ((Smj_h2_reg[i+sta1-1,j,k] + Smj_h2_reg[i+sta2-1,j,k]) / 2) 
+      refSma_h2[j,i,k] <- ((Sma_h2_reg[i+sta1-1,j,k] + Sma_h2_reg[i+sta2-1,j,k]) / 2) 
+      
+      # Demographic projection matrix for each region
+      A_AK <- matrix(c(
+        0.5*refF1[j,i,1] * (refSfj_w1[j,i,1] + refSfj_w2[j,i,1]) * refSfj_s[j,i,1] * (refSfj_h1[j,i,1] + refSfj_h2[j,i,1]),
+        0.5*refF2[j,i,1] * (refSfj_w1[j,i,1] + refSfj_w2[j,i,1]) * refSfj_s[j,i,1] * (refSfj_h1[j,i,1] + refSfj_h2[j,i,1]),0,0,
+        
+        (refSfa_w1[j,i,1] + refSfa_w2[j,i,1]) * refSfa_s[j,i,1] *  (refSfa_h1[j,i,1] + refSfa_h2[j,i,1]),
+        (refSfa_w1[j,i,1] + refSfa_w2[j,i,1]) * refSfa_s[j,i,1] *  (refSfa_h1[j,i,1] + refSfa_h2[j,i,1]),0,0,
+        
+        0.5*refF1[j,i,1] * (refSmj_w1[j,i,1] + refSmj_w2[j,i,1]) * refSmj_s[j,i,1] * (refSmj_h1[j,i,1] + refSmj_h2[j,i,1]),
+        0.5*refF2[j,i,1] * (refSmj_w1[j,i,1] + refSmj_w2[j,i,1]) * refSmj_s[j,i,1] * (refSmj_h1[j,i,1] + refSmj_h2[j,i,1]),0,0,
+        
+        0,0,
+        (refSma_w1[j,i,1] + refSma_w2[j,i,1]) * refSma_s[j,i,1] *  (refSma_h1[j,i,1] + refSma_h2[j,i,1]),
+        (refSma_w1[j,i,1] + refSma_w2[j,i,1]) * refSma_s[j,i,1] *  (refSma_h1[j,i,1] + refSma_h2[j,i,1])
+        ), nrow=4, byrow=TRUE)
+      
+      A_NO <- matrix(c(
+         0.5*refF1[j,i,2] * (refSfj_w1[j,i,2] + refSfj_w2[j,i,2]) *   refSfj_s[j,i,2] * (refSfj_h1[j,i,2] + refSfj_h2[j,i,2]), 
+         0.5*refF2[j,i,2] * (refSfj_w1[j,i,2] + refSfj_w2[j,i,2]) *   refSfj_s[j,i,2] * (refSfj_h1[j,i,2] + refSfj_h2[j,i,2]), 0,0,
+        (refSfa_w1[j,i,2] +  refSfa_w2[j,i,2]) * refSfa_s[j,i,2] *  (refSfa_h1[j,i,2] +  refSfa_h2[j,i,2]),
+        (refSfa_w1[j,i,2] +  refSfa_w2[j,i,2]) * refSfa_s[j,i,2] *  (refSfa_h1[j,i,2] +  refSfa_h2[j,i,2]),0,0,
+        
+        0.5*refF1[j,i,2] * (refSmj_w1[j,i,2] + refSmj_w2[j,i,2]) *   refSmj_s[j,i,2] * (refSmj_h1[j,i,2] + refSmj_h2[j,i,2]), 
+        0.5*refF2[j,i,2] * (refSmj_w1[j,i,2] + refSmj_w2[j,i,2]) *   refSmj_s[j,i,2] * (refSmj_h1[j,i,2] + refSmj_h2[j,i,2]), 0,0,
+        
+        0,0,
+        (refSma_w1[j,i,2] + refSma_w2[j,i,2]) * refSma_s[j,i,2] *  (refSma_h1[j,i,2] + refSma_h2[j,i,2]),
+        (refSma_w1[j,i,2] + refSma_w2[j,i,2]) * refSma_s[j,i,2] *  (refSma_h1[j,i,2] + refSma_h2[j,i,2])
+        ), nrow=4, byrow=TRUE)
+      
+      A_PR <- matrix(c(
+         0.5*refF1[j,i,3] * (refSfj_w1[j,i,3] + refSfj_w2[j,i,3]) *   refSfj_s[j,i,3] * (refSfj_h1[j,i,3] + refSfj_h2[j,i,3]), 
+         0.5*refF2[j,i,3] * (refSfj_w1[j,i,3] + refSfj_w2[j,i,3]) *   refSfj_s[j,i,3] * (refSfj_h1[j,i,3] + refSfj_h2[j,i,3]), 0,0,
+        (refSfa_w1[j,i,3] +  refSfa_w2[j,i,3]) * refSfa_s[j,i,3] *  (refSfa_h1[j,i,3] +  refSfa_h2[j,i,3]),
+        (refSfa_w1[j,i,3] +  refSfa_w2[j,i,3]) * refSfa_s[j,i,3] *  (refSfa_h1[j,i,3] +  refSfa_h2[j,i,3]),0,0,
+        
+        0.5*refF1[j,i,3] * (refSmj_w1[j,i,3] + refSmj_w2[j,i,3]) *   refSmj_s[j,i,3] * (refSmj_h1[j,i,3] + refSmj_h2[j,i,3]), 
+        0.5*refF2[j,i,3] * (refSmj_w1[j,i,3] + refSmj_w2[j,i,3]) *   refSmj_s[j,i,3] * (refSmj_h1[j,i,3] + refSmj_h2[j,i,3]), 0,0,
+        
+        0,0,
+        (refSma_w1[j,i,3] + refSma_w2[j,i,3]) * refSma_s[j,i,3] *  (refSma_h1[j,i,3] + refSma_h2[j,i,3]),
+        (refSma_w1[j,i,3] + refSma_w2[j,i,3]) * refSma_s[j,i,3] *  (refSma_h1[j,i,3] + refSma_h2[j,i,3])
+        ), nrow=4, byrow=TRUE)
+      
+      n_ak <- A_AK %*% refn[,,j,i,1]
+      n_no <- A_NO %*% refn[,,j,i,2]
+      n_pr <- A_PR %*% refn[,,j,i,3]
+      
+      lam_realref[j,i,1] <- sum( n_ak)
+      lam_realref[j,i,2] <- sum( n_no)
+      lam_realref[j,i,3] <- sum( n_pr)
+      
+      refn[,1,j,i+1,1] <-  n_ak/sum( n_ak) #store the proportionate abundances
+      refn[,1,j,i+1,2] <-  n_no/sum( n_no) #store the proportionate abundances
+      refn[,1,j,i+1,3] <-  n_pr/sum( n_pr) #store the proportionate abundances
+    }
+  }
+}
+
+# temporal means of the lower-level vital rates
+refF1mu     <- apply(refF1 ,c(1,3),mean)
+refF2mu     <- apply(refF2 ,c(1,3),mean)
+refSfjmu_w1 <- apply(refSfj_w1,c(1,3),mean)
+refSfamu_w1 <- apply(refSfa_w1,c(1,3),mean)
+refSfjmu_w2 <- apply(refSfj_w2,c(1,3),mean)
+refSfamu_w2 <- apply(refSfa_w2,c(1,3),mean)
+refSfjmu_h1 <- apply(refSfj_h1,c(1,3),mean)
+refSfamu_h1 <- apply(refSfa_h1,c(1,3),mean)
+refSfjmu_h2 <- apply(refSfj_h2,c(1,3),mean)
+refSfamu_h2 <- apply(refSfa_h2,c(1,3),mean)
+refSfjmu_s  <- apply(refSfj_s,c(1,3),mean)
+refSfamu_s  <- apply(refSfa_s,c(1,3),mean)
+refSmjmu_w1 <- apply(refSmj_w1,c(1,3),mean)
+refSmamu_w1 <- apply(refSma_w1,c(1,3),mean)
+refSmjmu_w2 <- apply(refSmj_w2,c(1,3),mean)
+refSmamu_w2 <- apply(refSma_w2,c(1,3),mean)
+refSmjmu_h1 <- apply(refSmj_h1,c(1,3),mean)
+refSmamu_h1 <- apply(refSma_h1,c(1,3),mean)
+refSmjmu_h2 <- apply(refSmj_h2,c(1,3),mean)
+refSmamu_h2 <- apply(refSma_h2,c(1,3),mean)
+refSmjmu_s  <- apply(refSmj_s,c(1,3),mean)
+refSmamu_s  <- apply(refSma_s,c(1,3),mean)
+
+logF1mudiff      <- matrix(NA,samples,3)
+logF2mudiff      <- matrix(NA,samples,3)
+logSfj1_wmudiff  <- matrix(NA,samples,3)
+logSfa1_wmudiff  <- matrix(NA,samples,3)
+logSfj1_hmudiff  <- matrix(NA,samples,3)
+logSfa1_hmudiff  <- matrix(NA,samples,3)
+logSfj2_wmudiff  <- matrix(NA,samples,3)
+logSfa2_wmudiff  <- matrix(NA,samples,3)
+logSfj2_hmudiff  <- matrix(NA,samples,3)
+logSfa2_hmudiff  <- matrix(NA,samples,3)
+logSfj_smudiff   <- matrix(NA,samples,3)
+logSfa_smudiff   <- matrix(NA,samples,3)
+
+logSmj1_wmudiff  <- matrix(NA,samples,3)
+logSma1_wmudiff  <- matrix(NA,samples,3)
+logSmj1_hmudiff  <- matrix(NA,samples,3)
+logSma1_hmudiff  <- matrix(NA,samples,3)
+logSmj2_wmudiff  <- matrix(NA,samples,3)
+logSma2_wmudiff  <- matrix(NA,samples,3)
+logSmj2_hmudiff  <- matrix(NA,samples,3)
+logSma2_hmudiff  <- matrix(NA,samples,3)
+logSmj_smudiff   <- matrix(NA,samples,3)
+logSma_smudiff   <- matrix(NA,samples,3)
+
+logF1sigdiff     <- matrix(NA,samples,3)
+logF2sigdiff     <- matrix(NA,samples,3)
+logSfj1_wsigdiff <- matrix(NA,samples,3)
+logSfa1_wsigdiff <- matrix(NA,samples,3)
+logSfj1_hsigdiff <- matrix(NA,samples,3)
+logSfa1_hsigdiff <- matrix(NA,samples,3)
+logSfj2_wsigdiff <- matrix(NA,samples,3)
+logSfa2_wsigdiff <- matrix(NA,samples,3)
+logSfj2_hsigdiff <- matrix(NA,samples,3)
+logSfa2_hsigdiff <- matrix(NA,samples,3)
+logSfj_ssigdiff  <- matrix(NA,samples,3)
+logSfa_ssigdiff  <- matrix(NA,samples,3)
+
+logSmj1_wsigdiff <- matrix(NA,samples,3)
+logSma1_wsigdiff <- matrix(NA,samples,3)
+logSmj1_hsigdiff <- matrix(NA,samples,3)
+logSma1_hsigdiff <- matrix(NA,samples,3)
+logSmj2_wsigdiff <- matrix(NA,samples,3)
+logSma2_wsigdiff <- matrix(NA,samples,3)
+logSmj2_hsigdiff <- matrix(NA,samples,3)
+logSma2_hsigdiff <- matrix(NA,samples,3)
+logSmj_ssigdiff  <- matrix(NA,samples,3)
+logSma_ssigdiff  <- matrix(NA,samples,3)
+
+######################################################################################
+# Step 7: Calculate differences on log scale in lower-level vital rate means 
+# and standard deviations between time periods.
+#######################################################################################
+
+for (j in 1:samples){
+  for(k in 1:n.region){      
+    # Equation 3 Koons et al. 2017, log u_a - log u_b
+    logF1mudiff[j,k]     <-        log(mean(F1[sta1:end1,j,k])) -        log(mean(F1[sta2:end2,j,k]))
+    logF2mudiff[j,k]     <-        log(mean(F2[sta1:end1,j,k])) -        log(mean(F2[sta2:end2,j,k]))
+    logSfj1_wmudiff[j,k] <-      log(mean(Sfj_w1_reg[sta1:end1,j,k]))-  log(mean(Sfj_w1_reg[sta2:end2,j,k])) 
+    logSfa1_wmudiff[j,k] <-      log(mean(Sfa_w1_reg[sta1:end1,j,k]))-  log(mean(Sfa_w1_reg[sta2:end2,j,k])) 
+    logSfj1_hmudiff[j,k] <-      log(mean(Sfj_h1_reg[sta1:end1,j,k]))-  log(mean(Sfj_h1_reg[sta2:end2,j,k]))
+    logSfa1_hmudiff[j,k] <-      log(mean(Sfa_h1_reg[sta1:end1,j,k]))-  log(mean(Sfa_h1_reg[sta2:end2,j,k]))
+    logSfj2_wmudiff[j,k] <-      log(mean(Sfj_w2_reg[sta1:end1,j,k]))-  log(mean(Sfj_w2_reg[sta2:end2,j,k])) 
+    logSfa2_wmudiff[j,k] <-      log(mean(Sfa_w2_reg[sta1:end1,j,k]))-  log(mean(Sfa_w2_reg[sta2:end2,j,k])) 
+    logSfj2_hmudiff[j,k] <-      log(mean(Sfj_h2_reg[sta1:end1,j,k]))-  log(mean(Sfj_h2_reg[sta2:end2,j,k]))
+    logSfa2_hmudiff[j,k] <-      log(mean(Sfa_h2_reg[sta1:end1,j,k]))-  log(mean(Sfa_h2_reg[sta2:end2,j,k]))
+    logSfj_smudiff[j,k]  <-      log(mean(Sfj2[sta1:end1,j,k])) -      log(mean(Sfj2[sta2:end2,j,k]))
+    logSfa_smudiff[j,k]  <-      log(mean(Sfa2[sta1:end1,j,k])) -      log(mean(Sfa2[sta2:end2,j,k]))
+    
+    logSmj1_wmudiff[j,k] <-      log(mean(Smj_w1_reg[sta1:end1,j,k]))-  log(mean(Smj_w1_reg[sta2:end2,j,k])) 
+    logSma1_wmudiff[j,k] <-      log(mean(Sma_w1_reg[sta1:end1,j,k]))-  log(mean(Sma_w1_reg[sta2:end2,j,k])) 
+    logSmj1_hmudiff[j,k] <-      log(mean(Smj_h1_reg[sta1:end1,j,k]))-  log(mean(Smj_h1_reg[sta2:end2,j,k]))
+    logSma1_hmudiff[j,k] <-      log(mean(Sma_h1_reg[sta1:end1,j,k]))-  log(mean(Sma_h1_reg[sta2:end2,j,k]))
+    logSmj2_wmudiff[j,k] <-      log(mean(Smj_w2_reg[sta1:end1,j,k]))-  log(mean(Smj_w2_reg[sta2:end2,j,k])) 
+    logSma2_wmudiff[j,k] <-      log(mean(Sma_w2_reg[sta1:end1,j,k]))-  log(mean(Sma_w2_reg[sta2:end2,j,k])) 
+    logSmj2_hmudiff[j,k] <-      log(mean(Smj_h2_reg[sta1:end1,j,k]))-  log(mean(Smj_h2_reg[sta2:end2,j,k]))
+    logSma2_hmudiff[j,k] <-      log(mean(Sma_h2_reg[sta1:end1,j,k]))-  log(mean(Sma_h2_reg[sta2:end2,j,k]))
+    logSmj_smudiff[j,k]  <-      log(mean(Smj2[sta1:end1,j,k])) -      log(mean(Smj2[sta2:end2,j,k]))
+    logSma_smudiff[j,k]  <-      log(mean(Sma2[sta1:end1,j,k])) -      log(mean(Sma2[sta2:end2,j,k]))
+    
+    # Equation 3 Koons et al. 2017, log sig_a - log sig_b
+    logF1sigdiff[j,k]     <-   log(sqrt(var(F1[sta1:end1,j,k]))) -   log(sqrt(var(F1[sta2:end2,j,k])))
+    logF2sigdiff[j,k]     <-   log(sqrt(var(F2[sta1:end1,j,k]))) -   log(sqrt(var(F2[sta2:end2,j,k])))
+    logSfj_ssigdiff[j,k]  <-   log(sqrt(var(Sfj2[sta1:end1,j,k]))) - log(sqrt(var(Sfj2[sta2:end2,j,k])))
+    logSfa_ssigdiff[j,k]  <-   log(sqrt(var(Sfa2[sta1:end1,j,k]))) - log(sqrt(var(Sfa2[sta2:end2,j,k])))
+    logSfj1_wsigdiff[j,k] <-   log(sqrt(var(Sfj_w1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfj_w1_reg[sta2:end2,j,k])))
+    logSfa1_wsigdiff[j,k] <-   log(sqrt(var(Sfa_w1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfa_w1_reg[sta2:end2,j,k])))
+    logSfj1_hsigdiff[j,k] <-   log(sqrt(var(Sfj_h1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfj_h1_reg[sta2:end2,j,k])))
+    logSfa1_hsigdiff[j,k] <-   log(sqrt(var(Sfa_h1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfa_h1_reg[sta2:end2,j,k])))
+    logSfj2_wsigdiff[j,k] <-   log(sqrt(var(Sfj_w2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfj_w2_reg[sta2:end2,j,k])))
+    logSfa2_wsigdiff[j,k] <-   log(sqrt(var(Sfa_w2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfa_w2_reg[sta2:end2,j,k])))
+    logSfj2_hsigdiff[j,k] <-   log(sqrt(var(Sfj_h2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfj_h2_reg[sta2:end2,j,k])))
+    logSfa2_hsigdiff[j,k] <-   log(sqrt(var(Sfa_h2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sfa_h2_reg[sta2:end2,j,k])))
+  
+    logSmj_ssigdiff[j,k] <- log(sqrt(var(Smj2[sta1:end1,j,k]))) - log(sqrt(var(Smj2[sta2:end2,j,k])))
+    logSma_ssigdiff[j,k] <- log(sqrt(var(Sma2[sta1:end1,j,k]))) - log(sqrt(var(Sma2[sta2:end2,j,k])))
+    logSmj1_wsigdiff[j,k] <-   log(sqrt(var(Smj_w1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Smj_w1_reg[sta2:end2,j,k])))
+    logSma1_wsigdiff[j,k] <-   log(sqrt(var(Sma_w1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sma_w1_reg[sta2:end2,j,k])))
+    logSmj1_hsigdiff[j,k] <-   log(sqrt(var(Smj_h1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Smj_h1_reg[sta2:end2,j,k])))
+    logSma1_hsigdiff[j,k] <-   log(sqrt(var(Sma_h1_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sma_h1_reg[sta2:end2,j,k])))
+    logSmj2_wsigdiff[j,k] <-   log(sqrt(var(Smj_w2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Smj_w2_reg[sta2:end2,j,k])))
+    logSma2_wsigdiff[j,k] <-   log(sqrt(var(Sma_w2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sma_w2_reg[sta2:end2,j,k])))
+    logSmj2_hsigdiff[j,k] <-   log(sqrt(var(Smj_h2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Smj_h2_reg[sta2:end2,j,k])))
+    logSma2_hsigdiff[j,k] <-   log(sqrt(var(Sma_h2_reg[sta1:end1,j,k]))) -  log(sqrt(var(Sma_h2_reg[sta2:end2,j,k])))
+  }
+}
+
+# Step 8: Compute real-time elasticities, evaluated at the reference mean         
+# Real-time elasticities for the direct effects of change in the lower-level vital rates.
+
+S <- 4  # dimension of projection matrix
+sp = 1  
+
+eAF1mu  <- eAF2mu <- eASfjmu_w1 <- eASfjmu_w2 <- eASfjmu_s <- eASfjmu_h1 <- eASfjmu_h2 <- eASfamu_h1 <- eASfamu_h2 <- eASfamu_w1 <- eASfamu_w2 <- eASfamu_s <- 
+                     eASmjmu_w1 <- eASmjmu_w2 <- eASmjmu_s <- eASmjmu_h1 <- eASmjmu_h2 <- eASmamu_h1 <- eASmamu_h2 <- eASmamu_w1 <- eASmamu_w2 <- eASmamu_s <- 
+eAF1sd  <- eAF2sd <- eASfjsd_w1 <- eASfjsd_w2 <- eASfjsd_s <- eASfjsd_h1 <- eASfjsd_h2 <- eASfasd_h1 <- eASfasd_h2 <- eASfasd_w1 <- eASfasd_w2 <- eASfasd_s <- 
+                     eASmjsd_w1 <- eASmjsd_w2 <- eASmjsd_s <- eASmjsd_h1 <- eASmjsd_h2 <- eASmasd_h1 <- eASmasd_h2 <- eASmasd_w1 <- eASmasd_w2 <- eASmasd_s <-array(NA,dim=c(S,S,samples,Time))
+
+tot_eAF1mu  <- tot_eAF2mu <- tot_eASfjmu_w1 <- tot_eASfjmu_w2 <- tot_eASfjmu_s <- tot_eASfjmu_h1 <- tot_eASfjmu_h2 <- tot_eASfamu_h1 <- tot_eASfamu_h2 <- tot_eASfamu_w1 <- tot_eASfamu_w2 <- tot_eASfamu_s <- 
+                             tot_eASmjmu_w1 <- tot_eASmjmu_w2 <- tot_eASmjmu_s <- tot_eASmjmu_h1 <- tot_eASmjmu_h2 <- tot_eASmamu_h1 <- tot_eASmamu_h2 <- tot_eASmamu_w1 <- tot_eASmamu_w2 <- tot_eASmamu_s <-
+tot_eAF1sd  <- tot_eAF2sd <- tot_eASfjsd_w1 <- tot_eASfjsd_w2 <- tot_eASfjsd_s <- tot_eASfjsd_h1 <- tot_eASfjsd_h2 <- tot_eASfasd_h1 <- tot_eASfasd_h2 <- tot_eASfasd_w1 <- tot_eASfasd_w2 <- tot_eASfasd_s  <-
+                             tot_eASmjsd_w1 <- tot_eASmjsd_w2 <- tot_eASmjsd_s <- tot_eASmjsd_h1 <- tot_eASmjsd_h2 <- tot_eASmasd_h1 <- tot_eASmasd_h2 <- tot_eASmasd_w1 <- tot_eASmasd_w2 <- tot_eASmasd_s  <-matrix(NA,samples,Time)
+
+
+for (j in 1:samples){
+  for (i in 1:Time){
+    for(k in sp){ # manually change region
+      vr_list = list(
+        F1 = refF1[j,i,k],
+        F2 = refF2[j,i,k],
+        Sfj_w1 = refSfj_w1[j,i,k],
+        Sfa_w1 = refSfa_w1[j,i,k],
+        Sfj_h1 = refSfj_h1[j,i,k],
+        Sfa_h1 = refSfa_h1[j,i,k],
+        Sfj_w2 = refSfj_w2[j,i,k],
+        Sfa_w2 = refSfa_w2[j,i,k],
+        Sfj_h2 = refSfj_h2[j,i,k],
+        Sfa_h2 = refSfa_h2[j,i,k],
+        Sfj_s = refSfj_s[j,i,k],
+        Sfa_s = refSfa_s[j,i,k],
+        
+        Smj_w1 = refSmj_w1[j,i,k],
+        Sma_w1 = refSma_w1[j,i,k],
+        Smj_h1 = refSmj_h1[j,i,k],
+        Sma_h1 = refSma_h1[j,i,k],
+        Smj_w2 = refSmj_w2[j,i,k],
+        Sma_w2 = refSma_w2[j,i,k],
+        Smj_h2 = refSmj_h2[j,i,k],
+        Sma_h2 = refSma_h2[j,i,k],
+        Smj_s = refSmj_s[j,i,k],
+        Sma_s = refSma_s[j,i,k],
+        
+        
+        pi_ak = refpi_ak[j,i,k],
+        pi_no = refpi_no[j,i,k],
+        pi_pr = refpi_pr[j,i,k]
+      )
+      dA_dF1 <- matrix(sapply(dF1,eval,vr_list),ncol = 4,nrow = 4,byrow = TRUE)
+      dA_dF2 <- matrix(sapply(dF2,eval,vr_list),ncol = 4,nrow = 4,byrow = TRUE)
+      
+      dA_dSfjw1 <- matrix(sapply(dSfj_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfaw1 <- matrix(sapply(dSfa_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfjw2 <- matrix(sapply(dSfj_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfaw2 <- matrix(sapply(dSfa_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSfjh1 <- matrix(sapply(dSfj_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfah1 <- matrix(sapply(dSfa_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfjh2 <- matrix(sapply(dSfj_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfah2 <- matrix(sapply(dSfa_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSfjs <- matrix(sapply(dSfj_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfas <- matrix(sapply(dSfa_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSmjw1 <- matrix(sapply(dSmj_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmaw1 <- matrix(sapply(dSma_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmjw2 <- matrix(sapply(dSmj_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmaw2 <- matrix(sapply(dSma_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSmjh1 <- matrix(sapply(dSmj_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmah1 <- matrix(sapply(dSma_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmjh2 <- matrix(sapply(dSmj_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmah2 <- matrix(sapply(dSma_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSmjs <- matrix(sapply(dSmj_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmas <- matrix(sapply(dSma_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      
+      for (m in 1:S){
+        for (n in 1:S){
+          # Equation 3 Koons et al. 2017, e^A_mu
+          ##########################################################
+          # Means
+          eAF1mu[m,n,j,i] <- refF1mu[j,k] * dA_dF1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eAF2mu[m,n,j,i] <- refF2mu[j,k] * dA_dF2[m,n] * refn[n,1,j,i,k] /  lam_realref[j,i,k]
+          
+          tot_eAF2mu[j,i] <- sum(sum(eAF2mu[,,j,i])) 
+          tot_eAF1mu[j,i] <- sum(sum(eAF1mu[,,j,i])) 
+          
+          eASfjmu_w1[m,n,j,i] <- refSfjmu_w1[j,k] * dA_dSfjw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfamu_w1[m,n,j,i] <- refSfamu_w1[j,k] * dA_dSfaw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfjmu_w2[m,n,j,i] <- refSfjmu_w2[j,k] * dA_dSfjw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfamu_w2[m,n,j,i] <- refSfamu_w2[j,k] * dA_dSfaw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjmu_w1[m,n,j,i] <- refSmjmu_w1[j,k] * dA_dSmjw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmamu_w1[m,n,j,i] <- refSmamu_w1[j,k] * dA_dSmaw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjmu_w2[m,n,j,i] <- refSmjmu_w2[j,k] * dA_dSmjw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmamu_w2[m,n,j,i] <- refSmamu_w2[j,k] * dA_dSmaw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          
+          tot_eASfjmu_w1[j,i] <-sum(sum(eASfjmu_w1[,,j,i]))
+          tot_eASfamu_w1[j,i] <-sum(sum(eASfamu_w1[,,j,i]))
+          tot_eASfjmu_w2[j,i] <-sum(sum(eASfjmu_w2[,,j,i]))
+          tot_eASfamu_w2[j,i] <-sum(sum(eASfamu_w2[,,j,i]))
+          tot_eASmjmu_w1[j,i] <-sum(sum(eASmjmu_w1[,,j,i]))
+          tot_eASmamu_w1[j,i] <-sum(sum(eASmamu_w1[,,j,i]))
+          tot_eASmjmu_w2[j,i] <-sum(sum(eASmjmu_w2[,,j,i]))
+          tot_eASmamu_w2[j,i] <-sum(sum(eASmamu_w2[,,j,i]))
+          
+          eASfjmu_h1[m,n,j,i] <- refSfjmu_h1[j,k] * dA_dSfjh1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfamu_h1[m,n,j,i] <- refSfamu_h1[j,k] * dA_dSfah1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfjmu_h2[m,n,j,i] <- refSfjmu_h2[j,k] * dA_dSfjh2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfamu_h2[m,n,j,i] <- refSfamu_h2[j,k] * dA_dSfah2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjmu_h1[m,n,j,i] <- refSmjmu_h1[j,k] * dA_dSmjh1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmamu_h1[m,n,j,i] <- refSmamu_h1[j,k] * dA_dSmah1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjmu_h2[m,n,j,i] <- refSmjmu_h2[j,k] * dA_dSmjh2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmamu_h2[m,n,j,i] <- refSmamu_h2[j,k] * dA_dSmah2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k] 
+          
+          tot_eASfjmu_h1[j,i] <-sum(sum(eASfjmu_h1[,,j,i]))
+          tot_eASfamu_h1[j,i] <-sum(sum(eASfamu_h1[,,j,i]))
+          tot_eASfjmu_h2[j,i] <-sum(sum(eASfjmu_h2[,,j,i]))
+          tot_eASfamu_h2[j,i] <-sum(sum(eASfamu_h2[,,j,i]))
+          tot_eASmjmu_h1[j,i] <-sum(sum(eASmjmu_h1[,,j,i]))
+          tot_eASmamu_h1[j,i] <-sum(sum(eASmamu_h1[,,j,i]))
+          tot_eASmjmu_h2[j,i] <-sum(sum(eASmjmu_h2[,,j,i]))
+          tot_eASmamu_h2[j,i] <-sum(sum(eASmamu_h2[,,j,i]))
+          
+          eASfjmu_s[m,n,j,i] <- refSfjmu_s[j,k] * dA_dSfjs[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfamu_s[m,n,j,i] <- refSfamu_s[j,k] * dA_dSfas[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjmu_s[m,n,j,i] <- refSmjmu_s[j,k] * dA_dSmjs[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmamu_s[m,n,j,i] <- refSmamu_s[j,k] * dA_dSmas[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          
+          tot_eASfjmu_s[j,i] <- sum(sum(eASfjmu_s[,,j,i])) 
+          tot_eASfamu_s[j,i] <- sum(sum(eASfamu_s[,,j,i])) 
+          tot_eASmjmu_s[j,i] <- sum(sum(eASmjmu_s[,,j,i])) 
+          tot_eASmamu_s[j,i] <- sum(sum(eASmamu_s[,,j,i])) 
+          ##################################################################################### 
+          # Variance
+          # Equation 3 Koons et al. 2017, e^A_sd
+          eAF1sd[m,n,j,i] <- (refF1[j,i,k] - refF1mu[j,k]) * dA_dF1[m,n] *  refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eAF2sd[m,n,j,i] <- (refF2[j,i,k] - refF2mu[j,k]) * dA_dF2[m,n] *  refn[n,1,j,i,k] / lam_realref[j,i,k]
+          
+          tot_eAF1sd[j,i] <- sum(sum(eAF1sd[,,j,i]))
+          tot_eAF2sd[j,i] <- sum(sum(eAF2sd[,,j,i]))
+          
+          eASfjsd_w1[m,n,j,i] <- (refSfj_w1[j,i,k] - refSfjmu_w1[j,k]) * dA_dSfjw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfasd_w1[m,n,j,i] <- (refSfa_w1[j,i,k] - refSfamu_w1[j,k]) * dA_dSfaw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfjsd_w2[m,n,j,i] <- (refSfj_w2[j,i,k] - refSfjmu_w2[j,k]) * dA_dSfjw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfasd_w2[m,n,j,i] <- (refSfa_w2[j,i,k] - refSfamu_w2[j,k]) * dA_dSfaw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfjsd_h1[m,n,j,i] <- (refSfj_h1[j,i,k] - refSfjmu_h1[j,k]) * dA_dSfjh1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfasd_h1[m,n,j,i] <- (refSfa_h1[j,i,k] - refSfamu_h1[j,k]) * dA_dSfah1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfjsd_h2[m,n,j,i] <- (refSfj_h2[j,i,k] - refSfjmu_h2[j,k]) * dA_dSfjh2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfasd_h2[m,n,j,i] <- (refSfa_h2[j,i,k] - refSfamu_h2[j,k]) * dA_dSfah2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfjsd_s [m,n,j,i] <- (refSfj_s[j,i,k]   - refSfjmu_s[j,k]) * dA_dSfjs[m,n] *  refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASfasd_s [m,n,j,i] <- (refSfa_s[j,i,k]   - refSfamu_s[j,k]) * dA_dSfas[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          
+          eASmjsd_w1[m,n,j,i] <- (refSmj_w1[j,i,k] - refSmjmu_w1[j,k]) * dA_dSmjw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmasd_w1[m,n,j,i] <- (refSma_w1[j,i,k] - refSmamu_w1[j,k]) * dA_dSmaw1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjsd_w2[m,n,j,i] <- (refSmj_w2[j,i,k] - refSmjmu_w2[j,k]) * dA_dSmjw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmasd_w2[m,n,j,i] <- (refSma_w2[j,i,k] - refSmamu_w2[j,k]) * dA_dSmaw2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjsd_h1[m,n,j,i] <- (refSmj_h1[j,i,k] - refSmjmu_h1[j,k]) * dA_dSmjh1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmasd_h1[m,n,j,i] <- (refSma_h1[j,i,k] - refSmamu_h1[j,k]) * dA_dSmah1[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjsd_h2[m,n,j,i] <- (refSmj_h2[j,i,k] - refSmjmu_h2[j,k]) * dA_dSmjh2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmasd_h2[m,n,j,i] <- (refSma_h2[j,i,k] - refSmamu_h2[j,k]) * dA_dSmah2[m,n] * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmjsd_s [m,n,j,i] <- (refSmj_s[j,i,k]  - refSmjmu_s[j,k]) * dA_dSmjs[m,n]   * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          eASmasd_s [m,n,j,i] <- (refSma_s[j,i,k]  - refSmamu_s[j,k]) * dA_dSmas[m,n]   * refn[n,1,j,i,k] / lam_realref[j,i,k]
+          
+          tot_eASfjsd_w1[j,i] <- sum(sum(eASfjsd_w1[,,j,i])) 
+          tot_eASfasd_w1[j,i] <- sum(sum(eASfasd_w1[,,j,i])) 
+          tot_eASfjsd_w2[j,i] <- sum(sum(eASfjsd_w2[,,j,i])) 
+          tot_eASfasd_w2[j,i] <- sum(sum(eASfasd_w2[,,j,i])) 
+          tot_eASfjsd_h1[j,i] <- sum(sum(eASfjsd_h1[,,j,i])) 
+          tot_eASfasd_h1[j,i] <- sum(sum(eASfasd_h1[,,j,i])) 
+          tot_eASfjsd_h2[j,i] <- sum(sum(eASfjsd_h2[,,j,i])) 
+          tot_eASfasd_h2[j,i] <- sum(sum(eASfasd_h2[,,j,i])) 
+          tot_eASfjsd_s [j,i] <- sum(sum(eASfjsd_s[,,j,i])) 
+          tot_eASfasd_s [j,i] <- sum(sum(eASfasd_s[,,j,i])) 
+          
+          tot_eASmjsd_w1[j,i] <- sum(sum(eASmjsd_w1[,,j,i])) 
+          tot_eASmasd_w1[j,i] <- sum(sum(eASmasd_w1[,,j,i])) 
+          tot_eASmjsd_w2[j,i] <- sum(sum(eASmjsd_w2[,,j,i])) 
+          tot_eASmasd_w2[j,i] <- sum(sum(eASmasd_w2[,,j,i])) 
+          tot_eASmjsd_h1[j,i] <- sum(sum(eASmjsd_h1[,,j,i])) 
+          tot_eASmasd_h1[j,i] <- sum(sum(eASmasd_h1[,,j,i])) 
+          tot_eASmjsd_h2[j,i] <- sum(sum(eASmjsd_h2[,,j,i])) 
+          tot_eASmasd_h2[j,i] <- sum(sum(eASmasd_h2[,,j,i])) 
+          tot_eASmjsd_s [j,i] <- sum(sum(eASmjsd_s[,,j,i])) 
+          tot_eASmasd_s [j,i] <- sum(sum(eASmasd_s[,,j,i])) 
+        }
+      }
+    }
+  }
+}
+
+   avg_eAF1mu    <- rowMeans(tot_eAF1mu  )
+   avg_eAF2mu    <- rowMeans(tot_eAF2mu )
+  avg_eASfjmu_w1 <- rowMeans(tot_eASfjmu_w1 )
+  avg_eASfjmu_w2 <- rowMeans(tot_eASfjmu_w2 )
+  avg_eASfjmu_s  <- rowMeans(tot_eASfjmu_s )
+  avg_eASfjmu_h1 <- rowMeans(tot_eASfjmu_h1 )
+  avg_eASfjmu_h2 <- rowMeans(tot_eASfjmu_h2)
+  avg_eASfamu_h1 <- rowMeans( tot_eASfamu_h1)
+  avg_eASfamu_h2 <- rowMeans( tot_eASfamu_h2 )
+  avg_eASfamu_w1 <- rowMeans(tot_eASfamu_w1 )
+  avg_eASfamu_w2 <- rowMeans(tot_eASfamu_w2 )
+  avg_eASfamu_s  <- rowMeans(tot_eASfamu_s )
+
+  avg_eASmjmu_w1 <- rowMeans(tot_eASmjmu_w1 )
+  avg_eASmjmu_w2 <- rowMeans(tot_eASmjmu_w2 )
+  avg_eASmjmu_s  <- rowMeans(tot_eASmjmu_s )
+  avg_eASmjmu_h1 <- rowMeans(tot_eASmjmu_h1 )
+  avg_eASmjmu_h2 <- rowMeans(tot_eASmjmu_h2)
+  avg_eASmamu_h1 <- rowMeans(tot_eASmamu_h1)
+  avg_eASmamu_h2 <- rowMeans(tot_eASmamu_h2 )
+  avg_eASmamu_w1 <- rowMeans(tot_eASmamu_w1 )
+  avg_eASmamu_w2 <- rowMeans(tot_eASmamu_w2 )
+  avg_eASmamu_s  <- rowMeans(tot_eASmamu_s )
+  
+   avg_eAF1sd    <-  rowMeans(tot_eAF1sd  )
+   avg_eAF2sd    <-  rowMeans(tot_eAF2sd )
+  avg_eASfjsd_w1 <-  rowMeans(tot_eASfjsd_w1 )
+  avg_eASfjsd_w2 <-  rowMeans(tot_eASfjsd_w2 )
+  avg_eASfjsd_s  <-  rowMeans(tot_eASfjsd_s )
+  avg_eASfjsd_h1 <-  rowMeans(tot_eASfjsd_h1 )
+  avg_eASfjsd_h2 <-  rowMeans(tot_eASfjsd_h2)
+  avg_eASfasd_h1 <- rowMeans( tot_eASfasd_h1)
+  avg_eASfasd_h2 <- rowMeans( tot_eASfasd_h2 )
+  avg_eASfasd_w1 <-  rowMeans(tot_eASfasd_w1 )
+  avg_eASfasd_w2 <-  rowMeans(tot_eASfasd_w2 )
+  avg_eASfasd_s  <-  rowMeans(tot_eASfasd_s )
+  
+  avg_eASmjsd_w1 <-  rowMeans(tot_eASmjsd_w1 )
+  avg_eASmjsd_w2 <-  rowMeans(tot_eASmjsd_w2 )
+  avg_eASmjsd_s  <-  rowMeans(tot_eASmjsd_s )
+  avg_eASmjsd_h1 <-  rowMeans(tot_eASmjsd_h1 )
+  avg_eASmjsd_h2 <-  rowMeans(tot_eASmjsd_h2)
+  avg_eASmasd_h1 <-  rowMeans(tot_eASmasd_h1)
+  avg_eASmasd_h2 <-  rowMeans(tot_eASmasd_h2 )
+  avg_eASmasd_w1 <-  rowMeans(tot_eASmasd_w1 )
+  avg_eASmasd_w2 <-  rowMeans(tot_eASmasd_w2 )
+  avg_eASmasd_s  <-  rowMeans(tot_eASmasd_s )
+  
+# Compute real-time elasticities for the indirect effects of past change in  
+# the lower-level vital rates that are channeled through perturbations to   
+# stage structure.
+I <- diag(S)             # Identity matrix
+e <- matrix(1,S,1)       # vector of 1's
+# indirect elasticities
+enF1mu <- enF2mu <- enSfjwmu1 <- enSfjwmu2 <- enSfawmu1 <- enSfawmu2 <- enSfjhmu1 <- enSfjhmu2 <- enSfahmu1 <- enSfahmu2 <- enSfasmu <- enSfjsmu  <- 
+enF1sd <- enF2sd <- enSfjwsd1 <- enSfjwsd2 <- enSfawsd1 <- enSfawsd2 <- enSfjhsd1 <- enSfjhsd2 <- enSfahsd1 <- enSfahsd2 <- enSfassd <- enSfjssd  <- 
+                    enSmjwmu1 <- enSmjwmu2 <- enSmawmu1 <- enSmawmu2 <- enSmjhmu1 <- enSmjhmu2 <- enSmahmu1 <- enSmahmu2 <- enSmasmu <- enSmjsmu  <- 
+                    enSmjwsd1 <- enSmjwsd2 <- enSmawsd1 <- enSmawsd2 <- enSmjhsd1 <- enSmjhsd2 <- enSmahsd1 <- enSmahsd2 <- enSmassd <- enSmjssd  <- array(0,dim=c(S,S,samples,Time))
+
+
+tot_enF1mu <- tot_enF2mu <- tot_enSfjwmu1 <- tot_enSfjwmu2 <- tot_enSfawmu1 <- tot_enSfawmu2 <- tot_enSfjhmu1 <- tot_enSfjhmu2 <- tot_enSfahmu1 <- tot_enSfahmu2 <- tot_enSfasmu <- tot_enSfjsmu  <- 
+tot_enF1sd <- tot_enF2sd <- tot_enSfjwsd1 <- tot_enSfjwsd2 <- tot_enSfawsd1 <- tot_enSfawsd2 <- tot_enSfjhsd1 <- tot_enSfjhsd2 <- tot_enSfahsd1 <- tot_enSfahsd2 <- tot_enSfassd <- tot_enSfjssd  <-
+                            tot_enSmjwmu1 <- tot_enSmjwmu2 <- tot_enSmawmu1 <- tot_enSmawmu2 <- tot_enSmjhmu1 <- tot_enSmjhmu2 <- tot_enSmahmu1 <- tot_enSmahmu2 <- tot_enSmasmu <- tot_enSmjsmu  <- 
+                            tot_enSmjwsd1 <- tot_enSmjwsd2 <- tot_enSmawsd1 <- tot_enSmawsd2 <- tot_enSmjhsd1 <- tot_enSmjhsd2 <- tot_enSmahsd1 <- tot_enSmahsd2 <- tot_enSmassd <- tot_enSmjssd  <-matrix(0,samples,Time)
+
+
+  for (j in 1:samples){
+  # perturbation matrices
+    C2F1 <- C2F2 <- C2Sfjw1 <- C2Sfjw2 <- C2Sfaw1 <- C2Sfaw2 <- C2Sfjh1 <- C2Sfjh2 <- C2Sfah1 <- C2Sfah2 <- C2Sfas <- C2Sfjs  <-C3F1 <- C3F2 <- C3Sfjw1 <- C3Sfjw2 <- C3Sfaw1 <- C3Sfaw2 <- C3Sfjh1 <- C3Sfjh2 <- C3Sfah1 <- C3Sfah2 <- C3Sfas <- C3Sfjs <-
+                    C2Smjw1 <- C2Smjw2 <- C2Smaw1 <- C2Smaw2 <- C2Smjh1 <- C2Smjh2 <- C2Smah1 <- C2Smah2 <- C2Smas <- C2Smjs                 <- C3Smjw1 <- C3Smjw2 <- C3Smaw1 <- C3Smaw2 <- C3Smjh1 <- C3Smjh2 <- C3Smah1 <- C3Smah2 <- C3Smas <- C3Smjs<-array(0,dim=c(S^2,S^2,Time)) 
+  # perturbation to stage structure
+    w_mu_F1 <- w_mu_F2 <- w_mu_Sfjw1 <- w_mu_Sfjw2 <- w_mu_Sfaw1 <- w_mu_Sfaw2 <- w_mu_Sfjh1 <- w_mu_Sfjh2 <- w_mu_Sfah1 <- w_mu_Sfah2 <- w_mu_Sfas <- w_mu_Sfjs  <-w_sd_F1 <- w_sd_F2 <- w_sd_Sfjw1 <- w_sd_Sfjw2 <- w_sd_Sfaw1 <- w_sd_Sfaw2 <- w_sd_Sfjh1 <- w_sd_Sfjh2 <- w_sd_Sfah1 <- w_sd_Sfah2 <- w_sd_Sfas <- w_sd_Sfjs  <- 
+                          w_mu_Smjw1 <- w_mu_Smjw2 <- w_mu_Smaw1 <- w_mu_Smaw2 <- w_mu_Smjh1 <- w_mu_Smjh2 <- w_mu_Smah1 <- w_mu_Smah2 <- w_mu_Smas <- w_mu_Smjs                       <- w_sd_Smjw1 <- w_sd_Smjw2 <- w_sd_Smaw1 <- w_sd_Smaw2 <- w_sd_Smjh1 <- w_sd_Smjh2 <- w_sd_Smah1 <- w_sd_Smah2 <- w_sd_Smas <- w_sd_Smjs  <- array(0,dim=c(S,S,S,Time+1)) 
+  for (i in 1:Time){
+    for(k in sp){ # manually change species
+      vr_list = list(
+        F1 = refF1[j,i,k],
+        F2 = refF2[j,i,k],
+        Sfj_w1 = refSfj_w1[j,i,k],
+        Sfa_w1 = refSfa_w1[j,i,k],
+        Sfj_h1 = refSfj_h1[j,i,k],
+        Sfa_h1 = refSfa_h1[j,i,k],
+        Sfj_w2 = refSfj_w2[j,i,k],
+        Sfa_w2 = refSfa_w2[j,i,k],
+        Sfj_h2 = refSfj_h2[j,i,k],
+        Sfa_h2 = refSfa_h2[j,i,k],
+        Sfj_s =  refSfj_s[j,i,k],
+        Sfa_s =  refSfa_s[j,i,k],
+        
+        Smj_w1 = refSmj_w1[j,i,k],
+        Sma_w1 = refSma_w1[j,i,k],
+        Smj_h1 = refSmj_h1[j,i,k],
+        Sma_h1 = refSma_h1[j,i,k],
+        Smj_w2 = refSmj_w2[j,i,k],
+        Sma_w2 = refSma_w2[j,i,k],
+        Smj_h2 = refSmj_h2[j,i,k],
+        Sma_h2 = refSma_h2[j,i,k],
+        Smj_s =  refSmj_s[j,i,k],
+        Sma_s =  refSma_s[j,i,k],
+        
+        pi_ak = refpi_ak[j,i,k],
+        pi_no = refpi_no[j,i,k],
+        pi_pr = refpi_pr[j,i,k]
+      )
+      dA_dF1 <- matrix(sapply(dF1,eval,vr_list),ncol = 4,nrow = 4,byrow = TRUE)
+      dA_dF2 <- matrix(sapply(dF2,eval,vr_list),ncol = 4,nrow = 4,byrow = TRUE)
+      
+      dA_dSfjw1 <- matrix(sapply(dSfj_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfaw1 <- matrix(sapply(dSfa_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfjw2 <- matrix(sapply(dSfj_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfaw2 <- matrix(sapply(dSfa_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSfjh1 <- matrix(sapply(dSfj_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfah1 <- matrix(sapply(dSfa_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfjh2 <- matrix(sapply(dSfj_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfah2 <- matrix(sapply(dSfa_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSfjs <- matrix(sapply(dSfj_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSfas <- matrix(sapply(dSfa_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSmjw1 <- matrix(sapply(dSmj_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmaw1 <- matrix(sapply(dSma_w1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmjw2 <- matrix(sapply(dSmj_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmaw2 <- matrix(sapply(dSma_w2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSmjh1 <- matrix(sapply(dSmj_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmah1 <- matrix(sapply(dSma_h1,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmjh2 <- matrix(sapply(dSmj_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmah2 <- matrix(sapply(dSma_h2,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      dA_dSmjs <- matrix(sapply(dSmj_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      dA_dSmas <- matrix(sapply(dSma_s,eval,vr_list),ncol = 4,nrow = 4,byrow=TRUE)
+      
+      
+      mat_elements <- sapply(matrix.elements,eval,vr_list)
+      A <- matrix(as.numeric(mat_elements[]),nrow=4,byrow=T)
+      
+      for (m in 1:S){
+        for (n in 1:S){
+            C2F1[(S+1)*m-S,(S+1)*n-S,i]   <- refF1mu[j,k]     * dA_dF1[m,n]
+            C2F2[(S+1)*m-S,(S+1)*n-S,i]   <- refF2mu[j,k]     * dA_dF2[m,n]
+          C2Sfjw1[(S+1)*m-S,(S+1)*n-S,i]   <- refSfjmu_w1[j,k] * dA_dSfjw1[m,n]
+          C2Sfjw2[(S+1)*m-S,(S+1)*n-S,i]   <- refSfjmu_w2[j,k] * dA_dSfjw2[m,n]
+          C2Sfaw1[(S+1)*m-S,(S+1)*n-S,i]   <- refSfamu_w1[j,k] * dA_dSfaw1[m,n]
+          C2Sfaw2[(S+1)*m-S,(S+1)*n-S,i]   <- refSfamu_w2[j,k] * dA_dSfaw2[m,n]
+          C2Sfjh1[(S+1)*m-S,(S+1)*n-S,i]   <- refSfjmu_h1[j,k] * dA_dSfjh1[m,n]
+          C2Sfjh2[(S+1)*m-S,(S+1)*n-S,i]   <- refSfjmu_h2[j,k] * dA_dSfjh2[m,n]
+          C2Sfah1[(S+1)*m-S,(S+1)*n-S,i]   <- refSfamu_h1[j,k] * dA_dSfah1[m,n]
+          C2Sfah2[(S+1)*m-S,(S+1)*n-S,i]   <- refSfamu_h2[j,k] * dA_dSfah2[m,n]
+           C2Sfas[(S+1)*m-S,(S+1)*n-S,i]   <- refSfamu_s[j,k]  * dA_dSfas[m,n]
+           C2Sfjs[(S+1)*m-S,(S+1)*n-S,i]   <- refSfjmu_s[j,k]  * dA_dSfjs[m,n]
+
+          C3F1[(S+1)*m-S,(S+1)*n-S,i]   <- (    refF1[j,i,k]     - refF1mu[j,k]    ) * dA_dF1[m,n]
+          C3F2[(S+1)*m-S,(S+1)*n-S,i]   <- (    refF2[j,i,k]     - refF2mu[j,k]    ) * dA_dF2[m,n]
+          C3Sfjw1[(S+1)*m-S,(S+1)*n-S,i] <- (refSfj_w1[j,i,k] - refSfjmu_w1[j,k]) * dA_dSfjw1[m,n]
+          C3Sfjw2[(S+1)*m-S,(S+1)*n-S,i] <- (refSfj_w2[j,i,k] - refSfjmu_w2[j,k]) * dA_dSfjw2[m,n]
+          C3Sfaw1[(S+1)*m-S,(S+1)*n-S,i] <- (refSfa_w1[j,i,k] - refSfamu_w1[j,k]) * dA_dSfaw1[m,n]
+          C3Sfaw2[(S+1)*m-S,(S+1)*n-S,i] <- (refSfa_w2[j,i,k] - refSfamu_w2[j,k]) * dA_dSfaw2[m,n]
+          C3Sfjh1[(S+1)*m-S,(S+1)*n-S,i] <- (refSfj_h1[j,i,k] - refSfjmu_h1[j,k]) * dA_dSfjh1[m,n]
+          C3Sfjh2[(S+1)*m-S,(S+1)*n-S,i] <- (refSfj_h2[j,i,k] - refSfjmu_h2[j,k]) * dA_dSfjh2[m,n]
+          C3Sfah1[(S+1)*m-S,(S+1)*n-S,i] <- (refSfa_h1[j,i,k] - refSfamu_h1[j,k]) * dA_dSfah1[m,n]
+          C3Sfah2[(S+1)*m-S,(S+1)*n-S,i] <- (refSfa_h2[j,i,k] - refSfamu_h2[j,k]) * dA_dSfah2[m,n]
+          C3Sfas[(S+1)*m-S,(S+1)*n-S,i]  <- ( refSfa_s[j,i,k]  - refSfamu_s[j,k] ) * dA_dSfas[m,n]
+          C3Sfjs[(S+1)*m-S,(S+1)*n-S,i]  <- ( refSfj_s[j,i,k]  - refSfjmu_s[j,k] ) * dA_dSfjs[m,n]
+          
+          C2Smjw1[(S+1)*m-S,(S+1)*n-S,i]   <- refSmjmu_w1[j,k] * dA_dSmjw1[m,n]
+          C2Smjw2[(S+1)*m-S,(S+1)*n-S,i]   <- refSmjmu_w2[j,k] * dA_dSmjw2[m,n]
+          C2Smaw1[(S+1)*m-S,(S+1)*n-S,i]   <- refSmamu_w1[j,k] * dA_dSmaw1[m,n]
+          C2Smaw2[(S+1)*m-S,(S+1)*n-S,i]   <- refSmamu_w2[j,k] * dA_dSmaw2[m,n]
+          C2Smjh1[(S+1)*m-S,(S+1)*n-S,i]   <- refSmjmu_h1[j,k] * dA_dSmjh1[m,n]
+          C2Smjh2[(S+1)*m-S,(S+1)*n-S,i]   <- refSmjmu_h2[j,k] * dA_dSmjh2[m,n]
+          C2Smah1[(S+1)*m-S,(S+1)*n-S,i]   <- refSmamu_h1[j,k] * dA_dSmah1[m,n]
+          C2Smah2[(S+1)*m-S,(S+1)*n-S,i]   <- refSmamu_h2[j,k] * dA_dSmah2[m,n]
+          C2Smas[(S+1)*m-S,(S+1)*n-S,i]   <- refSmamu_s[j,k]  * dA_dSmas[m,n]
+          C2Smjs[(S+1)*m-S,(S+1)*n-S,i]   <- refSmjmu_s[j,k]  * dA_dSmjs[m,n]
+          
+          C3Smjw1[(S+1)*m-S,(S+1)*n-S,i] <- (refSmj_w1[j,i,k] - refSmjmu_w1[j,k]) * dA_dSmjw1[m,n]
+          C3Smjw2[(S+1)*m-S,(S+1)*n-S,i] <- (refSmj_w2[j,i,k] - refSmjmu_w2[j,k]) * dA_dSmjw2[m,n]
+          C3Smaw1[(S+1)*m-S,(S+1)*n-S,i] <- (refSma_w1[j,i,k] - refSmamu_w1[j,k]) * dA_dSmaw1[m,n]
+          C3Smaw2[(S+1)*m-S,(S+1)*n-S,i] <- (refSma_w2[j,i,k] - refSmamu_w2[j,k]) * dA_dSmaw2[m,n]
+          C3Smjh1[(S+1)*m-S,(S+1)*n-S,i] <- (refSmj_h1[j,i,k] - refSmjmu_h1[j,k]) * dA_dSmjh1[m,n]
+          C3Smjh2[(S+1)*m-S,(S+1)*n-S,i] <- (refSmj_h2[j,i,k] - refSmjmu_h2[j,k]) * dA_dSmjh2[m,n]
+          C3Smah1[(S+1)*m-S,(S+1)*n-S,i] <- (refSma_h1[j,i,k] - refSmamu_h1[j,k]) * dA_dSmah1[m,n]
+          C3Smah2[(S+1)*m-S,(S+1)*n-S,i] <- (refSma_h2[j,i,k] - refSmamu_h2[j,k]) * dA_dSmah2[m,n]
+          C3Smas[(S+1)*m-S,(S+1)*n-S,i]  <- ( refSma_s[j,i,k]  - refSmamu_s[j,k] ) * dA_dSmas[m,n]
+          C3Smjs[(S+1)*m-S,(S+1)*n-S,i]  <- ( refSmj_s[j,i,k]  - refSmjmu_s[j,k] ) * dA_dSmjs[m,n]
+          
+          
+          K <- I - refn[,1,j,i+1,k]%*%t(e)  # intermediate steps
+          B <- K %*% A / lam_realref[j,i,k]
+          
+          gF1_mu <-  K %*%     C2F1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+          gF2_mu <-  K %*%     C2F2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfjw1_mu <-  K %*%   C2Sfjw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfjw2_mu <-  K %*%   C2Sfjw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfaw1_mu <-  K %*%   C2Sfaw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfaw2_mu <-  K %*%   C2Sfaw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfjh1_mu <-  K %*%   C2Sfjh1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfjh2_mu <-  K %*%   C2Sfjh2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfah1_mu <-  K %*%   C2Sfah1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+        gSfah2_mu <-  K %*%   C2Sfah2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfas_mu <-  K %*%    C2Sfas[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfjs_mu <-  K %*%    C2Sfjs[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+          
+         gF1_sig <-  K %*%     C3F1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gF2_sig <-  K %*%     C3F2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfjw1_sig <-  K %*%   C3Sfjw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfjw2_sig <-  K %*%   C3Sfjw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfaw1_sig <-  K %*%   C3Sfaw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfaw2_sig <-  K %*%   C3Sfaw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfjh1_sig <-  K %*%   C3Sfjh1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfjh2_sig <-  K %*%   C3Sfjh2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfah1_sig <-  K %*%   C3Sfah1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfah2_sig <-  K %*%   C3Sfah2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfas_sig <-  K %*%    C3Sfas[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSfjs_sig <-  K %*%    C3Sfjs[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         
+         gSmjw1_mu <-  K %*%   C2Smjw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjw2_mu <-  K %*%   C2Smjw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmaw1_mu <-  K %*%   C2Smaw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmaw2_mu <-  K %*%   C2Smaw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjh1_mu <-  K %*%   C2Smjh1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjh2_mu <-  K %*%   C2Smjh2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmah1_mu <-  K %*%   C2Smah1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmah2_mu <-  K %*%   C2Smah2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmas_mu <-  K %*%    C2Smas[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjs_mu <-  K %*%    C2Smjs[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         
+         gSmjw1_sig <-  K %*%   C3Smjw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjw2_sig <-  K %*%   C3Smjw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmaw1_sig <-  K %*%   C3Smaw1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmaw2_sig <-  K %*%   C3Smaw2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjh1_sig <-  K %*%   C3Smjh1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjh2_sig <-  K %*%   C3Smjh2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmah1_sig <-  K %*%   C3Smah1[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmah2_sig <-  K %*%   C3Smah2[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmas_sig <-  K %*%    C3Smas[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         gSmjs_sig <-  K %*%    C3Smjs[(S*m-(S-1)):(S*m),(S*n-(S-1)):(S*n),i] %*% refn[,1,j,i,k] / lam_realref[j,i,k]
+         
+             w_mu_F1[,m,n,i+1]  <- B %*%  w_mu_F1[,m,n,i] +    gF1_mu  
+             w_mu_F2[,m,n,i+1]  <- B %*%  w_mu_F2[,m,n,i] +    gF2_mu  
+           w_mu_Sfjw1[,m,n,i+1]  <- B %*% w_mu_Sfjw1[,m,n,i] +  gSfjw1_mu  
+           w_mu_Sfjw2[,m,n,i+1]  <- B %*% w_mu_Sfjw2[,m,n,i] +  gSfjw2_mu  
+           w_mu_Sfaw1[,m,n,i+1]  <- B %*% w_mu_Sfaw1[,m,n,i] +  gSfaw1_mu  
+           w_mu_Sfaw2[,m,n,i+1]  <- B %*% w_mu_Sfaw2[,m,n,i] +  gSfaw2_mu  
+           w_mu_Sfjh1[,m,n,i+1]  <- B %*% w_mu_Sfjh1[,m,n,i] +  gSfjh1_mu  
+           w_mu_Sfjh2[,m,n,i+1]  <- B %*% w_mu_Sfjh2[,m,n,i] +  gSfjh2_mu  
+           w_mu_Sfah1[,m,n,i+1]  <- B %*% w_mu_Sfah1[,m,n,i] +  gSfah1_mu  
+           w_mu_Sfah2[,m,n,i+1]  <- B %*% w_mu_Sfah2[,m,n,i] +  gSfah2_mu  
+            w_mu_Sfas[,m,n,i+1]  <- B %*% w_mu_Sfas[,m,n,i] +   gSfas_mu  
+            w_mu_Sfjs[,m,n,i+1]  <- B %*% w_mu_Sfjs[,m,n,i] +   gSfjs_mu  
+         
+            w_sd_F1[,m,n,i+1]   <- B %*%  w_sd_F1[,m,n,i] +    gF1_sig  
+            w_sd_F2[,m,n,i+1]   <- B %*%  w_sd_F2[,m,n,i] +    gF2_sig  
+            w_sd_Sfjw1[,m,n,i+1]  <- B %*% w_sd_Sfjw1[,m,n,i] +  gSfjw1_sig  
+            w_sd_Sfjw2[,m,n,i+1]  <- B %*% w_sd_Sfjw2[,m,n,i] +  gSfjw2_sig  
+            w_sd_Sfaw1[,m,n,i+1]  <- B %*% w_sd_Sfaw1[,m,n,i] +  gSfaw1_sig  
+            w_sd_Sfaw2[,m,n,i+1]  <- B %*% w_sd_Sfaw2[,m,n,i] +  gSfaw2_sig  
+            w_sd_Sfjh1[,m,n,i+1]  <- B %*% w_sd_Sfjh1[,m,n,i] +  gSfjh1_sig  
+            w_sd_Sfjh2[,m,n,i+1]  <- B %*% w_sd_Sfjh2[,m,n,i] +  gSfjh2_sig  
+            w_sd_Sfah1[,m,n,i+1]  <- B %*% w_sd_Sfah1[,m,n,i] +  gSfah1_sig  
+            w_sd_Sfah2[,m,n,i+1]  <- B %*% w_sd_Sfah2[,m,n,i] +  gSfah2_sig  
+            w_sd_Sfas[,m,n,i+1]   <- B %*% w_sd_Sfas[,m,n,i] +   gSfas_sig  
+            w_sd_Sfjs[,m,n,i+1]   <- B %*% w_sd_Sfjs[,m,n,i] +   gSfjs_sig  
+          
+            w_mu_Smjw1[,m,n,i+1]  <- B %*% w_mu_Smjw1[,m,n,i] +  gSmjw1_mu  
+            w_mu_Smjw2[,m,n,i+1]  <- B %*% w_mu_Smjw2[,m,n,i] +  gSmjw2_mu  
+            w_mu_Smaw1[,m,n,i+1]  <- B %*% w_mu_Smaw1[,m,n,i] +  gSmaw1_mu  
+            w_mu_Smaw2[,m,n,i+1]  <- B %*% w_mu_Smaw2[,m,n,i] +  gSmaw2_mu  
+            w_mu_Smjh1[,m,n,i+1]  <- B %*% w_mu_Smjh1[,m,n,i] +  gSmjh1_mu  
+            w_mu_Smjh2[,m,n,i+1]  <- B %*% w_mu_Smjh2[,m,n,i] +  gSmjh2_mu  
+            w_mu_Smah1[,m,n,i+1]  <- B %*% w_mu_Smah1[,m,n,i] +  gSmah1_mu  
+            w_mu_Smah2[,m,n,i+1]  <- B %*% w_mu_Smah2[,m,n,i] +  gSmah2_mu  
+            w_mu_Smas[,m,n,i+1]  <- B %*% w_mu_Smas[,m,n,i] +   gSmas_mu  
+            w_mu_Smjs[,m,n,i+1]  <- B %*% w_mu_Smjs[,m,n,i] +   gSmjs_mu  
+            
+            w_sd_Smjw1[,m,n,i+1]  <- B %*% w_sd_Smjw1[,m,n,i] +  gSmjw1_sig  
+            w_sd_Smjw2[,m,n,i+1]  <- B %*% w_sd_Smjw2[,m,n,i] +  gSmjw2_sig  
+            w_sd_Smaw1[,m,n,i+1]  <- B %*% w_sd_Smaw1[,m,n,i] +  gSmaw1_sig  
+            w_sd_Smaw2[,m,n,i+1]  <- B %*% w_sd_Smaw2[,m,n,i] +  gSmaw2_sig  
+            w_sd_Smjh1[,m,n,i+1]  <- B %*% w_sd_Smjh1[,m,n,i] +  gSmjh1_sig  
+            w_sd_Smjh2[,m,n,i+1]  <- B %*% w_sd_Smjh2[,m,n,i] +  gSmjh2_sig  
+            w_sd_Smah1[,m,n,i+1]  <- B %*% w_sd_Smah1[,m,n,i] +  gSmah1_sig  
+            w_sd_Smah2[,m,n,i+1]  <- B %*% w_sd_Smah2[,m,n,i] +  gSmah2_sig  
+            w_sd_Smas[,m,n,i+1]   <- B %*% w_sd_Smas[,m,n,i] +   gSmas_sig  
+            w_sd_Smjs[,m,n,i+1]   <- B %*% w_sd_Smjs[,m,n,i] +   gSmjs_sig  
+            
+            # Equation 3 Koons et al. 2017, e^n_mu
+            enF1mu [m,n,j,i] <- t(e) %*% A %*%   w_mu_F1[,m,n,i] / lam_realref[j,i,k] 
+            enF2mu [m,n,j,i] <- t(e) %*% A %*%   w_mu_F2[,m,n,i] / lam_realref[j,i,k] 
+            enSfjwmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfjw1[,m,n,i] / lam_realref[j,i,k] 
+            enSfjwmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfjw2[,m,n,i] / lam_realref[j,i,k] 
+            enSfawmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfaw1[,m,n,i] / lam_realref[j,i,k] 
+            enSfawmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfaw2[,m,n,i] / lam_realref[j,i,k] 
+            enSfjhmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfjh1[,m,n,i] / lam_realref[j,i,k] 
+            enSfjhmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfjh2[,m,n,i] / lam_realref[j,i,k] 
+            enSfahmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfah1[,m,n,i] / lam_realref[j,i,k] 
+            enSfahmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfah2[,m,n,i] / lam_realref[j,i,k] 
+            enSfasmu[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfas[,m,n,i] / lam_realref[j,i,k] 
+            enSfjsmu[m,n,j,i] <- t(e) %*% A %*%  w_mu_Sfjs[,m,n,i] / lam_realref[j,i,k] 
+            
+            tot_enF1mu [j,i] <-  sum(sum(enF1mu [,,j,i]))
+            tot_enF2mu [j,i] <-  sum(sum(enF2mu [,,j,i]))
+            tot_enSfjwmu1[j,i] <- sum(sum(enSfjwmu1[,,j,i]))
+            tot_enSfjwmu2[j,i] <- sum(sum(enSfjwmu2[,,j,i]))
+            tot_enSfawmu1[j,i] <- sum(sum(enSfawmu1[,,j,i]))
+            tot_enSfawmu2[j,i] <- sum(sum(enSfawmu2[,,j,i]))
+            tot_enSfjhmu1[j,i] <- sum(sum(enSfjhmu1[,,j,i]))
+            tot_enSfjhmu2[j,i] <- sum(sum(enSfjhmu2[,,j,i]))
+            tot_enSfahmu1[j,i] <- sum(sum(enSfahmu1[,,j,i]))
+            tot_enSfahmu2[j,i] <- sum(sum(enSfahmu2[,,j,i]))
+            tot_enSfasmu[j,i] <-  sum(sum(enSfasmu[,,j,i]))
+               
+            enSmjwmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smjw1[,m,n,i] / lam_realref[j,i,k] 
+            enSmjwmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smjw2[,m,n,i] / lam_realref[j,i,k] 
+            enSmawmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smaw1[,m,n,i] / lam_realref[j,i,k] 
+            enSmawmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smaw2[,m,n,i] / lam_realref[j,i,k] 
+            enSmjhmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smjh1[,m,n,i] / lam_realref[j,i,k] 
+            enSmjhmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smjh2[,m,n,i] / lam_realref[j,i,k] 
+            enSmahmu1[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smah1[,m,n,i] / lam_realref[j,i,k] 
+            enSmahmu2[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smah2[,m,n,i] / lam_realref[j,i,k] 
+            enSmasmu[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smas[,m,n,i] / lam_realref[j,i,k] 
+            enSmjsmu[m,n,j,i] <- t(e) %*% A %*%  w_mu_Smjs[,m,n,i] / lam_realref[j,i,k] 
+            
+            tot_enSmjwmu1[j,i] <- sum(sum(enSmjwmu1[,,j,i]))
+            tot_enSmjwmu2[j,i] <- sum(sum(enSmjwmu2[,,j,i]))
+            tot_enSmawmu1[j,i] <- sum(sum(enSmawmu1[,,j,i]))
+            tot_enSmawmu2[j,i] <- sum(sum(enSmawmu2[,,j,i]))
+            tot_enSmjhmu1[j,i] <- sum(sum(enSmjhmu1[,,j,i]))
+            tot_enSmjhmu2[j,i] <- sum(sum(enSmjhmu2[,,j,i]))
+            tot_enSmahmu1[j,i] <- sum(sum(enSmahmu1[,,j,i]))
+            tot_enSmahmu2[j,i] <- sum(sum(enSmahmu2[,,j,i]))
+            tot_enSmasmu[j,i] <-  sum(sum(enSmasmu[,,j,i]))
+            
+            
+                # Equation 3 Koons et al. 2017, e^n_sd
+               enF1sd [m,n,j,i] <- t(e) %*% A %*%   w_sd_F1[,m,n,i] / lam_realref[j,i,k] 
+               enF2sd [m,n,j,i] <- t(e) %*% A %*%   w_sd_F2[,m,n,i] / lam_realref[j,i,k] 
+               enSfjwsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfjw1[,m,n,i] / lam_realref[j,i,k] 
+               enSfjwsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfjw2[,m,n,i] / lam_realref[j,i,k] 
+               enSfawsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfaw1[,m,n,i] / lam_realref[j,i,k] 
+               enSfawsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfaw2[,m,n,i] / lam_realref[j,i,k] 
+               enSfjhsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfjh1[,m,n,i] / lam_realref[j,i,k] 
+               enSfjhsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfjh2[,m,n,i] / lam_realref[j,i,k] 
+               enSfahsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfah1[,m,n,i] / lam_realref[j,i,k] 
+               enSfahsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Sfah2[,m,n,i] / lam_realref[j,i,k] 
+               enSfassd[m,n,j,i] <- t(e) %*% A %*%  w_sd_Sfas[,m,n,i] / lam_realref[j,i,k] 
+               enSfjssd[m,n,j,i] <- t(e) %*% A %*%  w_sd_Sfjs[,m,n,i] / lam_realref[j,i,k] 
+               
+                tot_enF1sd [j,i] <-  sum(sum(enF1sd [,,j,i]))
+                tot_enF2sd [j,i] <-  sum(sum(enF2sd [,,j,i]))
+               tot_enSfjwsd1[j,i] <- sum(sum(enSfjwsd1[,,j,i]))
+               tot_enSfjwsd2[j,i] <- sum(sum(enSfjwsd2[,,j,i]))
+               tot_enSfawsd1[j,i] <- sum(sum(enSfawsd1[,,j,i]))
+               tot_enSfawsd2[j,i] <- sum(sum(enSfawsd2[,,j,i]))
+               tot_enSfjhsd1[j,i] <- sum(sum(enSfjhsd1[,,j,i]))
+               tot_enSfjhsd2[j,i] <- sum(sum(enSfjhsd2[,,j,i]))
+               tot_enSfahsd1[j,i] <- sum(sum(enSfahsd1[,,j,i]))
+               tot_enSfahsd2[j,i] <- sum(sum(enSfahsd2[,,j,i]))
+               tot_enSfassd[j,i] <-  sum(sum(enSfassd[,,j,i]))
+               tot_enSfjssd[j,i] <-  sum(sum(enSfjssd[,,j,i]))
+               
+               enSmjwsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Smjw1[,m,n,i] / lam_realref[j,i,k] 
+               enSmjwsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Smjw2[,m,n,i] / lam_realref[j,i,k] 
+               enSmawsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Smaw1[,m,n,i] / lam_realref[j,i,k] 
+               enSmawsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Smaw2[,m,n,i] / lam_realref[j,i,k] 
+               enSmjhsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Smjh1[,m,n,i] / lam_realref[j,i,k] 
+               enSmjhsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Smjh2[,m,n,i] / lam_realref[j,i,k] 
+               enSmahsd1[m,n,j,i] <- t(e) %*% A %*% w_sd_Smah1[,m,n,i] / lam_realref[j,i,k] 
+               enSmahsd2[m,n,j,i] <- t(e) %*% A %*% w_sd_Smah2[,m,n,i] / lam_realref[j,i,k] 
+               enSmassd[m,n,j,i] <- t(e) %*% A %*%  w_sd_Smas[,m,n,i] / lam_realref[j,i,k] 
+               enSmjssd[m,n,j,i] <- t(e) %*% A %*%  w_sd_Smjs[,m,n,i] / lam_realref[j,i,k] 
+               
+               tot_enSmjwsd1[j,i] <- sum(sum(enSmjwsd1[,,j,i]))
+               tot_enSmjwsd2[j,i] <- sum(sum(enSmjwsd2[,,j,i]))
+               tot_enSmawsd1[j,i] <- sum(sum(enSmawsd1[,,j,i]))
+               tot_enSmawsd2[j,i] <- sum(sum(enSmawsd2[,,j,i]))
+               tot_enSmjhsd1[j,i] <- sum(sum(enSmjhsd1[,,j,i]))
+               tot_enSmjhsd2[j,i] <- sum(sum(enSmjhsd2[,,j,i]))
+               tot_enSmahsd1[j,i] <- sum(sum(enSmahsd1[,,j,i]))
+               tot_enSmahsd2[j,i] <- sum(sum(enSmahsd2[,,j,i]))
+               tot_enSmassd[j,i] <-  sum(sum(enSmassd[,,j,i]))
+               tot_enSmjssd[j,i] <-  sum(sum(enSmjssd[,,j,i]))
+               
+        }
+      }
+    }
+  }
+}
+
+
+
+ avg_enF1mu  <- rowMeans( tot_enF1mu )
+ avg_enF2mu  <- rowMeans( tot_enF2mu )
+ avg_enSfjwmu1 <- rowMeans(tot_enSfjwmu1)
+ avg_enSfjwmu2 <- rowMeans(tot_enSfjwmu2)
+ avg_enSfawmu1 <- rowMeans(tot_enSfawmu1)
+ avg_enSfawmu2 <- rowMeans(tot_enSfawmu2)
+ avg_enSfjhmu1 <- rowMeans(tot_enSfjhmu1)
+ avg_enSfjhmu2 <- rowMeans(tot_enSfjhmu2)
+ avg_enSfahmu1 <- rowMeans(tot_enSfahmu1)
+ avg_enSfahmu2 <- rowMeans(tot_enSfahmu2)
+ avg_enSfasmu <- rowMeans( tot_enSfasmu)
+ avg_enSfjsmu <- rowMeans( tot_enSfjsmu)
+ avg_enSmjwmu1 <- rowMeans(tot_enSmjwmu1)
+ avg_enSmjwmu2 <- rowMeans(tot_enSmjwmu2)
+ avg_enSmawmu1 <- rowMeans(tot_enSmawmu1)
+ avg_enSmawmu2 <- rowMeans(tot_enSmawmu2)
+ avg_enSmjhmu1 <- rowMeans(tot_enSmjhmu1)
+ avg_enSmjhmu2 <- rowMeans(tot_enSmjhmu2)
+ avg_enSmahmu1 <- rowMeans(tot_enSmahmu1)
+ avg_enSmahmu2 <- rowMeans(tot_enSmahmu2)
+ avg_enSmasmu <- rowMeans( tot_enSmasmu)
+ avg_enSmjsmu <- rowMeans( tot_enSmjsmu)
+ 
+avg_enF1sd  <-  rowMeans( tot_enF1sd )
+
+avg_enF2sd  <-  rowMeans( tot_enF2sd )
+avg_enSfjwsd1 <- rowMeans(tot_enSfjwsd1)
+avg_enSfjwsd2 <- rowMeans(tot_enSfjwsd2)
+avg_enSfawsd1 <- rowMeans(tot_enSfawsd1)
+avg_enSfawsd2 <- rowMeans(tot_enSfawsd2)
+avg_enSfjhsd1 <- rowMeans(tot_enSfjhsd1)
+avg_enSfjhsd2 <- rowMeans(tot_enSfjhsd2)
+avg_enSfahsd1 <- rowMeans(tot_enSfahsd1)
+avg_enSfahsd2 <- rowMeans(tot_enSfahsd2)
+avg_enSfassd <- rowMeans( tot_enSfassd)
+avg_enSfjssd <- rowMeans( tot_enSfjssd)
+
+avg_enSmjwsd1 <- rowMeans(tot_enSmjwsd1)
+avg_enSmjwsd2 <- rowMeans(tot_enSmjwsd2)
+avg_enSmawsd1 <- rowMeans(tot_enSmawsd1)
+avg_enSmawsd2 <- rowMeans(tot_enSmawsd2)
+avg_enSmjhsd1 <- rowMeans(tot_enSmjhsd1)
+avg_enSmjhsd2 <- rowMeans(tot_enSmjhsd2)
+avg_enSmahsd1 <- rowMeans(tot_enSmahsd1)
+avg_enSmahsd2 <- rowMeans(tot_enSmahsd2)
+avg_enSmassd <- rowMeans( tot_enSmassd)
+avg_enSmjssd <- rowMeans( tot_enSmjssd)
+
+# Step 9: Calculate vital rate contributions to the difference in geometric mean rates of population growth between time periods. This is a function of 
+# logged differences in mean of vital rates, logged differences in s.d. of  vital rates, as channeled through direct effects of perturbations to the   
+# moments and indirect effects of perturbations to these moments channeled through changes in population structure over time.
+cont_A_F1mu  <- cont_A_F2mu <- cont_A_Sfjmu_w1 <- cont_A_Sfjmu_w2 <- cont_A_Sfjmu_s <- cont_A_Sfjmu_h1 <- cont_A_Sfjmu_h2 <- cont_A_Sfamu_h1 <- cont_A_Sfamu_h2 <- cont_A_Sfamu_w1 <- cont_A_Sfamu_w2 <- cont_A_Sfamu_s <- 
+cont_A_F1sd  <- cont_A_F2sd <- cont_A_Sfjsd_w1 <- cont_A_Sfjsd_w2 <- cont_A_Sfjsd_s <- cont_A_Sfjsd_h1 <- cont_A_Sfjsd_h2 <- cont_A_Sfasd_h1 <- cont_A_Sfasd_h2 <- cont_A_Sfasd_w1 <- cont_A_Sfasd_w2 <- cont_A_Sfasd_s <-
+cont_n_F1mu  <- cont_n_F2mu <- cont_n_Sfjmu_w1 <- cont_n_Sfjmu_w2 <- cont_n_Sfjmu_s <- cont_n_Sfjmu_h1 <- cont_n_Sfjmu_h2 <- cont_n_Sfamu_h1 <- cont_n_Sfamu_h2 <- cont_n_Sfamu_w1 <- cont_n_Sfamu_w2 <- cont_n_Sfamu_s <- 
+cont_n_F1sd  <- cont_n_F2sd <- cont_n_Sfjsd_w1 <- cont_n_Sfjsd_w2 <- cont_n_Sfjsd_s <- cont_n_Sfjsd_h1 <- cont_n_Sfjsd_h2 <- cont_n_Sfasd_h1 <- cont_n_Sfasd_h2 <- cont_n_Sfasd_w1 <- cont_n_Sfasd_w2 <- cont_n_Sfasd_s <- 
+                               cont_A_Smjmu_w1 <- cont_A_Smjmu_w2 <- cont_A_Smjmu_s <- cont_A_Smjmu_h1 <- cont_A_Smjmu_h2 <- cont_A_Smamu_h1 <- cont_A_Smamu_h2 <- cont_A_Smamu_w1 <- cont_A_Smamu_w2 <- cont_A_Smamu_s <- 
+                               cont_A_Smjsd_w1 <- cont_A_Smjsd_w2 <- cont_A_Smjsd_s <- cont_A_Smjsd_h1 <- cont_A_Smjsd_h2 <- cont_A_Smasd_h1 <- cont_A_Smasd_h2 <- cont_A_Smasd_w1 <- cont_A_Smasd_w2 <- cont_A_Smasd_s <-
+                               cont_n_Smjmu_w1 <- cont_n_Smjmu_w2 <- cont_n_Smjmu_s <- cont_n_Smjmu_h1 <- cont_n_Smjmu_h2 <- cont_n_Smamu_h1 <- cont_n_Smamu_h2 <- cont_n_Smamu_w1 <- cont_n_Smamu_w2 <- cont_n_Smamu_s <- 
+                               cont_n_Smjsd_w1 <- cont_n_Smjsd_w2 <- cont_n_Smjsd_s <- cont_n_Smjsd_h1 <- cont_n_Smjsd_h2 <- cont_n_Smasd_h1 <- cont_n_Smasd_h2 <- cont_n_Smasd_w1 <- cont_n_Smasd_w2 <- cont_n_Smasd_s <- matrix(NA,samples,1)
+
+# Equation 3; Koons et al. 2017
+for (j in 1:samples){
+  for(k in sp){
+
+          cont_A_F1mu[j] <-         logF1mudiff[j,k] *      avg_eAF1mu[j]       
+          cont_A_F2mu[j] <-         logF2mudiff[j,k] *      avg_eAF2mu[j]       
+      cont_A_Sfjmu_w1[j] <-     logSfj1_wmudiff[j,k] *  avg_eASfjmu_w1[j] 
+      cont_A_Sfamu_w1[j] <-     logSfa1_wmudiff[j,k] *  avg_eASfamu_w1[j] 
+      cont_A_Sfjmu_h1[j] <-     logSfj1_hmudiff[j,k] *  avg_eASfjmu_h1[j]  
+      cont_A_Sfamu_h1[j] <-     logSfa1_hmudiff[j,k] *  avg_eASfamu_h1[j] 
+      cont_A_Sfjmu_w2[j] <-     logSfj2_wmudiff[j,k] *  avg_eASfjmu_w2[j] 
+      cont_A_Sfamu_w2[j] <-     logSfa2_wmudiff[j,k] *  avg_eASfamu_w2[j] 
+      cont_A_Sfjmu_h2[j] <-     logSfj2_hmudiff[j,k] *  avg_eASfjmu_h2[j] 
+      cont_A_Sfamu_h2[j] <-     logSfa2_hmudiff[j,k] *  avg_eASfamu_h2[j] 
+       cont_A_Sfjmu_s[j] <-      logSfj_smudiff[j,k] *   avg_eASfjmu_s[j] 
+       cont_A_Sfamu_s[j] <-      logSfa_smudiff[j,k] *   avg_eASfamu_s[j]  
+     
+        cont_A_F1sd[j] <-            logF1sigdiff[j,k] *      avg_eAF1sd[j]       
+        cont_A_F2sd[j] <-            logF2sigdiff[j,k] *      avg_eAF2sd[j]       
+       cont_A_Sfjsd_w1[j] <-     logSfj1_wsigdiff[j,k] *  avg_eASfjsd_w1[j] 
+       cont_A_Sfasd_w1[j] <-     logSfa1_wsigdiff[j,k] *  avg_eASfasd_w1[j] 
+       cont_A_Sfjsd_h1[j] <-     logSfj1_hsigdiff[j,k] *  avg_eASfjsd_h1[j]  
+       cont_A_Sfasd_h1[j] <-     logSfa1_hsigdiff[j,k] *  avg_eASfasd_h1[j] 
+       cont_A_Sfjsd_w2[j] <-     logSfj2_wsigdiff[j,k] *  avg_eASfjsd_w2[j] 
+       cont_A_Sfasd_w2[j] <-     logSfa2_wsigdiff[j,k] *  avg_eASfasd_w2[j] 
+       cont_A_Sfjsd_h2[j] <-     logSfj2_hsigdiff[j,k] *  avg_eASfjsd_h2[j] 
+       cont_A_Sfasd_h2[j] <-     logSfa2_hsigdiff[j,k] *  avg_eASfasd_h2[j] 
+       cont_A_Sfjsd_s[j] <-       logSfj_ssigdiff[j,k] *   avg_eASfjsd_s[j] 
+       cont_A_Sfasd_s[j] <-       logSfa_ssigdiff[j,k] *   avg_eASfasd_s[j]  
+        
+      
+       cont_n_F1mu[j] <-         logF1mudiff[j,k] *       avg_enF1mu  [j]   
+       cont_n_F2mu[j] <-         logF2mudiff[j,k] *       avg_enF2mu  [j]   
+       cont_n_Sfjmu_w1[j] <-     logSfj1_wmudiff[j,k] *   avg_enSfjwmu1[j] 
+       cont_n_Sfamu_w1[j] <-     logSfa1_wmudiff[j,k] *   avg_enSfjwmu2[j] 
+       cont_n_Sfjmu_h1[j] <-     logSfj1_hmudiff[j,k] *   avg_enSfawmu1[j]  
+       cont_n_Sfamu_h1[j] <-     logSfa1_hmudiff[j,k] *   avg_enSfawmu2[j] 
+       cont_n_Sfjmu_w2[j] <-     logSfj2_wmudiff[j,k] *   avg_enSfjhmu1[j] 
+       cont_n_Sfamu_w2[j] <-     logSfa2_wmudiff[j,k] *   avg_enSfjhmu2[j] 
+       cont_n_Sfjmu_h2[j] <-     logSfj2_hmudiff[j,k] *   avg_enSfahmu1[j] 
+       cont_n_Sfamu_h2[j] <-     logSfa2_hmudiff[j,k] *   avg_enSfahmu2[j] 
+       cont_n_Sfjmu_s[j] <-      logSfj_smudiff[j,k] *    avg_enSfasmu [j]
+       cont_n_Sfamu_s[j] <-      logSfa_smudiff[j,k] *    avg_enSfjsmu [j] 
+       
+       cont_n_F1sd[j] <-            logF1sigdiff[j,k] *   avg_enF1sd  [j]
+       cont_n_F2sd[j] <-            logF2sigdiff[j,k] *   avg_enF2sd  [j]
+       cont_n_Sfjsd_w1[j] <-     logSfj1_wsigdiff[j,k] *  avg_enSfjwsd1[j]
+       cont_n_Sfasd_w1[j] <-     logSfa1_wsigdiff[j,k] *  avg_enSfjwsd2[j]
+       cont_n_Sfjsd_h1[j] <-     logSfj1_hsigdiff[j,k] *  avg_enSfawsd1[j]
+       cont_n_Sfasd_h1[j] <-     logSfa1_hsigdiff[j,k] *  avg_enSfawsd2[j]
+       cont_n_Sfjsd_w2[j] <-     logSfj2_wsigdiff[j,k] *  avg_enSfjhsd1[j]
+       cont_n_Sfasd_w2[j] <-     logSfa2_wsigdiff[j,k] *  avg_enSfjhsd2[j]
+       cont_n_Sfjsd_h2[j] <-     logSfj2_hsigdiff[j,k] *  avg_enSfahsd1[j]
+       cont_n_Sfasd_h2[j] <-     logSfa2_hsigdiff[j,k] *  avg_enSfahsd2[j]
+       cont_n_Sfjsd_s[j] <-       logSfj_ssigdiff[j,k] *  avg_enSfassd [j]
+       cont_n_Sfasd_s[j] <-       logSfa_ssigdiff[j,k] *  avg_enSfjssd [j]
+       ###
+      
+       cont_A_Smjmu_w1[j] <-     logSmj1_wmudiff[j,k] *  avg_eASmjmu_w1[j] 
+       cont_A_Smamu_w1[j] <-     logSma1_wmudiff[j,k] *  avg_eASmamu_w1[j] 
+       cont_A_Smjmu_h1[j] <-     logSmj1_hmudiff[j,k] *  avg_eASmjmu_h1[j]  
+       cont_A_Smamu_h1[j] <-     logSma1_hmudiff[j,k] *  avg_eASmamu_h1[j] 
+       cont_A_Smjmu_w2[j] <-     logSmj2_wmudiff[j,k] *  avg_eASmjmu_w2[j] 
+       cont_A_Smamu_w2[j] <-     logSma2_wmudiff[j,k] *  avg_eASmamu_w2[j] 
+       cont_A_Smjmu_h2[j] <-     logSmj2_hmudiff[j,k] *  avg_eASmjmu_h2[j] 
+       cont_A_Smamu_h2[j] <-     logSma2_hmudiff[j,k] *  avg_eASmamu_h2[j] 
+       cont_A_Smjmu_s[j] <-      logSmj_smudiff[j,k] *   avg_eASmjmu_s[j] 
+       cont_A_Smamu_s[j] <-      logSma_smudiff[j,k] *   avg_eASmamu_s[j]  
+       
+       cont_A_Smjsd_w1[j] <-     logSmj1_wsigdiff[j,k] *  avg_eASmjsd_w1[j] 
+       cont_A_Smasd_w1[j] <-     logSma1_wsigdiff[j,k] *  avg_eASmasd_w1[j] 
+       cont_A_Smjsd_h1[j] <-     logSmj1_hsigdiff[j,k] *  avg_eASmjsd_h1[j]  
+       cont_A_Smasd_h1[j] <-     logSma1_hsigdiff[j,k] *  avg_eASmasd_h1[j] 
+       cont_A_Smjsd_w2[j] <-     logSmj2_wsigdiff[j,k] *  avg_eASmjsd_w2[j] 
+       cont_A_Smasd_w2[j] <-     logSma2_wsigdiff[j,k] *  avg_eASmasd_w2[j] 
+       cont_A_Smjsd_h2[j] <-     logSmj2_hsigdiff[j,k] *  avg_eASmjsd_h2[j] 
+       cont_A_Smasd_h2[j] <-     logSma2_hsigdiff[j,k] *  avg_eASmasd_h2[j] 
+       cont_A_Smjsd_s[j] <-       logSmj_ssigdiff[j,k] *   avg_eASmjsd_s[j] 
+       cont_A_Smasd_s[j] <-       logSma_ssigdiff[j,k] *   avg_eASmasd_s[j]  
+       
+       cont_n_Smjmu_w1[j] <-     logSmj1_wmudiff[j,k] *   avg_enSmjwmu1[j] 
+       cont_n_Smamu_w1[j] <-     logSma1_wmudiff[j,k] *   avg_enSmjwmu2[j] 
+       cont_n_Smjmu_h1[j] <-     logSmj1_hmudiff[j,k] *   avg_enSmawmu1[j]  
+       cont_n_Smamu_h1[j] <-     logSma1_hmudiff[j,k] *   avg_enSmawmu2[j] 
+       cont_n_Smjmu_w2[j] <-     logSmj2_wmudiff[j,k] *   avg_enSmjhmu1[j] 
+       cont_n_Smamu_w2[j] <-     logSma2_wmudiff[j,k] *   avg_enSmjhmu2[j] 
+       cont_n_Smjmu_h2[j] <-     logSmj2_hmudiff[j,k] *   avg_enSmahmu1[j] 
+       cont_n_Smamu_h2[j] <-     logSma2_hmudiff[j,k] *   avg_enSmahmu2[j] 
+       cont_n_Smjmu_s[j] <-      logSmj_smudiff[j,k] *    avg_enSmasmu [j]
+       cont_n_Smamu_s[j] <-      logSma_smudiff[j,k] *    avg_enSmjsmu [j] 
+       
+       cont_n_Smjsd_w1[j] <-     logSmj1_wsigdiff[j,k] *  avg_enSmjwsd1[j]
+       cont_n_Smasd_w1[j] <-     logSma1_wsigdiff[j,k] *  avg_enSmjwsd2[j]
+       cont_n_Smjsd_h1[j] <-     logSmj1_hsigdiff[j,k] *  avg_enSmawsd1[j]
+       cont_n_Smasd_h1[j] <-     logSma1_hsigdiff[j,k] *  avg_enSmawsd2[j]
+       cont_n_Smjsd_w2[j] <-     logSmj2_wsigdiff[j,k] *  avg_enSmjhsd1[j]
+       cont_n_Smasd_w2[j] <-     logSma2_wsigdiff[j,k] *  avg_enSmjhsd2[j]
+       cont_n_Smjsd_h2[j] <-     logSmj2_hsigdiff[j,k] *  avg_enSmahsd1[j]
+       cont_n_Smasd_h2[j] <-     logSma2_hsigdiff[j,k] *  avg_enSmahsd2[j]
+       cont_n_Smjsd_s[j] <-       logSmj_ssigdiff[j,k] *  avg_enSmassd [j]
+       cont_n_Smasd_s[j] <-       logSma_ssigdiff[j,k] *  avg_enSmjssd [j]
+  }
+}
+
+# Total effect of shifts in the mean vital rate (A_mu), its variance [A_sd], or the indirect effects of demographic rates channeled through shifts in the mean (n_mu) or variance (n_sd) population structure
+totF1 <- cont_A_F1mu + cont_A_F1sd + cont_n_F1mu + cont_n_F1sd
+totF2 <- cont_A_F2mu + cont_A_F2sd + cont_n_F2mu + cont_n_F2sd
+totF  <- totF1 + totF2
+
+tot_Sf_w_j_1 <- cont_A_Sfjmu_w1 + cont_A_Sfjsd_w1 + cont_n_Sfjmu_w1 + cont_n_Sfjsd_w1 
+tot_Sf_w_j_2 <- cont_A_Sfjmu_w2 + cont_A_Sfjsd_w2 + cont_n_Sfjmu_w2 + cont_n_Sfjsd_w2
+tot_Sf_2_j_1 <- cont_A_Sfjmu_s + cont_A_Sfjsd_s + cont_n_Sfjmu_s + cont_n_Sfjsd_s
+tot_Sf_h_j_1 <- cont_A_Sfjmu_h1 + cont_A_Sfjsd_h1 + cont_n_Sfjmu_h1 + cont_n_Sfjsd_h1
+tot_Sf_h_j_2 <- cont_A_Sfjmu_h2 + cont_A_Sfjsd_h2 + cont_n_Sfjmu_h2 + cont_n_Sfjsd_h2
+tot_Sf_h_a_1 <- cont_A_Sfamu_h1 + cont_A_Sfasd_h1 + cont_n_Sfamu_h1 + cont_n_Sfasd_h1
+tot_Sf_h_a_2 <- cont_A_Sfamu_h2 + cont_A_Sfasd_h2 + cont_n_Sfamu_h2 + cont_n_Sfasd_h2
+tot_Sf_w_a_1 <- cont_A_Sfamu_w1 + cont_A_Sfasd_w1 + cont_n_Sfamu_w1 + cont_n_Sfasd_w1
+tot_Sf_w_a_2 <- cont_A_Sfamu_w2 + cont_A_Sfasd_w2 + cont_n_Sfamu_w2 + cont_n_Sfasd_w2
+tot_Sf_2_2_1 <- cont_A_Sfamu_s + cont_A_Sfasd_s + cont_n_Sfamu_s + cont_n_Sfasd_s
+
+tot_Sm_w_j_1 <- cont_A_Smjmu_w1 + cont_A_Smjsd_w1 + cont_n_Smjmu_w1 + cont_n_Smjsd_w1 
+tot_Sm_w_j_2 <- cont_A_Smjmu_w2 + cont_A_Smjsd_w2 + cont_n_Smjmu_w2 + cont_n_Smjsd_w2
+tot_Sm_2_j_1 <- cont_A_Smjmu_s + cont_A_Smjsd_s + cont_n_Smjmu_s + cont_n_Smjsd_s
+tot_Sm_h_j_1 <- cont_A_Smjmu_h1 + cont_A_Smjsd_h1 + cont_n_Smjmu_h1 + cont_n_Smjsd_h1
+tot_Sm_h_j_2 <- cont_A_Smjmu_h2 + cont_A_Smjsd_h2 + cont_n_Smjmu_h2 + cont_n_Smjsd_h2
+tot_Sm_h_a_1 <- cont_A_Smamu_h1 + cont_A_Smasd_h1 + cont_n_Smamu_h1 + cont_n_Smasd_h1
+tot_Sm_h_a_2 <- cont_A_Smamu_h2 + cont_A_Smasd_h2 + cont_n_Smamu_h2 + cont_n_Smasd_h2
+tot_Sm_w_a_1 <- cont_A_Smamu_w1 + cont_A_Smasd_w1 + cont_n_Smamu_w1 + cont_n_Smasd_w1
+tot_Sm_w_a_2 <- cont_A_Smamu_w2 + cont_A_Smasd_w2 + cont_n_Smamu_w2 + cont_n_Smasd_w2
+tot_Sm_2_2_1 <- cont_A_Smamu_s + cont_A_Smasd_s + cont_n_Smamu_s + cont_n_Smasd_s
+
+cont_time_alaska_1 <- rbind.data.frame(
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F1', statistic = 'Total', value = 'Total', mean = mean(totF1      ), lower = quantile(totF1      ,probs = 0.05),upper = quantile(totF1      ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F2', statistic = 'Total', value = 'Total', mean = mean(totF2      ), lower = quantile(totF2      ,probs = 0.05),upper = quantile(totF2      ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ1', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_w_j_1), lower = quantile(tot_Sf_w_j_1,probs = 0.05),upper = quantile(tot_Sf_w_j_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA1', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_w_a_1), lower = quantile(tot_Sf_w_a_1,probs = 0.05),upper = quantile(tot_Sf_w_a_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ1', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_h_j_1), lower = quantile(tot_Sf_h_j_1,probs = 0.05),upper = quantile(tot_Sf_h_j_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA1', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_h_a_1), lower = quantile(tot_Sf_h_a_1,probs = 0.05),upper = quantile(tot_Sf_h_a_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ2', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_w_j_2), lower = quantile(tot_Sf_w_j_2,probs = 0.05),upper = quantile(tot_Sf_w_j_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA2', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_w_a_2), lower = quantile(tot_Sf_w_a_2,probs = 0.05),upper = quantile(tot_Sf_w_a_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ2', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_h_j_2), lower = quantile(tot_Sf_h_j_2,probs = 0.05),upper = quantile(tot_Sf_h_j_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA2', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_h_a_2), lower = quantile(tot_Sf_h_a_2,probs = 0.05),upper = quantile(tot_Sf_h_a_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SJ', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_2_j_1), lower = quantile(tot_Sf_2_j_1,probs = 0.05),upper = quantile(tot_Sf_2_j_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SA', statistic = 'Total', value = 'Total', mean = mean(tot_Sf_2_2_1), lower = quantile(tot_Sf_2_2_1,probs = 0.05),upper = quantile(tot_Sf_2_2_1,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F1', statistic = 'A', value = 'mu', mean = mean(cont_A_F1mu    ), lower = quantile(cont_A_F1mu    ,probs = 0.05),upper = quantile(cont_A_F1mu    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F2', statistic = 'A', value = 'mu', mean = mean(cont_A_F2mu    ), lower = quantile(cont_A_F2mu    ,probs = 0.05),upper = quantile(cont_A_F2mu    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ1', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfjmu_w1), lower = quantile(cont_A_Sfjmu_w1,probs = 0.05),upper = quantile(cont_A_Sfjmu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA1', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfamu_w1), lower = quantile(cont_A_Sfamu_w1,probs = 0.05),upper = quantile(cont_A_Sfamu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ1', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfjmu_h1), lower = quantile(cont_A_Sfjmu_h1,probs = 0.05),upper = quantile(cont_A_Sfjmu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA1', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfamu_h1), lower = quantile(cont_A_Sfamu_h1,probs = 0.05),upper = quantile(cont_A_Sfamu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ2', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfjmu_w2), lower = quantile(cont_A_Sfjmu_w2,probs = 0.05),upper = quantile(cont_A_Sfjmu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA2', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfamu_w2), lower = quantile(cont_A_Sfamu_w2,probs = 0.05),upper = quantile(cont_A_Sfamu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ2', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfjmu_h2), lower = quantile(cont_A_Sfjmu_h2,probs = 0.05),upper = quantile(cont_A_Sfjmu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA2', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfamu_h2), lower = quantile(cont_A_Sfamu_h2,probs = 0.05),upper = quantile(cont_A_Sfamu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SJ', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfjmu_s ), lower = quantile(cont_A_Sfjmu_s ,probs = 0.05),upper = quantile(cont_A_Sfjmu_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SA', statistic = 'A', value = 'mu', mean = mean(cont_A_Sfamu_s ), lower = quantile(cont_A_Sfamu_s ,probs = 0.05),upper = quantile(cont_A_Sfamu_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F1', statistic = 'A', value = 'sd', mean = mean(cont_A_F1sd    ), lower = quantile(cont_A_F1sd    ,probs = 0.05),upper = quantile(cont_A_F1sd    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F2', statistic = 'A', value = 'sd', mean = mean(cont_A_F2sd    ), lower = quantile(cont_A_F2sd    ,probs = 0.05),upper = quantile(cont_A_F2sd    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ1', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfjsd_w1), lower = quantile(cont_A_Sfjsd_w1,probs = 0.05),upper = quantile(cont_A_Sfjsd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA1', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfasd_w1), lower = quantile(cont_A_Sfasd_w1,probs = 0.05),upper = quantile(cont_A_Sfasd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ1', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfjsd_h1), lower = quantile(cont_A_Sfjsd_h1,probs = 0.05),upper = quantile(cont_A_Sfjsd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA1', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfasd_h1), lower = quantile(cont_A_Sfasd_h1,probs = 0.05),upper = quantile(cont_A_Sfasd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ2', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfjsd_w2), lower = quantile(cont_A_Sfjsd_w2,probs = 0.05),upper = quantile(cont_A_Sfjsd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA2', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfasd_w2), lower = quantile(cont_A_Sfasd_w2,probs = 0.05),upper = quantile(cont_A_Sfasd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ2', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfjsd_h2), lower = quantile(cont_A_Sfjsd_h2,probs = 0.05),upper = quantile(cont_A_Sfjsd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA2', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfasd_h2), lower = quantile(cont_A_Sfasd_h2,probs = 0.05),upper = quantile(cont_A_Sfasd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SJ', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfjsd_s ), lower = quantile(cont_A_Sfjsd_s ,probs = 0.05),upper = quantile(cont_A_Sfjsd_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SA', statistic = 'A', value = 'sd', mean = mean(cont_A_Sfasd_s ), lower = quantile(cont_A_Sfasd_s ,probs = 0.05),upper = quantile(cont_A_Sfasd_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F1', statistic = 'n', value = 'mu', mean = mean(cont_n_F1mu    ), lower = quantile(cont_n_F1mu    ,probs = 0.05),upper = quantile(cont_n_F1mu    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F2', statistic = 'n', value = 'mu', mean = mean(cont_n_F2mu    ), lower = quantile(cont_n_F2mu    ,probs = 0.05),upper = quantile(cont_n_F2mu    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ1', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfjmu_w1), lower = quantile(cont_n_Sfjmu_w1,probs = 0.05),upper = quantile(cont_n_Sfjmu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA1', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfamu_w1), lower = quantile(cont_n_Sfamu_w1,probs = 0.05),upper = quantile(cont_n_Sfamu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ1', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfjmu_h1), lower = quantile(cont_n_Sfjmu_h1,probs = 0.05),upper = quantile(cont_n_Sfjmu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA1', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfamu_h1), lower = quantile(cont_n_Sfamu_h1,probs = 0.05),upper = quantile(cont_n_Sfamu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ2', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfjmu_w2), lower = quantile(cont_n_Sfjmu_w2,probs = 0.05),upper = quantile(cont_n_Sfjmu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA2', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfamu_w2), lower = quantile(cont_n_Sfamu_w2,probs = 0.05),upper = quantile(cont_n_Sfamu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ2', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfjmu_h2), lower = quantile(cont_n_Sfjmu_h2,probs = 0.05),upper = quantile(cont_n_Sfjmu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA2', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfamu_h2), lower = quantile(cont_n_Sfamu_h2,probs = 0.05),upper = quantile(cont_n_Sfamu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SJ', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfjmu_s ), lower = quantile(cont_n_Sfjmu_s ,probs = 0.05),upper = quantile(cont_n_Sfjmu_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SA', statistic = 'n', value = 'mu', mean = mean(cont_n_Sfamu_s ), lower = quantile(cont_n_Sfamu_s ,probs = 0.05),upper = quantile(cont_n_Sfamu_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F1', statistic = 'n', value = 'sd', mean = mean(cont_n_F1sd    ), lower = quantile(cont_n_F1sd    ,probs = 0.05),upper = quantile(cont_n_F1sd    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' F2', statistic = 'n', value = 'sd', mean = mean(cont_n_F2sd    ), lower = quantile(cont_n_F2sd    ,probs = 0.05),upper = quantile(cont_n_F2sd    ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ1', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfjsd_w1), lower = quantile(cont_n_Sfjsd_w1,probs = 0.05),upper = quantile(cont_n_Sfjsd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA1', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfasd_w1), lower = quantile(cont_n_Sfasd_w1,probs = 0.05),upper = quantile(cont_n_Sfasd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ1', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfjsd_h1), lower = quantile(cont_n_Sfjsd_h1,probs = 0.05),upper = quantile(cont_n_Sfjsd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA1', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfasd_h1), lower = quantile(cont_n_Sfasd_h1,probs = 0.05),upper = quantile(cont_n_Sfasd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WJ2', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfjsd_w2), lower = quantile(cont_n_Sfjsd_w2,probs = 0.05),upper = quantile(cont_n_Sfjsd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'WA2', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfasd_w2), lower = quantile(cont_n_Sfasd_w2,probs = 0.05),upper = quantile(cont_n_Sfasd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HJ2', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfjsd_h2), lower = quantile(cont_n_Sfjsd_h2,probs = 0.05),upper = quantile(cont_n_Sfjsd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = 'HA2', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfasd_h2), lower = quantile(cont_n_Sfasd_h2,probs = 0.05),upper = quantile(cont_n_Sfasd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SJ', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfjsd_s ), lower = quantile(cont_n_Sfjsd_s ,probs = 0.05),upper = quantile(cont_n_Sfjsd_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Female', type = 'Contribution', trait = ' SA', statistic = 'n', value = 'sd', mean = mean(cont_n_Sfasd_s ), lower = quantile(cont_n_Sfasd_s ,probs = 0.05),upper = quantile(cont_n_Sfasd_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ1', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_w_j_1), lower = quantile(tot_Sm_w_j_1,probs = 0.05),upper = quantile(tot_Sm_w_j_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA1', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_w_a_1), lower = quantile(tot_Sm_w_a_1,probs = 0.05),upper = quantile(tot_Sm_w_a_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ1', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_h_j_1), lower = quantile(tot_Sm_h_j_1,probs = 0.05),upper = quantile(tot_Sm_h_j_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA1', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_h_a_1), lower = quantile(tot_Sm_h_a_1,probs = 0.05),upper = quantile(tot_Sm_h_a_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ2', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_w_j_2), lower = quantile(tot_Sm_w_j_2,probs = 0.05),upper = quantile(tot_Sm_w_j_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA2', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_w_a_2), lower = quantile(tot_Sm_w_a_2,probs = 0.05),upper = quantile(tot_Sm_w_a_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ2', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_h_j_2), lower = quantile(tot_Sm_h_j_2,probs = 0.05),upper = quantile(tot_Sm_h_j_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA2', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_h_a_2), lower = quantile(tot_Sm_h_a_2,probs = 0.05),upper = quantile(tot_Sm_h_a_2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SJ', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_2_j_1), lower = quantile(tot_Sm_2_j_1,probs = 0.05),upper = quantile(tot_Sm_2_j_1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SA', statistic = 'Total', value = 'Total', mean = mean(tot_Sm_2_2_1), lower = quantile(tot_Sm_2_2_1,probs = 0.05),upper = quantile(tot_Sm_2_2_1,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ1', statistic = 'A', value = 'mu', mean = mean(cont_A_Smjmu_w1), lower = quantile(cont_A_Smjmu_w1,probs = 0.05),upper = quantile(cont_A_Smjmu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA1', statistic = 'A', value = 'mu', mean = mean(cont_A_Smamu_w1), lower = quantile(cont_A_Smamu_w1,probs = 0.05),upper = quantile(cont_A_Smamu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ1', statistic = 'A', value = 'mu', mean = mean(cont_A_Smjmu_h1), lower = quantile(cont_A_Smjmu_h1,probs = 0.05),upper = quantile(cont_A_Smjmu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA1', statistic = 'A', value = 'mu', mean = mean(cont_A_Smamu_h1), lower = quantile(cont_A_Smamu_h1,probs = 0.05),upper = quantile(cont_A_Smamu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ2', statistic = 'A', value = 'mu', mean = mean(cont_A_Smjmu_w2), lower = quantile(cont_A_Smjmu_w2,probs = 0.05),upper = quantile(cont_A_Smjmu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA2', statistic = 'A', value = 'mu', mean = mean(cont_A_Smamu_w2), lower = quantile(cont_A_Smamu_w2,probs = 0.05),upper = quantile(cont_A_Smamu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ2', statistic = 'A', value = 'mu', mean = mean(cont_A_Smjmu_h2), lower = quantile(cont_A_Smjmu_h2,probs = 0.05),upper = quantile(cont_A_Smjmu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA2', statistic = 'A', value = 'mu', mean = mean(cont_A_Smamu_h2), lower = quantile(cont_A_Smamu_h2,probs = 0.05),upper = quantile(cont_A_Smamu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SJ', statistic = 'A', value = 'mu', mean = mean(cont_A_Smjmu_s ), lower = quantile(cont_A_Smjmu_s ,probs = 0.05),upper = quantile(cont_A_Smjmu_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SA', statistic = 'A', value = 'mu', mean = mean(cont_A_Smamu_s ), lower = quantile(cont_A_Smamu_s ,probs = 0.05),upper = quantile(cont_A_Smamu_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ1', statistic = 'A', value = 'sd', mean = mean(cont_A_Smjsd_w1), lower = quantile(cont_A_Smjsd_w1,probs = 0.05),upper = quantile(cont_A_Smjsd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA1', statistic = 'A', value = 'sd', mean = mean(cont_A_Smasd_w1), lower = quantile(cont_A_Smasd_w1,probs = 0.05),upper = quantile(cont_A_Smasd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ1', statistic = 'A', value = 'sd', mean = mean(cont_A_Smjsd_h1), lower = quantile(cont_A_Smjsd_h1,probs = 0.05),upper = quantile(cont_A_Smjsd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA1', statistic = 'A', value = 'sd', mean = mean(cont_A_Smasd_h1), lower = quantile(cont_A_Smasd_h1,probs = 0.05),upper = quantile(cont_A_Smasd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ2', statistic = 'A', value = 'sd', mean = mean(cont_A_Smjsd_w2), lower = quantile(cont_A_Smjsd_w2,probs = 0.05),upper = quantile(cont_A_Smjsd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA2', statistic = 'A', value = 'sd', mean = mean(cont_A_Smasd_w2), lower = quantile(cont_A_Smasd_w2,probs = 0.05),upper = quantile(cont_A_Smasd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ2', statistic = 'A', value = 'sd', mean = mean(cont_A_Smjsd_h2), lower = quantile(cont_A_Smjsd_h2,probs = 0.05),upper = quantile(cont_A_Smjsd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA2', statistic = 'A', value = 'sd', mean = mean(cont_A_Smasd_h2), lower = quantile(cont_A_Smasd_h2,probs = 0.05),upper = quantile(cont_A_Smasd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SJ', statistic = 'A', value = 'sd', mean = mean(cont_A_Smjsd_s ), lower = quantile(cont_A_Smjsd_s ,probs = 0.05),upper = quantile(cont_A_Smjsd_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SA', statistic = 'A', value = 'sd', mean = mean(cont_A_Smasd_s ), lower = quantile(cont_A_Smasd_s ,probs = 0.05),upper = quantile(cont_A_Smasd_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ1', statistic = 'n', value = 'mu', mean = mean(cont_n_Smjmu_w1), lower = quantile(cont_n_Smjmu_w1,probs = 0.05),upper = quantile(cont_n_Smjmu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA1', statistic = 'n', value = 'mu', mean = mean(cont_n_Smamu_w1), lower = quantile(cont_n_Smamu_w1,probs = 0.05),upper = quantile(cont_n_Smamu_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ1', statistic = 'n', value = 'mu', mean = mean(cont_n_Smjmu_h1), lower = quantile(cont_n_Smjmu_h1,probs = 0.05),upper = quantile(cont_n_Smjmu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA1', statistic = 'n', value = 'mu', mean = mean(cont_n_Smamu_h1), lower = quantile(cont_n_Smamu_h1,probs = 0.05),upper = quantile(cont_n_Smamu_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ2', statistic = 'n', value = 'mu', mean = mean(cont_n_Smjmu_w2), lower = quantile(cont_n_Smjmu_w2,probs = 0.05),upper = quantile(cont_n_Smjmu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA2', statistic = 'n', value = 'mu', mean = mean(cont_n_Smamu_w2), lower = quantile(cont_n_Smamu_w2,probs = 0.05),upper = quantile(cont_n_Smamu_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ2', statistic = 'n', value = 'mu', mean = mean(cont_n_Smjmu_h2), lower = quantile(cont_n_Smjmu_h2,probs = 0.05),upper = quantile(cont_n_Smjmu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA2', statistic = 'n', value = 'mu', mean = mean(cont_n_Smamu_h2), lower = quantile(cont_n_Smamu_h2,probs = 0.05),upper = quantile(cont_n_Smamu_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SJ', statistic = 'n', value = 'mu', mean = mean(cont_n_Smjmu_s ), lower = quantile(cont_n_Smjmu_s ,probs = 0.05),upper = quantile(cont_n_Smjmu_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SA', statistic = 'n', value = 'mu', mean = mean(cont_n_Smamu_s ), lower = quantile(cont_n_Smamu_s ,probs = 0.05),upper = quantile(cont_n_Smamu_s ,probs = 0.95)),
+  
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ1', statistic = 'n', value = 'sd', mean = mean(cont_n_Smjsd_w1), lower = quantile(cont_n_Smjsd_w1,probs = 0.05),upper = quantile(cont_n_Smjsd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA1', statistic = 'n', value = 'sd', mean = mean(cont_n_Smasd_w1), lower = quantile(cont_n_Smasd_w1,probs = 0.05),upper = quantile(cont_n_Smasd_w1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ1', statistic = 'n', value = 'sd', mean = mean(cont_n_Smjsd_h1), lower = quantile(cont_n_Smjsd_h1,probs = 0.05),upper = quantile(cont_n_Smjsd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA1', statistic = 'n', value = 'sd', mean = mean(cont_n_Smasd_h1), lower = quantile(cont_n_Smasd_h1,probs = 0.05),upper = quantile(cont_n_Smasd_h1,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WJ2', statistic = 'n', value = 'sd', mean = mean(cont_n_Smjsd_w2), lower = quantile(cont_n_Smjsd_w2,probs = 0.05),upper = quantile(cont_n_Smjsd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'WA2', statistic = 'n', value = 'sd', mean = mean(cont_n_Smasd_w2), lower = quantile(cont_n_Smasd_w2,probs = 0.05),upper = quantile(cont_n_Smasd_w2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HJ2', statistic = 'n', value = 'sd', mean = mean(cont_n_Smjsd_h2), lower = quantile(cont_n_Smjsd_h2,probs = 0.05),upper = quantile(cont_n_Smjsd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = 'HA2', statistic = 'n', value = 'sd', mean = mean(cont_n_Smasd_h2), lower = quantile(cont_n_Smasd_h2,probs = 0.05),upper = quantile(cont_n_Smasd_h2,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SJ', statistic = 'n', value = 'sd', mean = mean(cont_n_Smjsd_s ), lower = quantile(cont_n_Smjsd_s ,probs = 0.05),upper = quantile(cont_n_Smjsd_s ,probs = 0.95)),
+  cbind.data.frame(sex = 'Male', type = 'Contribution', trait = ' SA', statistic = 'n', value = 'sd', mean = mean(cont_n_Smasd_s ), lower = quantile(cont_n_Smasd_s ,probs = 0.05),upper = quantile(cont_n_Smasd_s ,probs = 0.95))
+  
+)
+tot_fec <- totF
+tot_fwhy <- tot_Sf_w_j_1 + tot_Sf_w_j_2
+tot_fwah <- tot_Sf_w_a_1 + tot_Sf_w_a_2
+tot_fssy <- tot_Sf_2_j_1
+tot_fsas <- tot_Sf_2_2_1
+tot_fhhy <- tot_Sf_h_j_1 + tot_Sf_h_j_2
+tot_fhah <- tot_Sf_h_a_1 + tot_Sf_h_a_2
+tot_mwhy <- tot_Sm_w_j_1 + tot_Sm_w_j_2
+tot_mwah <- tot_Sm_w_a_1 + tot_Sm_w_a_2
+tot_mssy <- tot_Sm_2_j_1
+tot_msas <- tot_Sm_2_2_1
+tot_mhhy <- tot_Sm_h_j_1 + tot_Sm_h_j_2
+tot_mhah <- tot_Sm_h_a_1 + tot_Sm_h_a_2
+
+cont_total_alaska_1 <- rbind.data.frame(
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'FEC', statistic = 'Total', value = 'Total', mean = mean(tot_fec),  lower = quantile(tot_fec,probs = 0.05),upper = quantile(tot_fec,probs = 0.95)),
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'WHY', statistic = 'Total', value = 'Total', mean = mean(tot_fwhy), lower = quantile(tot_fwhy,probs = 0.05),upper = quantile(tot_fwhy,probs = 0.95)),
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'WAH', statistic = 'Total', value = 'Total', mean = mean(tot_fwah), lower = quantile(tot_fwah,probs = 0.05),upper = quantile(tot_fwah,probs = 0.95)),
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'SSY', statistic = 'Total', value = 'Total', mean = mean(tot_fssy), lower = quantile(tot_fssy,probs = 0.05),upper = quantile(tot_fssy,probs = 0.95)),
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'SAS', statistic = 'Total', value = 'Total', mean = mean(tot_fsas), lower = quantile(tot_fsas,probs = 0.05),upper = quantile(tot_fsas,probs = 0.95)),
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'HHY', statistic = 'Total', value = 'Total', mean = mean(tot_fhhy), lower = quantile(tot_fhhy,probs = 0.05),upper = quantile(tot_fhhy,probs = 0.95)),
+  cbind.data.frame(Sex = 'Female', type = 'Contribution', trait = 'HAH', statistic = 'Total', value = 'Total', mean = mean(tot_fhah), lower = quantile(tot_fhah,probs = 0.05),upper = quantile(tot_fhah,probs = 0.95)),
+  cbind.data.frame(Sex = 'Male',   type = 'Contribution', trait = 'WHY', statistic = 'Total', value = 'Total', mean = mean(tot_mwhy), lower = quantile(tot_mwhy,probs = 0.05),upper = quantile(tot_mwhy,probs = 0.95)),
+  cbind.data.frame(Sex = 'Male',   type = 'Contribution', trait = 'WAH', statistic = 'Total', value = 'Total', mean = mean(tot_mwah), lower = quantile(tot_mwah,probs = 0.05),upper = quantile(tot_mwah,probs = 0.95)),
+  cbind.data.frame(Sex = 'Male',   type = 'Contribution', trait = 'SSY', statistic = 'Total', value = 'Total', mean = mean(tot_mssy), lower = quantile(tot_mssy,probs = 0.05),upper = quantile(tot_mssy,probs = 0.95)),
+  cbind.data.frame(Sex = 'Male',   type = 'Contribution', trait = 'SAS', statistic = 'Total', value = 'Total', mean = mean(tot_msas), lower = quantile(tot_msas,probs = 0.05),upper = quantile(tot_msas,probs = 0.95)),
+  cbind.data.frame(Sex = 'Male',   type = 'Contribution', trait = 'HHY', statistic = 'Total', value = 'Total', mean = mean(tot_mhhy), lower = quantile(tot_mhhy,probs = 0.05),upper = quantile(tot_mhhy,probs = 0.95)),
+  cbind.data.frame(Sex = 'Male',   type = 'Contribution', trait = 'HAH', statistic = 'Total', value = 'Total', mean = mean(tot_mhah), lower = quantile(tot_mhah,probs = 0.05),upper = quantile(tot_mhah,probs = 0.95))
+)
