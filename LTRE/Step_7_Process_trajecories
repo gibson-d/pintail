@@ -1,0 +1,341 @@
+
+###########################################################################
+plot_cont <- cbind.data.frame(rbind.data.frame(cont_time_prairie_1,cont_time_prairie_2,cont_time_north_1, cont_time_north_2, cont_time_alaska_1, cont_time_alaska_2), 
+                              Region = rep(c('Prairie','Boreal', 'Alaska'), each = 110 * 2), Reference = rep(c('Increase','Decrease'), each = 110, times = 3))
+
+
+
+plot_total <- cbind.data.frame(rbind.data.frame(cont_total_alaska_1,cont_total_alaska_2,
+                                                cont_total_north_1,cont_total_north_2,
+                                                cont_total_prairie_1,cont_total_prairie_2),
+                               expand.grid(Parameters = 1:13,  Reference  =  c('Increase','Decrease'), Region = c('Alaska','Boreal', 'Prairie')))
+                       
+
+
+write.csv(plot_total, file = 'plot_total.csv')
+
+fig_3a <- plot_total %>% subset(Reference == 'Increase') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.05,.12)) + facet_wrap(~Sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression('F',H[AHY], H[HY], S[ASY], S[SY], W[AHY], W[HY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Increase\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig_3a
+ggsave(fig_3a, file = 'comp_1.jpg', height = 8, width = 12, dpi = 640)
+
+fig_3b <- plot_total %>% subset(Reference != 'Increase') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.05,.12)) + facet_wrap(~Sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression('F',H[AHY], H[HY], S[ASY], S[SY], W[AHY], W[HY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Decline\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig_3b
+ggsave(fig_3b, file = 'comp_2.jpg',  height = 8, width = 12, dpi = 640)
+
+
+plot_cont$demo_type <- ifelse(plot_cont$trait == "HJ1" | plot_cont$trait ==  "HA1" | plot_cont$trait ==  "HJ2" | plot_cont$trait == "HA2", 'Harvest',
+                              ifelse(plot_cont$trait == "WJ1" | plot_cont$trait ==  "WA1" | plot_cont$trait ==  "WJ2" | plot_cont$trait == "WA2", 'Winter', 'Summer'))
+
+fig1a_mu <- plot_cont %>% subset(statistic == 'A' & Reference == 'Increase' & demo_type == 'Harvest' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.12,.12)) + facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig1a_mu
+
+fig1n_mu <- plot_cont %>% subset(statistic == 'n' & Reference == 'Increase' & demo_type == 'Harvest' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig1n_mu
+
+fig1A_sd <- plot_cont %>% subset(statistic == 'A' & Reference == 'Increase' & demo_type == 'Harvest' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig1A_sd
+
+fig1n_sd <- plot_cont %>% subset(statistic == 'n' & Reference == 'Increase' & demo_type == 'Harvest' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig1n_sd
+
+
+fig2a_mu <- plot_cont %>% subset(statistic == 'A' & Reference == 'Increase' & demo_type == 'Winter' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.12,.12)) + facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig2a_mu
+
+fig2n_mu <- plot_cont %>% subset(statistic == 'n' & Reference == 'Increase' & demo_type == 'Winter' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig2n_mu
+
+fig2A_sd <- plot_cont %>% subset(statistic == 'A' & Reference == 'Increase' & demo_type == 'Winter' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig2A_sd
+
+fig2n_sd <- plot_cont %>% subset(statistic == 'n' & Reference == 'Increase' & demo_type == 'Winter' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig2n_sd
+
+
+
+fig3a_mu <- plot_cont %>% subset(statistic == 'A' & Reference == 'Increase' & demo_type == 'Summer' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.12,.12)) +facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig3a_mu
+
+fig3n_mu <- plot_cont %>% subset(statistic == 'n' & Reference == 'Increase' & demo_type == 'Summer' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig3n_mu
+
+fig3A_sd <- plot_cont %>% subset(statistic == 'A' & Reference == 'Increase' & demo_type == 'Summer' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig3A_sd
+
+fig3n_sd <- plot_cont %>% subset(statistic == 'n' & Reference == 'Increase' & demo_type == 'Summer' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig3n_sd
+
+
+
+require(grid) 
+f1 <- ggarrange(fig1a_mu+ rremove("ylab") + rremove("xlab"),fig2a_mu+ rremove("ylab") + rremove("xlab") ,fig3a_mu+ rremove("ylab") + rremove("xlab"), ncol = 1, nrow = 3, labels = c('a','b','c'), common.legend = TRUE)
+
+f1_star <- annotate_figure(f1, left = textGrob('Difference in Demographic Contributions to Population Growth\nDuring A Period of Growth Relative to Period of Steep Decline', 
+                                    rot = 90, vjust = .5, gp = gpar(cex = 1.3)),  bottom = textGrob("Demographic Rate", gp = gpar(cex = 1.3)))
+                
+ggsave(f1_star , file = 'f1_star.jpg', height = 12, width = 8, dpi = 320)
+
+
+#####################
+
+fig4a_mu <- plot_cont %>% subset(statistic == 'A' & Reference != 'Increase' & demo_type == 'Harvest' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.12,.12)) + facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig4a_mu
+
+fig4n_mu <- plot_cont %>% subset(statistic == 'n' & Reference != 'Increase' & demo_type == 'Harvest' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig4n_mu
+
+fig4A_sd <- plot_cont %>% subset(statistic == 'A' & Reference != 'Increase' & demo_type == 'Harvest' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig4A_sd
+
+fig4n_sd <- plot_cont %>% subset(statistic == 'n' & Reference != 'Increase' & demo_type == 'Harvest' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig4n_sd
+
+
+fig5a_mu <- plot_cont %>% subset(statistic == 'A' & Reference != 'Increase' & demo_type == 'Winter' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.12,.12)) + facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig5a_mu
+
+fig5n_mu <- plot_cont %>% subset(statistic == 'n' & Reference != 'Increase' & demo_type == 'Winter' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig5n_mu
+
+fig5A_sd <- plot_cont %>% subset(statistic == 'A' & Reference != 'Increase' & demo_type == 'Winter' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig5A_sd
+
+fig5n_sd <- plot_cont %>% subset(statistic == 'n' & Reference != 'Increase' & demo_type == 'Winter' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(AHY[GC],AHY[CV],HY[GC],HY[CV])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig5n_sd
+
+
+
+fig6a_mu <- plot_cont %>% subset(statistic == 'A' & Reference != 'Increase' & demo_type == 'Summer' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  coord_cartesian(ylim = c(-.12,.12)) + facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig6a_mu
+
+fig6n_mu <- plot_cont %>% subset(statistic == 'n' & Reference != 'Increase' & demo_type == 'Summer' & value == 'mu') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig6n_mu
+
+fig6A_sd <- plot_cont %>% subset(statistic == 'A' & Reference != 'Increase' & demo_type == 'Summer' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig6A_sd
+
+fig6n_sd <- plot_cont %>% subset(statistic == 'n' & Reference != 'Increase' & demo_type == 'Summer' & value == 'sd') %>% 
+  ggplot(aes(x = trait, y = mean, fill = Region)) + 
+  geom_bar(aes(x = trait, y = mean, fill = Region),alpha = .75, color = NA, stat ='identity',position = position_dodge2(.25)) + 
+  geom_pointrange2(aes(x = trait, y = mean, ymin = lower, ymax = upper), color = 'black', size = .67,position = position_dodge2(.9)) + 
+  scale_color_see_d() +  scale_fill_see_d() + scale_alpha_manual(values = c(.85,.05), guide = 'none')+geom_hline(yintercept = 0) + 
+  facet_wrap(~ sex, ncol = 2) +
+  scale_x_discrete(labels = c(expression(F[SY],F[ASY],S[ASY],SY[SY])))+
+  labs(y = 'Difference in Demographic Contributions to\nPopulation Growth During A Period of Growth\nRelative to Period of Steep Decline', x = 'Demographic Rate') +
+  theme_modern(base_size = 18, axis.title.size = 18, axis.text.size = 18, legend.text.size = 18, legend.title.size = 18, legend.position = 'top',)
+fig6n_sd
+
+
+
+require(grid) 
+f2 <- ggarrange(fig4a_mu+ rremove("ylab") + rremove("xlab"),fig5a_mu+ rremove("ylab") + rremove("xlab") ,fig6a_mu+ rremove("ylab") + rremove("xlab"), ncol = 1, nrow = 3, labels = c('a','b','c'), common.legend = TRUE)
+
+
+
+f2_star <- annotate_figure(f2, left = textGrob('Difference in Demographic Contributions to Population Growth\nDuring A Period of Decline Relative to Period of Steep Decline', 
+                                               rot = 90, vjust = .5, gp = gpar(cex = 1.3)),  bottom = textGrob("Demographic Rate", gp = gpar(cex = 1.3)))
+
+
+
+ggsave(f2_star , file = 'f2_star.jpg', height = 12, width = 8, dpi = 320)
+
