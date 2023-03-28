@@ -1,0 +1,222 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# Step 4: Calculate the LTRE contributions of temporal process (co)variation 
+# in the demographic parameters to temporal variation in the realized 
+# population growth rates.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+cont_F1_t     <- array(0,dim = c(samples,3,59))
+cont_F2_t     <- array(0,dim = c(samples,3,59))
+cont_Sfj_w1_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_w1_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_w2_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_w2_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_h1_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_h1_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_h2_t <- array(0,dim = c(samples,3,59))
+cont_Sfa_h2_t <- array(0,dim = c(samples,3,59))
+cont_Sfj_s_t  <- array(0,dim = c(samples,3,59))
+cont_Sfa_s_t  <- array(0,dim = c(samples,3,59))
+cont_nf1_t    <- array(0,dim = c(samples,3,59))
+cont_nf2_t    <- array(0,dim = c(samples,3,59))
+cont_Smj_w1_t <- array(0,dim = c(samples,3,59))
+cont_Sma_w1_t <- array(0,dim = c(samples,3,59))
+cont_Smj_w2_t <- array(0,dim = c(samples,3,59))
+cont_Sma_w2_t <- array(0,dim = c(samples,3,59))
+cont_Smj_h1_t <- array(0,dim = c(samples,3,59))
+cont_Sma_h1_t <- array(0,dim = c(samples,3,59))
+cont_Smj_h2_t <- array(0,dim = c(samples,3,59))
+cont_Sma_h2_t <- array(0,dim = c(samples,3,59))
+cont_Smj_s_t  <- array(0,dim = c(samples,3,59))
+cont_Sma_s_t  <- array(0,dim = c(samples,3,59))
+cont_nm1_t    <- array(0,dim = c(samples,3,59))
+cont_nm2_t    <- array(0,dim = c(samples,3,59))
+cont_psi1_t   <- array(0,dim = c(samples,3,59))
+cont_psi2_t   <- array(0,dim = c(samples,3,59))
+cont_pi1_t    <- array(0,dim = c(samples,3,59))
+cont_pi2_t    <- array(0,dim = c(samples,3,59))
+cont_pi3_t    <- array(0,dim = c(samples,3,59)) 
+
+cont_F1     <- array(0,dim = c(samples,3))
+cont_F2     <- array(0,dim = c(samples,3))
+cont_Sfj_w1 <- array(0,dim = c(samples,3))
+cont_Sfa_w1 <- array(0,dim = c(samples,3))
+cont_Sfj_w2 <- array(0,dim = c(samples,3))
+cont_Sfa_w2 <- array(0,dim = c(samples,3))
+cont_Sfj_h1 <- array(0,dim = c(samples,3))
+cont_Sfa_h1 <- array(0,dim = c(samples,3))
+cont_Sfj_h2 <- array(0,dim = c(samples,3))
+cont_Sfa_h2 <- array(0,dim = c(samples,3))
+cont_Sfj_s  <- array(0,dim = c(samples,3))
+cont_Sfa_s  <- array(0,dim = c(samples,3))
+cont_nf1    <- array(0,dim = c(samples,3))
+cont_nf2    <- array(0,dim = c(samples,3))
+cont_Smj_w1 <- array(0,dim = c(samples,3))
+cont_Sma_w1 <- array(0,dim = c(samples,3))
+cont_Smj_w2 <- array(0,dim = c(samples,3))
+cont_Sma_w2 <- array(0,dim = c(samples,3))
+cont_Smj_h1 <- array(0,dim = c(samples,3))
+cont_Sma_h1 <- array(0,dim = c(samples,3))
+cont_Smj_h2 <- array(0,dim = c(samples,3))
+cont_Sma_h2 <- array(0,dim = c(samples,3))
+cont_Smj_s  <- array(0,dim = c(samples,3))
+cont_Sma_s  <- array(0,dim = c(samples,3))
+cont_nm1    <- array(0,dim = c(samples,3))
+cont_nm2    <- array(0,dim = c(samples,3))
+cont_psi1    <- array(0,dim = c(samples,3))
+cont_psi2    <- array(0,dim = c(samples,3))
+cont_pi1    <- array(0,dim = c(samples,3))
+cont_pi2    <- array(0,dim = c(samples,3))
+cont_pi3    <- array(0,dim = c(samples,3))
+
+sensvec    <- array(0,dim = c(31, samples,3))
+
+sens_F1       <- apply(sens_F1     ,1:2, sum)
+sens_F2       <- apply(sens_F2     ,1:2, sum)
+sens_Sfj_w1   <- apply(sens_Sfj_w1 ,1:2, sum)
+sens_Sfj_w2   <- apply(sens_Sfj_w2 ,1:2, sum)
+sens_Sfj_h1   <- apply(sens_Sfj_h1 ,1:2, sum)
+sens_Sfj_h2   <- apply(sens_Sfj_h2 ,1:2, sum)
+sens_Sfj_s    <- apply(sens_Sfj_s  ,1:2, sum)
+sens_Smj_w1   <- apply(sens_Smj_w1 ,1:2, sum)
+sens_Smj_w2   <- apply(sens_Smj_w2 ,1:2, sum)
+sens_Smj_h1   <- apply(sens_Smj_h1 ,1:2, sum)
+sens_Smj_h2   <- apply(sens_Smj_h2 ,1:2, sum)
+sens_Smj_s    <- apply(sens_Smj_s  ,1:2, sum)  
+sens_nf1      <- apply(sens_nf1,1:2,sum)  
+sens_nf2      <- apply(sens_nf2,1:2,sum)  
+sens_nm1      <- apply(sens_nm1,1:2,sum)  
+sens_nm2      <- apply(sens_nm2,1:2,sum)  
+
+sens_F1_t     <- apply(sens_F1_t    ,1:3,sum)
+sens_F2_t     <- apply(sens_F2_t    ,1:3,sum)
+sens_Sfj_w1_t <- apply(sens_Sfj_w1_t,1:3,sum)
+sens_Sfj_w2_t <- apply(sens_Sfj_w2_t,1:3,sum)
+sens_Sfj_h1_t <- apply(sens_Sfj_h1_t,1:3,sum)
+sens_Sfj_h2_t <- apply(sens_Sfj_h2_t,1:3,sum)
+sens_Sfj_s_t  <- apply(sens_Sfj_s_t   ,1:3,sum)
+sens_nf1_t    <- apply(sens_nf1_t   ,1:3,sum)
+sens_nf2_t    <- apply(sens_nf2_t   ,1:3,sum)
+sens_Smj_w1_t <- apply(sens_Smj_w1_t,1:3,sum)
+sens_Smj_w2_t <- apply(sens_Smj_w2_t,1:3,sum)
+sens_Smj_h1_t <- apply(sens_Smj_h1_t,1:3,sum)
+sens_Smj_h2_t <- apply(sens_Smj_h2_t,1:3,sum)
+sens_Smj_s_t  <- apply(sens_Smj_s_t   ,1:3,sum)
+sens_nm1_t    <- apply(sens_nm1_t   ,1:3,sum)
+sens_nm2_t    <- apply(sens_nm2_t   ,1:3,sum)
+
+pi_edit1 <- aperm(pi_all[,1,1:60,], c(2,3,1))
+pi_edit2 <- aperm(pi_all[,2,1:60,], c(2,3,1))
+pi_edit3 <- aperm(pi_all[,3,1:60,], c(2,3,1))
+
+params <- 29
+
+psi_1 <- mu_psi[1:60,,]
+psi_2 <- 1 - mu_psi[1:60,,]
+
+dp_dif <- matrix(0,3,params)
+for (j in 1:samples){ #samples
+  for(k in 1:n.region){
+    # array of annual demographic rates
+    dp_stoch <- abind(F1[,j,],F2[,j,],
+                      Sfj_w1_r[,j,],Sfj_w2_r[,j,],Sfj_h1_r[,j,],Sfj_h2_r[,j,],Sfj_s[,j,],Sfa_w1_r[,j,],Sfa_w2_r[,j,],Sfa_h1_r[,j,],Sfa_h2_r[,j,],Sfa_s[,j,],nf1[,j,],nf2[,j,],
+                      Smj_w1_r[,j,],Smj_w2_r[,j,],Smj_h1_r[,j,],Smj_h2_r[,j,],Smj_s[,j,],Sma_w1_r[,j,],Sma_w2_r[,j,],Sma_h1_r[,j,],Sma_h2_r[,j,],Sma_s[,j,],nm1[,j,],nm2[,j,],
+                      t(pi_all[,1,1:60,j]),t(pi_all[,2,1:60,j]),t(pi_all[,3,1:60,j]), along = 3)
+    for(t in 1:59){
+      # Change in demographic rate b/w t and t+1
+      dp_dif[k,]<- dp_stoch[t+1,k,] - dp_stoch[t,k,] 
+      
+      # Derive process variance and covariance among demographic parameters using 'shrinkage' estimates of vital rates and proportionate abundances:
+      dp_varcov <- array(apply(dp_stoch, 2, var), dim = c(params,params,3))
+      sensvec   <- abind(sens_F1[j,],sens_F2[j,],
+                         sens_Sfj_w1[j,],sens_Sfj_w2[j,],sens_Sfj_h1[j,],sens_Sfj_h2[j,],sens_Sfj_s[j,],sens_Sfa_w1[j,],sens_Sfa_w2[j,],sens_Sfa_h1[j,],sens_Sfa_h2[j,],sens_Sfa_s[j,],sens_nf1[j,],sens_nf2[j,],
+                         sens_Smj_w1[j,],sens_Smj_w2[j,],sens_Smj_h1[j,],sens_Smj_h2[j,],sens_Smj_s[j,],sens_Sma_w1[j,],sens_Sma_w2[j,],sens_Sma_h1[j,],sens_Sma_h2[j,],sens_Sma_s[j,],sens_nm1[j,],sens_nm2[j,],
+                         sens_pi[j,1,],sens_pi[j,2,],sens_pi[j,3,], along = 2)
+      
+      sensvec_t <- abind(sens_F1_t[j,,t],sens_F2_t[j,,t],
+                         sens_Sfj_w1_t[j,,t],sens_Sfj_w2_t[j,,t],sens_Sfj_h1_t[j,,t],sens_Sfj_h2_t[j,,t],sens_Sfj_s_t[j,,t],sens_Sfa_w1_t[j,,t],sens_Sfa_w2_t[j,,t],sens_Sfa_h1_t[j,,t],sens_Sfa_h2_t[j,,t],sens_Sfa_s_t[j,,t],sens_nf1_t[j,,t],sens_nf2_t[j,,t],
+                         sens_Smj_w1_t[j,,t],sens_Smj_w2_t[j,,t],sens_Smj_h1_t[j,,t],sens_Smj_h2_t[j,,t],sens_Smj_s_t[j,,t],sens_Sma_w1_t[j,,t],sens_Sma_w2_t[j,,t],sens_Sma_h1_t[j,,t],sens_Sma_h2_t[j,,t],sens_Sma_s_t[j,,t],sens_nm1_t[j,,t],sens_nm2_t[j,,t],
+                         sens_pi_t[j,1,,t],sens_pi_t[j,2,,t],sens_pi_t[j,3,,t], along = 2)
+      
+      # calculate demographic contributions
+      contvec2 <- matrix(0,params,3)
+      for (m in 1:params){
+        # Transient contribution to changesin population growth = change in demographic rate x its sensitivity
+        contvec2[m,k] <- dp_dif[k,m]*sensvec_t[k,m]                       # Equation 2: Koons et al. 2017
+      }
+      contmatrix <- array(0,dim = c(params,params,3))
+      for (l in 1:params){
+        for (m in 1:params){
+          # Transient Contribution to variability to population growth = Pairwise Covariance between Rate A and Rate B x sensitivity to A x sensitivity to B
+          contmatrix[l,m,k] <- dp_varcov[l,m,k]*sensvec[k,l]*sensvec[k,m] # Equation 1: Koons et al. 2017
+        }
+      }
+      
+      contributions_t <- contvec2
+      
+      # Contribution of annual changes in vital rate to annual changes in lambda
+      
+          cont_F1_t[j,k,t] <- contributions_t[1,k]    
+          cont_F2_t[j,k,t] <- contributions_t[2,k]    
+      cont_Sfj_w1_t[j,k,t] <- contributions_t[3,k]
+      cont_Sfj_w2_t[j,k,t] <- contributions_t[4,k]
+      cont_Sfj_h1_t[j,k,t] <- contributions_t[5,k]
+      cont_Sfj_h2_t[j,k,t] <- contributions_t[6,k]
+      cont_Sfj_s_t[j,k,t]  <- contributions_t[7,k] 
+      cont_Sfa_w1_t[j,k,t] <- contributions_t[8,k]
+      cont_Sfa_w2_t[j,k,t] <- contributions_t[9,k]
+      cont_Sfa_h1_t[j,k,t] <- contributions_t[10,k]
+      cont_Sfa_h2_t[j,k,t] <- contributions_t[11,k]
+       cont_Sfa_s_t[j,k,t] <- contributions_t[12,k] 
+         cont_nf1_t[j,k,t] <- contributions_t[13,k]   
+         cont_nf2_t[j,k,t] <- contributions_t[14,k]
+      cont_Smj_w1_t[j,k,t] <- contributions_t[15,k]
+      cont_Smj_w2_t[j,k,t] <- contributions_t[16,k]
+      cont_Smj_h1_t[j,k,t] <- contributions_t[17,k]
+      cont_Smj_h2_t[j,k,t] <- contributions_t[18,k]
+       cont_Smj_s_t[j,k,t] <- contributions_t[19,k] 
+      cont_Sma_w1_t[j,k,t] <- contributions_t[20,k]
+      cont_Sma_w2_t[j,k,t] <- contributions_t[21,k]
+      cont_Sma_h1_t[j,k,t] <- contributions_t[22,k]
+      cont_Sma_h2_t[j,k,t] <- contributions_t[23,k]
+       cont_Sma_s_t[j,k,t] <- contributions_t[24,k] 
+         cont_nm1_t[j,k,t] <- contributions_t[25,k]   
+         cont_nm2_t[j,k,t] <- contributions_t[26,k]
+         cont_pi1_t[j,k,t] <- contributions_t[27,k]   
+         cont_pi2_t[j,k,t] <- contributions_t[28,k]   
+         cont_pi3_t[j,k,t] <- contributions_t[29,k]   
+
+    }
+    contributions <- apply(contmatrix,c(1,3),sum)
+    
+      # Contribution of each vital rate to temporal variance in lambda
+        cont_F1[j,k] <- contributions[1,k]     
+        cont_F2[j,k] <- contributions[2,k]     
+    cont_Sfj_w1[j,k] <- contributions[3,k]
+    cont_Sfj_w2[j,k] <- contributions[4,k]
+    cont_Sfj_h1[j,k] <- contributions[5,k]
+    cont_Sfj_h2[j,k] <- contributions[6,k]
+     cont_Sfj_s[j,k] <- contributions[7,k]  
+    cont_Sfa_w1[j,k] <- contributions[8,k]
+    cont_Sfa_w2[j,k] <- contributions[9,k]
+    cont_Sfa_h1[j,k] <- contributions[10,k]
+    cont_Sfa_h2[j,k] <- contributions[11,k]
+     cont_Sfa_s[j,k] <- contributions[12,k] 
+       cont_nf1[j,k] <- contributions[13,k]   
+       cont_nf2[j,k] <- contributions[14,k]
+    cont_Smj_w1[j,k] <- contributions[15,k]
+    cont_Smj_w2[j,k] <- contributions[16,k]
+    cont_Smj_h1[j,k] <- contributions[17,k]
+    cont_Smj_h2[j,k] <- contributions[18,k]
+     cont_Smj_s[j,k] <- contributions[19,k] 
+    cont_Sma_w1[j,k] <- contributions[20,k]
+    cont_Sma_w2[j,k] <- contributions[21,k]
+    cont_Sma_h1[j,k] <- contributions[22,k]
+    cont_Sma_h2[j,k] <- contributions[23,k]
+     cont_Sma_s[j,k] <- contributions[24,k] 
+       cont_nm1[j,k] <- contributions[25,k]   
+       cont_nm2[j,k] <- contributions[26,k] 
+       cont_pi1[j,k] <- contributions[27,k]   
+       cont_pi2[j,k] <- contributions[28,k]   
+       cont_pi3[j,k] <- contributions[29,k]   
+  }
+}
