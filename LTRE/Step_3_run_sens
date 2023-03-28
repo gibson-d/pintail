@@ -82,8 +82,6 @@ for (j in 1:samples){
       nrm2[t,j,k,l] <- nm2[t,j,k] * pi_all[k,l,t,j]
     }
   
-
-      
     mu_nrf1[j,k,l] <- mean( nrf1[1:noyears,j,k,l])
     mu_nrf2[j,k,l] <- mean( nrf2[1:noyears,j,k,l])
     mu_nrm1[j,k,l] <- mean( nrm1[1:noyears,j,k,l])
@@ -402,6 +400,43 @@ sens_pi[j,1,k] <-  ((0.5 * mu_F1[j,k] * mu_nf1[j,1] *  mu_Sfj_s[j,k]  * ((mu_Sfj
      }
   }
 }
+
+
+# This last chunk 'recomposes' the breeding population x movemement sensitivities into breeding or winter population sensitivities.
+
+sens_F1       <- apply(sens_F1     ,1:2, sum)
+sens_F2       <- apply(sens_F2     ,1:2, sum)
+sens_Sfj_w1   <- apply(sens_Sfj_w1 ,1:2, sum)
+sens_Sfj_w2   <- apply(sens_Sfj_w2 ,1:2, sum)
+sens_Sfj_h1   <- apply(sens_Sfj_h1 ,1:2, sum)
+sens_Sfj_h2   <- apply(sens_Sfj_h2 ,1:2, sum)
+sens_Sfj_s    <- apply(sens_Sfj_s  ,1:2, sum)
+sens_Smj_w1   <- apply(sens_Smj_w1 ,1:2, sum)
+sens_Smj_w2   <- apply(sens_Smj_w2 ,1:2, sum)
+sens_Smj_h1   <- apply(sens_Smj_h1 ,1:2, sum)
+sens_Smj_h2   <- apply(sens_Smj_h2 ,1:2, sum)
+sens_Smj_s    <- apply(sens_Smj_s  ,1:2, sum)  
+sens_nf1      <- apply(sens_nf1,1:2,sum)  
+sens_nf2      <- apply(sens_nf2,1:2,sum)  
+sens_nm1      <- apply(sens_nm1,1:2,sum)  
+sens_nm2      <- apply(sens_nm2,1:2,sum)  
+
+sens_F1_t     <- apply(sens_F1_t    ,1:3,sum)
+sens_F2_t     <- apply(sens_F2_t    ,1:3,sum)
+sens_Sfj_w1_t <- apply(sens_Sfj_w1_t,1:3,sum)
+sens_Sfj_w2_t <- apply(sens_Sfj_w2_t,1:3,sum)
+sens_Sfj_h1_t <- apply(sens_Sfj_h1_t,1:3,sum)
+sens_Sfj_h2_t <- apply(sens_Sfj_h2_t,1:3,sum)
+sens_Sfj_s_t  <- apply(sens_Sfj_s_t   ,1:3,sum)
+sens_nf1_t    <- apply(sens_nf1_t   ,1:3,sum)
+sens_nf2_t    <- apply(sens_nf2_t   ,1:3,sum)
+sens_Smj_w1_t <- apply(sens_Smj_w1_t,1:3,sum)
+sens_Smj_w2_t <- apply(sens_Smj_w2_t,1:3,sum)
+sens_Smj_h1_t <- apply(sens_Smj_h1_t,1:3,sum)
+sens_Smj_h2_t <- apply(sens_Smj_h2_t,1:3,sum)
+sens_Smj_s_t  <- apply(sens_Smj_s_t   ,1:3,sum)
+sens_nm1_t    <- apply(sens_nm1_t   ,1:3,sum)
+sens_nm2_t    <- apply(sens_nm2_t   ,1:3,sum)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
